@@ -12,6 +12,12 @@ import 'scan_screen.dart';
 
 const _tempLineColor = Color(0xFF60A5FA);
 
+// ── Warm design palette ───────────────────────────────────────────────────────
+const _bgWarm      = Color(0xFF0E0C09);
+const _surfaceWarm = Color(0xFF1C1916);
+const _surface2    = Color(0xFF251F18);
+const _borderWarm  = Color(0xFF2E2820);
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -59,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: _bgWarm,
       body: SafeArea(
         child: StreamBuilder<List<MeterReading>>(
           stream: AppDatabase.instance.watchAllReadings(),
@@ -127,29 +133,70 @@ class _HomeScreenState extends State<HomeScreen> {
                           _buildHeader(),
                           const SizedBox(height: 20),
 
-                          // ── Meter display ─────────────────────────────────
-                          Text(
-                            'AKTUELLER ZÄHLERSTAND',
-                            style: GoogleFonts.rajdhani(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary,
-                              letterSpacing: 2,
+                          // ── Meter display card ────────────────────────────
+                          Container(
+                            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+                            decoration: BoxDecoration(
+                              color: _surfaceWarm,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: _borderWarm, width: 1),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.amber.withOpacity(0.05),
+                                  blurRadius: 30,
+                                  spreadRadius: 0,
+                                  offset: const Offset(0, -4),
+                                ),
+                              ],
+                            ),
+                            child: Stack(
+                              children: [
+                                // Amber top glow accent line
+                                Positioned(
+                                  top: 0,
+                                  left: 20,
+                                  right: 20,
+                                  child: Container(
+                                    height: 1,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(colors: [
+                                        Colors.transparent,
+                                        AppColors.amber.withOpacity(0.45),
+                                        Colors.transparent,
+                                      ]),
+                                    ),
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'AKTUELLER ZÄHLERSTAND',
+                                      style: GoogleFonts.rajdhani(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textSecondary,
+                                        letterSpacing: 2,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    MeterDisplay(value: lastReading?.value),
+                                    if (lastReading != null) ...[
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Abgelesen am ${DateFormat('dd. MMM yyyy, HH:mm', 'de_DE').format(lastReading.timestamp)}',
+                                        style: GoogleFonts.rajdhani(
+                                          fontSize: 13,
+                                          color: AppColors.textSecondary,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          MeterDisplay(value: lastReading?.value),
-                          if (lastReading != null) ...[
-                            const SizedBox(height: 6),
-                            Text(
-                              'Abgelesen am ${DateFormat('dd. MMM yyyy, HH:mm', 'de_DE').format(lastReading.timestamp)}',
-                              style: GoogleFonts.rajdhani(
-                                fontSize: 13,
-                                color: AppColors.textSecondary,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
 
                           const SizedBox(height: 24),
 
@@ -177,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   onInfoTap: () => showDialog(
                                     context: context,
                                     builder: (_) => AlertDialog(
-                                      backgroundColor: AppColors.surface,
+                                      backgroundColor: _surfaceWarm,
                                       shape: RoundedRectangleBorder(
                                           borderRadius:
                                               BorderRadius.circular(16)),
@@ -245,7 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 onTap: () => showDialog(
                                   context: context,
                                   builder: (_) => AlertDialog(
-                                    backgroundColor: AppColors.surface,
+                                    backgroundColor: _surfaceWarm,
                                     shape: RoundedRectangleBorder(
                                         borderRadius:
                                             BorderRadius.circular(16)),
@@ -340,78 +387,140 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: Row(
+    return SizedBox(
+      height: 76,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'HOMERGY',
-                style: GoogleFonts.spaceMono(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.amber,
-                  letterSpacing: 6,
-                ),
-              ),
-              Text(
-                'VERBRAUCHSMONITOR',
-                style: GoogleFonts.rajdhani(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
-                  letterSpacing: 4,
-                ),
-              ),
-            ],
+          // Atmospheric ambient glow behind the icons
+          Positioned(
+            top: -30,
+            right: -20,
+            child: _GlowOrb(size: 160, color: AppColors.amber, opacity: 0.07),
           ),
-          const Spacer(),
-          // Refresh button
-          GestureDetector(
-            onTap: _refresh,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border, width: 1),
-              ),
-              child: _isRefreshing
-                  ? Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.amber,
+          Positioned(
+            top: 8,
+            right: 45,
+            child: _GlowOrb(
+                size: 65, color: const Color(0xFFFF8C42), opacity: 0.04),
+          ),
+          // Content row
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'HOMERGY',
+                        style: GoogleFonts.rajdhani(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.amber,
+                          letterSpacing: 6,
+                          height: 1.0,
+                        ),
                       ),
-                    )
-                  : const Icon(
-                      Icons.refresh_rounded,
+                      const SizedBox(height: 2),
+                      Text(
+                        'VERBRAUCHSMONITOR',
+                        style: GoogleFonts.spaceMono(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w400,
+                          color: AppColors.textSecondary.withOpacity(0.65),
+                          letterSpacing: 3,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  // Refresh button
+                  GestureDetector(
+                    onTap: _refresh,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: _surfaceWarm,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _borderWarm, width: 1),
+                      ),
+                      child: _isRefreshing
+                          ? const Padding(
+                              padding: EdgeInsets.all(10),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.amber,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.refresh_rounded,
+                              color: AppColors.amber,
+                              size: 20,
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Flame badge
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.amber.withOpacity(0.10),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.amber.withOpacity(0.25),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.amber.withOpacity(0.18),
+                          blurRadius: 14,
+                          spreadRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.local_fire_department,
                       color: AppColors.amber,
                       size: 22,
                     ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Decorative flame icon
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.amber.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-              border:
-                  Border.all(color: AppColors.amber.withOpacity(0.3), width: 1),
-            ),
-            child: const Icon(
-              Icons.local_fire_department,
-              color: AppColors.amber,
-              size: 24,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Ambient glow orb helper
+// ---------------------------------------------------------------------------
+
+class _GlowOrb extends StatelessWidget {
+  final double size;
+  final Color color;
+  final double opacity;
+  const _GlowOrb(
+      {required this.size, required this.color, this.opacity = 1.0});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color.withOpacity(opacity), color.withOpacity(0)],
+        ),
       ),
     );
   }
@@ -429,9 +538,11 @@ class _DayStat {
 }
 
 class _SpotData {
-  final FlSpot spot;
+  final FlSpot spot; // y = average per period (total / periodsCovered)
   final int periodsCovered;
-  const _SpotData(this.spot, {this.periodsCovered = 1});
+  final double totalConsumption;
+  const _SpotData(this.spot,
+      {this.periodsCovered = 1, required this.totalConsumption});
 }
 
 enum _ChartPeriod { week, month, year }
@@ -587,9 +698,12 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
       }
       prevMax ??= anchorValue;
       if (prevMax == null) continue;
+      final total = (dayMax - prevMax).clamp(0.0, double.infinity);
+      final days = day - prevDay;
       result.add(_SpotData(
-        FlSpot(day.toDouble(), (dayMax - prevMax).clamp(0.0, double.infinity)),
-        periodsCovered: day - prevDay,
+        FlSpot(day.toDouble(), total / days),
+        periodsCovered: days,
+        totalConsumption: total,
       ));
     }
     return result;
@@ -628,9 +742,12 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
       }
       prevMax ??= anchorValue;
       if (prevMax == null) continue;
+      final total = (monthMax - prevMax).clamp(0.0, double.infinity);
+      final months = m - prevM;
       result.add(_SpotData(
-        FlSpot(m.toDouble(), (monthMax - prevMax).clamp(0.0, double.infinity)),
-        periodsCovered: m - prevM,
+        FlSpot(m.toDouble(), total / months),
+        periodsCovered: months,
+        totalConsumption: total,
       ));
     }
     return result;
@@ -686,6 +803,7 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
     List<_DayStat> weekStats = [];
     List<FlSpot> spots = [];
     Map<double, int> coverageByX = {};
+    Map<double, double> totalByX = {};
     double minX = 0, maxX = 6;
 
     switch (_period) {
@@ -693,8 +811,11 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
         weekStats = _buildWeekStats();
         for (int i = 0; i < weekStats.length; i++) {
           if (weekStats[i].consumption != null) {
-            spots.add(FlSpot(i.toDouble(), weekStats[i].consumption!));
-            coverageByX[i.toDouble()] = weekStats[i].daysCovered;
+            final total = weekStats[i].consumption!;
+            final days = weekStats[i].daysCovered;
+            spots.add(FlSpot(i.toDouble(), total / days));
+            coverageByX[i.toDouble()] = days;
+            totalByX[i.toDouble()] = total;
           }
         }
         minX = 0;
@@ -703,12 +824,14 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
         final monthData = _buildMonthSpotData();
         spots = monthData.map((d) => d.spot).toList();
         coverageByX = {for (final d in monthData) d.spot.x: d.periodsCovered};
+        totalByX = {for (final d in monthData) d.spot.x: d.totalConsumption};
         minX = 1;
         maxX = DateTime(now.year, now.month + 1, 0).day.toDouble();
       case _ChartPeriod.year:
         final yearData = _buildYearSpotData();
         spots = yearData.map((d) => d.spot).toList();
         coverageByX = {for (final d in yearData) d.spot.x: d.periodsCovered};
+        totalByX = {for (final d in yearData) d.spot.x: d.totalConsumption};
         minX = 0;
         maxX = 11;
     }
@@ -754,7 +877,7 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
             radius: coverage > 1 ? 4.5 : 3.0,
             color: AppColors.amber,
             strokeWidth: coverage > 1 ? 2.0 : 1.5,
-            strokeColor: AppColors.surface,
+            strokeColor: _surfaceWarm,
           );
         },
       ),
@@ -826,9 +949,9 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 12, 12, 8),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: _surfaceWarm,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border, width: 1),
+        border: Border.all(color: _borderWarm, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -887,7 +1010,7 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
                       drawVerticalLine: false,
                       horizontalInterval: yInterval,
                       getDrawingHorizontalLine: (_) => FlLine(
-                        color: AppColors.border,
+                        color: _borderWarm,
                         strokeWidth: 0.8,
                         dashArray: [4, 4],
                       ),
@@ -907,28 +1030,28 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
                       topTitles: const AxisTitles(
                           sideTitles: SideTitles(showTitles: false)),
                       rightTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: hasTempData,
-                        reservedSize: 34,
-                        interval: yInterval,
-                        getTitlesWidget: (value, meta) {
-                          if (value <= 0 || value > chartMaxY) {
-                            return const SizedBox.shrink();
-                          }
-                          final tC = tempMin + (value / chartMaxY) * tempRange;
-                          return Padding(
-                            padding: const EdgeInsets.only(left: 4),
-                            child: Text(
-                              '${tC.round()}°',
-                              style: GoogleFonts.spaceMono(
-                                fontSize: 9,
-                                color: _tempLineColor,
+                        sideTitles: SideTitles(
+                          showTitles: hasTempData,
+                          reservedSize: 34,
+                          interval: yInterval,
+                          getTitlesWidget: (value, meta) {
+                            if (value <= 0 || value > chartMaxY) {
+                              return const SizedBox.shrink();
+                            }
+                            final tC = tempMin + (value / chartMaxY) * tempRange;
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Text(
+                                '${tC.round()}°',
+                                style: GoogleFonts.spaceMono(
+                                  fontSize: 9,
+                                  color: _tempLineColor,
+                                ),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
-                    ),
                       leftTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
@@ -984,17 +1107,22 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
                         }
                       },
                       touchTooltipData: LineTouchTooltipData(
-                        getTooltipColor: (_) => AppColors.background,
+                        getTooltipColor: (_) => _bgWarm,
                         tooltipBorder:
-                            const BorderSide(color: AppColors.border),
+                            const BorderSide(color: _borderWarm),
                         tooltipRoundedRadius: 8,
                         getTooltipItems: (touchedSpots) =>
                             touchedSpots.map((s) {
                           if (s.barIndex == 1) return null;
-                          final val = s.y < 0.1
+                          final coverage = coverageByX[s.x] ?? 1;
+                          final total = totalByX[s.x] ?? s.y;
+                          // s.y is already the daily average
+                          final avgStr = s.y < 0.1
                               ? s.y.toStringAsFixed(3)
                               : s.y.toStringAsFixed(2);
-                          final coverage = coverageByX[s.x] ?? 1;
+                          final totalStr = total < 0.1
+                              ? total.toStringAsFixed(3)
+                              : total.toStringAsFixed(2);
                           final xKey = tempByX.keys
                               .where((k) => (k - s.x).abs() < 0.6)
                               .fold<double?>(null, (prev, k) =>
@@ -1010,12 +1138,11 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
                           final avgUnit = _period == _ChartPeriod.year
                               ? 'Mon.'
                               : 'Tag';
-                          final avg = s.y / coverage;
-                          final avgStr = avg < 0.1
-                              ? avg.toStringAsFixed(3)
-                              : avg.toStringAsFixed(2);
+                          final mainLabel = coverage > 1
+                              ? 'Ø $avgStr m³/$avgUnit'
+                              : '$avgStr m³';
                           return LineTooltipItem(
-                            '$val m³',
+                            mainLabel,
                             GoogleFonts.spaceMono(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -1025,7 +1152,7 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
                               if (coverage > 1)
                                 TextSpan(
                                   text:
-                                      '\n$coverage $periodLabel · Ø $avgStr/$avgUnit',
+                                      '\n$coverage $periodLabel · $totalStr m³ gesamt',
                                   style: GoogleFonts.rajdhani(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w500,
@@ -1074,9 +1201,9 @@ class ChartFullscreenScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: _bgWarm,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: _bgWarm,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
@@ -1132,13 +1259,11 @@ class _PeriodTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: selected
-              ? AppColors.amber.withOpacity(0.15)
-              : Colors.transparent,
+          color: selected ? AppColors.amber.withOpacity(0.12) : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: selected
-                ? AppColors.amber.withOpacity(0.4)
+                ? AppColors.amber.withOpacity(0.35)
                 : Colors.transparent,
             width: 1,
           ),
@@ -1220,80 +1345,114 @@ class _StatCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: _surfaceWarm,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border, width: 1),
+          border: Border.all(color: _borderWarm, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: iconColor.withOpacity(0.07),
+              blurRadius: 20,
+              spreadRadius: 0,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            Row(
-              children: [
-                Icon(icon, color: iconColor, size: 16),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: GoogleFonts.rajdhani(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondary,
-                    letterSpacing: 1,
+            // Top accent glow line
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(15)),
+                child: Container(
+                  height: 1.5,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [
+                      Colors.transparent,
+                      iconColor.withOpacity(0.55),
+                      Colors.transparent,
+                    ]),
                   ),
                 ),
-                if (onInfoTap != null) ...[
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: onInfoTap,
-                    behavior: HitTestBehavior.opaque,
-                    child: Icon(
-                      Icons.info_outline_rounded,
-                      size: 16,
-                      color: AppColors.textSecondary.withOpacity(0.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(icon, color: iconColor, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        label,
+                        style: GoogleFonts.rajdhani(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      if (onInfoTap != null) ...[
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: onInfoTap,
+                          behavior: HitTestBehavior.opaque,
+                          child: Icon(
+                            Icons.info_outline_rounded,
+                            size: 16,
+                            color: AppColors.textSecondary.withOpacity(0.5),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    value,
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
                     ),
                   ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              value,
-              style: GoogleFonts.spaceMono(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            if (unit.isNotEmpty)
-              Text(
-                unit,
-                style: GoogleFonts.rajdhani(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            if (subValue != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                subValue!,
-                style: GoogleFonts.spaceMono(
-                  fontSize: 11,
-                  color: AppColors.amber.withOpacity(0.7),
-                ),
-              ),
-            ],
-            if (onTap != null) ...[
-              const SizedBox(height: 6),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Icon(Icons.chevron_right_rounded,
-                      size: 14,
-                      color: AppColors.textSecondary.withOpacity(0.5)),
+                  if (unit.isNotEmpty)
+                    Text(
+                      unit,
+                      style: GoogleFonts.rajdhani(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  if (subValue != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      subValue!,
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 11,
+                        color: AppColors.amber.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                  if (onTap != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Icon(Icons.chevron_right_rounded,
+                            size: 14,
+                            color: AppColors.textSecondary.withOpacity(0.5)),
+                      ],
+                    ),
+                  ],
                 ],
               ),
-            ],
+            ),
           ],
         ),
       ),
@@ -1371,10 +1530,16 @@ class _ScanButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: AppColors.amber.withOpacity(0.35),
-              blurRadius: 20,
+              color: AppColors.amber.withOpacity(0.4),
+              blurRadius: 24,
+              spreadRadius: 2,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: AppColors.amber.withOpacity(0.15),
+              blurRadius: 48,
               spreadRadius: 0,
-              offset: const Offset(0, 6),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
