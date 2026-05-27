@@ -1,0 +1,2893 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'database.dart';
+
+// ignore_for_file: type=lint
+mixin _$ReadingsDaoMixin on DatabaseAccessor<AppDatabase> {
+  $MeterReadingsTable get meterReadings => attachedDatabase.meterReadings;
+  ReadingsDaoManager get managers => ReadingsDaoManager(this);
+}
+
+class ReadingsDaoManager {
+  final _$ReadingsDaoMixin _db;
+  ReadingsDaoManager(this._db);
+  $$MeterReadingsTableTableManager get meterReadings =>
+      $$MeterReadingsTableTableManager(_db.attachedDatabase, _db.meterReadings);
+}
+
+mixin _$ContractsDaoMixin on DatabaseAccessor<AppDatabase> {
+  $PriceContractsTable get priceContracts => attachedDatabase.priceContracts;
+  ContractsDaoManager get managers => ContractsDaoManager(this);
+}
+
+class ContractsDaoManager {
+  final _$ContractsDaoMixin _db;
+  ContractsDaoManager(this._db);
+  $$PriceContractsTableTableManager get priceContracts =>
+      $$PriceContractsTableTableManager(
+        _db.attachedDatabase,
+        _db.priceContracts,
+      );
+}
+
+mixin _$SettingsDaoMixin on DatabaseAccessor<AppDatabase> {
+  $AppSettingsTable get appSettings => attachedDatabase.appSettings;
+  SettingsDaoManager get managers => SettingsDaoManager(this);
+}
+
+class SettingsDaoManager {
+  final _$SettingsDaoMixin _db;
+  SettingsDaoManager(this._db);
+  $$AppSettingsTableTableManager get appSettings =>
+      $$AppSettingsTableTableManager(_db.attachedDatabase, _db.appSettings);
+}
+
+mixin _$WeatherDaoMixin on DatabaseAccessor<AppDatabase> {
+  $WeatherCachesTable get weatherCaches => attachedDatabase.weatherCaches;
+  WeatherDaoManager get managers => WeatherDaoManager(this);
+}
+
+class WeatherDaoManager {
+  final _$WeatherDaoMixin _db;
+  WeatherDaoManager(this._db);
+  $$WeatherCachesTableTableManager get weatherCaches =>
+      $$WeatherCachesTableTableManager(_db.attachedDatabase, _db.weatherCaches);
+}
+
+class $MeterReadingsTable extends MeterReadings
+    with TableInfo<$MeterReadingsTable, MeterReading> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MeterReadingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<double> value = GeneratedColumn<double>(
+    'value',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _timestampMeta = const VerificationMeta(
+    'timestamp',
+  );
+  @override
+  late final GeneratedColumn<DateTime> timestamp = GeneratedColumn<DateTime>(
+    'timestamp',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _imagePathMeta = const VerificationMeta(
+    'imagePath',
+  );
+  @override
+  late final GeneratedColumn<String> imagePath = GeneratedColumn<String>(
+    'image_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isSyncedMeta = const VerificationMeta(
+    'isSynced',
+  );
+  @override
+  late final GeneratedColumn<bool> isSynced = GeneratedColumn<bool>(
+    'is_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_synced" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _remoteIdMeta = const VerificationMeta(
+    'remoteId',
+  );
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+    'remote_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    value,
+    timestamp,
+    note,
+    imagePath,
+    isSynced,
+    remoteId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'meter_readings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MeterReading> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+        _valueMeta,
+        value.isAcceptableOrUnknown(data['value']!, _valueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    if (data.containsKey('timestamp')) {
+      context.handle(
+        _timestampMeta,
+        timestamp.isAcceptableOrUnknown(data['timestamp']!, _timestampMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_timestampMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('image_path')) {
+      context.handle(
+        _imagePathMeta,
+        imagePath.isAcceptableOrUnknown(data['image_path']!, _imagePathMeta),
+      );
+    }
+    if (data.containsKey('is_synced')) {
+      context.handle(
+        _isSyncedMeta,
+        isSynced.isAcceptableOrUnknown(data['is_synced']!, _isSyncedMeta),
+      );
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(
+        _remoteIdMeta,
+        remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MeterReading map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MeterReading(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      value: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}value'],
+      )!,
+      timestamp: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}timestamp'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      imagePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}image_path'],
+      ),
+      isSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_synced'],
+      )!,
+      remoteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_id'],
+      ),
+    );
+  }
+
+  @override
+  $MeterReadingsTable createAlias(String alias) {
+    return $MeterReadingsTable(attachedDatabase, alias);
+  }
+}
+
+class MeterReading extends DataClass implements Insertable<MeterReading> {
+  final int id;
+  final double value;
+  final DateTime timestamp;
+  final String? note;
+  final String? imagePath;
+  final bool isSynced;
+  final String? remoteId;
+  const MeterReading({
+    required this.id,
+    required this.value,
+    required this.timestamp,
+    this.note,
+    this.imagePath,
+    required this.isSynced,
+    this.remoteId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['value'] = Variable<double>(value);
+    map['timestamp'] = Variable<DateTime>(timestamp);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    if (!nullToAbsent || imagePath != null) {
+      map['image_path'] = Variable<String>(imagePath);
+    }
+    map['is_synced'] = Variable<bool>(isSynced);
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
+    return map;
+  }
+
+  MeterReadingsCompanion toCompanion(bool nullToAbsent) {
+    return MeterReadingsCompanion(
+      id: Value(id),
+      value: Value(value),
+      timestamp: Value(timestamp),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      imagePath: imagePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imagePath),
+      isSynced: Value(isSynced),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+    );
+  }
+
+  factory MeterReading.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MeterReading(
+      id: serializer.fromJson<int>(json['id']),
+      value: serializer.fromJson<double>(json['value']),
+      timestamp: serializer.fromJson<DateTime>(json['timestamp']),
+      note: serializer.fromJson<String?>(json['note']),
+      imagePath: serializer.fromJson<String?>(json['imagePath']),
+      isSynced: serializer.fromJson<bool>(json['isSynced']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'value': serializer.toJson<double>(value),
+      'timestamp': serializer.toJson<DateTime>(timestamp),
+      'note': serializer.toJson<String?>(note),
+      'imagePath': serializer.toJson<String?>(imagePath),
+      'isSynced': serializer.toJson<bool>(isSynced),
+      'remoteId': serializer.toJson<String?>(remoteId),
+    };
+  }
+
+  MeterReading copyWith({
+    int? id,
+    double? value,
+    DateTime? timestamp,
+    Value<String?> note = const Value.absent(),
+    Value<String?> imagePath = const Value.absent(),
+    bool? isSynced,
+    Value<String?> remoteId = const Value.absent(),
+  }) => MeterReading(
+    id: id ?? this.id,
+    value: value ?? this.value,
+    timestamp: timestamp ?? this.timestamp,
+    note: note.present ? note.value : this.note,
+    imagePath: imagePath.present ? imagePath.value : this.imagePath,
+    isSynced: isSynced ?? this.isSynced,
+    remoteId: remoteId.present ? remoteId.value : this.remoteId,
+  );
+  MeterReading copyWithCompanion(MeterReadingsCompanion data) {
+    return MeterReading(
+      id: data.id.present ? data.id.value : this.id,
+      value: data.value.present ? data.value.value : this.value,
+      timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
+      note: data.note.present ? data.note.value : this.note,
+      imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
+      isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MeterReading(')
+          ..write('id: $id, ')
+          ..write('value: $value, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('note: $note, ')
+          ..write('imagePath: $imagePath, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('remoteId: $remoteId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, value, timestamp, note, imagePath, isSynced, remoteId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MeterReading &&
+          other.id == this.id &&
+          other.value == this.value &&
+          other.timestamp == this.timestamp &&
+          other.note == this.note &&
+          other.imagePath == this.imagePath &&
+          other.isSynced == this.isSynced &&
+          other.remoteId == this.remoteId);
+}
+
+class MeterReadingsCompanion extends UpdateCompanion<MeterReading> {
+  final Value<int> id;
+  final Value<double> value;
+  final Value<DateTime> timestamp;
+  final Value<String?> note;
+  final Value<String?> imagePath;
+  final Value<bool> isSynced;
+  final Value<String?> remoteId;
+  const MeterReadingsCompanion({
+    this.id = const Value.absent(),
+    this.value = const Value.absent(),
+    this.timestamp = const Value.absent(),
+    this.note = const Value.absent(),
+    this.imagePath = const Value.absent(),
+    this.isSynced = const Value.absent(),
+    this.remoteId = const Value.absent(),
+  });
+  MeterReadingsCompanion.insert({
+    this.id = const Value.absent(),
+    required double value,
+    required DateTime timestamp,
+    this.note = const Value.absent(),
+    this.imagePath = const Value.absent(),
+    this.isSynced = const Value.absent(),
+    this.remoteId = const Value.absent(),
+  }) : value = Value(value),
+       timestamp = Value(timestamp);
+  static Insertable<MeterReading> custom({
+    Expression<int>? id,
+    Expression<double>? value,
+    Expression<DateTime>? timestamp,
+    Expression<String>? note,
+    Expression<String>? imagePath,
+    Expression<bool>? isSynced,
+    Expression<String>? remoteId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (value != null) 'value': value,
+      if (timestamp != null) 'timestamp': timestamp,
+      if (note != null) 'note': note,
+      if (imagePath != null) 'image_path': imagePath,
+      if (isSynced != null) 'is_synced': isSynced,
+      if (remoteId != null) 'remote_id': remoteId,
+    });
+  }
+
+  MeterReadingsCompanion copyWith({
+    Value<int>? id,
+    Value<double>? value,
+    Value<DateTime>? timestamp,
+    Value<String?>? note,
+    Value<String?>? imagePath,
+    Value<bool>? isSynced,
+    Value<String?>? remoteId,
+  }) {
+    return MeterReadingsCompanion(
+      id: id ?? this.id,
+      value: value ?? this.value,
+      timestamp: timestamp ?? this.timestamp,
+      note: note ?? this.note,
+      imagePath: imagePath ?? this.imagePath,
+      isSynced: isSynced ?? this.isSynced,
+      remoteId: remoteId ?? this.remoteId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<double>(value.value);
+    }
+    if (timestamp.present) {
+      map['timestamp'] = Variable<DateTime>(timestamp.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (imagePath.present) {
+      map['image_path'] = Variable<String>(imagePath.value);
+    }
+    if (isSynced.present) {
+      map['is_synced'] = Variable<bool>(isSynced.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MeterReadingsCompanion(')
+          ..write('id: $id, ')
+          ..write('value: $value, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('note: $note, ')
+          ..write('imagePath: $imagePath, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('remoteId: $remoteId')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PriceContractsTable extends PriceContracts
+    with TableInfo<$PriceContractsTable, PriceContract> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PriceContractsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _internalNameMeta = const VerificationMeta(
+    'internalName',
+  );
+  @override
+  late final GeneratedColumn<String> internalName = GeneratedColumn<String>(
+    'internal_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _displayNameMeta = const VerificationMeta(
+    'displayName',
+  );
+  @override
+  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
+    'display_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pricePerKwhMeta = const VerificationMeta(
+    'pricePerKwh',
+  );
+  @override
+  late final GeneratedColumn<double> pricePerKwh = GeneratedColumn<double>(
+    'price_per_kwh',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _monthlyBasePriceMeta = const VerificationMeta(
+    'monthlyBasePrice',
+  );
+  @override
+  late final GeneratedColumn<double> monthlyBasePrice = GeneratedColumn<double>(
+    'monthly_base_price',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _validFromMeta = const VerificationMeta(
+    'validFrom',
+  );
+  @override
+  late final GeneratedColumn<int> validFrom = GeneratedColumn<int>(
+    'valid_from',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _brennwertMeta = const VerificationMeta(
+    'brennwert',
+  );
+  @override
+  late final GeneratedColumn<double> brennwert = GeneratedColumn<double>(
+    'brennwert',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _zustandszahlMeta = const VerificationMeta(
+    'zustandszahl',
+  );
+  @override
+  late final GeneratedColumn<double> zustandszahl = GeneratedColumn<double>(
+    'zustandszahl',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _isSyncedMeta = const VerificationMeta(
+    'isSynced',
+  );
+  @override
+  late final GeneratedColumn<bool> isSynced = GeneratedColumn<bool>(
+    'is_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_synced" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _remoteIdMeta = const VerificationMeta(
+    'remoteId',
+  );
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+    'remote_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    internalName,
+    displayName,
+    pricePerKwh,
+    monthlyBasePrice,
+    validFrom,
+    brennwert,
+    zustandszahl,
+    isSynced,
+    remoteId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'price_contracts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PriceContract> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('internal_name')) {
+      context.handle(
+        _internalNameMeta,
+        internalName.isAcceptableOrUnknown(
+          data['internal_name']!,
+          _internalNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_internalNameMeta);
+    }
+    if (data.containsKey('display_name')) {
+      context.handle(
+        _displayNameMeta,
+        displayName.isAcceptableOrUnknown(
+          data['display_name']!,
+          _displayNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_displayNameMeta);
+    }
+    if (data.containsKey('price_per_kwh')) {
+      context.handle(
+        _pricePerKwhMeta,
+        pricePerKwh.isAcceptableOrUnknown(
+          data['price_per_kwh']!,
+          _pricePerKwhMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_pricePerKwhMeta);
+    }
+    if (data.containsKey('monthly_base_price')) {
+      context.handle(
+        _monthlyBasePriceMeta,
+        monthlyBasePrice.isAcceptableOrUnknown(
+          data['monthly_base_price']!,
+          _monthlyBasePriceMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_monthlyBasePriceMeta);
+    }
+    if (data.containsKey('valid_from')) {
+      context.handle(
+        _validFromMeta,
+        validFrom.isAcceptableOrUnknown(data['valid_from']!, _validFromMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_validFromMeta);
+    }
+    if (data.containsKey('brennwert')) {
+      context.handle(
+        _brennwertMeta,
+        brennwert.isAcceptableOrUnknown(data['brennwert']!, _brennwertMeta),
+      );
+    }
+    if (data.containsKey('zustandszahl')) {
+      context.handle(
+        _zustandszahlMeta,
+        zustandszahl.isAcceptableOrUnknown(
+          data['zustandszahl']!,
+          _zustandszahlMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_synced')) {
+      context.handle(
+        _isSyncedMeta,
+        isSynced.isAcceptableOrUnknown(data['is_synced']!, _isSyncedMeta),
+      );
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(
+        _remoteIdMeta,
+        remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PriceContract map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PriceContract(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      internalName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}internal_name'],
+      )!,
+      displayName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}display_name'],
+      )!,
+      pricePerKwh: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}price_per_kwh'],
+      )!,
+      monthlyBasePrice: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monthly_base_price'],
+      )!,
+      validFrom: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}valid_from'],
+      )!,
+      brennwert: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}brennwert'],
+      )!,
+      zustandszahl: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}zustandszahl'],
+      )!,
+      isSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_synced'],
+      )!,
+      remoteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_id'],
+      ),
+    );
+  }
+
+  @override
+  $PriceContractsTable createAlias(String alias) {
+    return $PriceContractsTable(attachedDatabase, alias);
+  }
+}
+
+class PriceContract extends DataClass implements Insertable<PriceContract> {
+  final int id;
+
+  /// Internal unique name, e.g. "Stadtwerke_1". Never shown to the user.
+  final String internalName;
+
+  /// Display name shown to the user, e.g. "Stadtwerke".
+  final String displayName;
+  final double pricePerKwh;
+  final double monthlyBasePrice;
+
+  /// Milliseconds since epoch.
+  final int validFrom;
+  final double brennwert;
+  final double zustandszahl;
+  final bool isSynced;
+  final String? remoteId;
+  const PriceContract({
+    required this.id,
+    required this.internalName,
+    required this.displayName,
+    required this.pricePerKwh,
+    required this.monthlyBasePrice,
+    required this.validFrom,
+    required this.brennwert,
+    required this.zustandszahl,
+    required this.isSynced,
+    this.remoteId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['internal_name'] = Variable<String>(internalName);
+    map['display_name'] = Variable<String>(displayName);
+    map['price_per_kwh'] = Variable<double>(pricePerKwh);
+    map['monthly_base_price'] = Variable<double>(monthlyBasePrice);
+    map['valid_from'] = Variable<int>(validFrom);
+    map['brennwert'] = Variable<double>(brennwert);
+    map['zustandszahl'] = Variable<double>(zustandszahl);
+    map['is_synced'] = Variable<bool>(isSynced);
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
+    return map;
+  }
+
+  PriceContractsCompanion toCompanion(bool nullToAbsent) {
+    return PriceContractsCompanion(
+      id: Value(id),
+      internalName: Value(internalName),
+      displayName: Value(displayName),
+      pricePerKwh: Value(pricePerKwh),
+      monthlyBasePrice: Value(monthlyBasePrice),
+      validFrom: Value(validFrom),
+      brennwert: Value(brennwert),
+      zustandszahl: Value(zustandszahl),
+      isSynced: Value(isSynced),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+    );
+  }
+
+  factory PriceContract.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PriceContract(
+      id: serializer.fromJson<int>(json['id']),
+      internalName: serializer.fromJson<String>(json['internalName']),
+      displayName: serializer.fromJson<String>(json['displayName']),
+      pricePerKwh: serializer.fromJson<double>(json['pricePerKwh']),
+      monthlyBasePrice: serializer.fromJson<double>(json['monthlyBasePrice']),
+      validFrom: serializer.fromJson<int>(json['validFrom']),
+      brennwert: serializer.fromJson<double>(json['brennwert']),
+      zustandszahl: serializer.fromJson<double>(json['zustandszahl']),
+      isSynced: serializer.fromJson<bool>(json['isSynced']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'internalName': serializer.toJson<String>(internalName),
+      'displayName': serializer.toJson<String>(displayName),
+      'pricePerKwh': serializer.toJson<double>(pricePerKwh),
+      'monthlyBasePrice': serializer.toJson<double>(monthlyBasePrice),
+      'validFrom': serializer.toJson<int>(validFrom),
+      'brennwert': serializer.toJson<double>(brennwert),
+      'zustandszahl': serializer.toJson<double>(zustandszahl),
+      'isSynced': serializer.toJson<bool>(isSynced),
+      'remoteId': serializer.toJson<String?>(remoteId),
+    };
+  }
+
+  PriceContract copyWith({
+    int? id,
+    String? internalName,
+    String? displayName,
+    double? pricePerKwh,
+    double? monthlyBasePrice,
+    int? validFrom,
+    double? brennwert,
+    double? zustandszahl,
+    bool? isSynced,
+    Value<String?> remoteId = const Value.absent(),
+  }) => PriceContract(
+    id: id ?? this.id,
+    internalName: internalName ?? this.internalName,
+    displayName: displayName ?? this.displayName,
+    pricePerKwh: pricePerKwh ?? this.pricePerKwh,
+    monthlyBasePrice: monthlyBasePrice ?? this.monthlyBasePrice,
+    validFrom: validFrom ?? this.validFrom,
+    brennwert: brennwert ?? this.brennwert,
+    zustandszahl: zustandszahl ?? this.zustandszahl,
+    isSynced: isSynced ?? this.isSynced,
+    remoteId: remoteId.present ? remoteId.value : this.remoteId,
+  );
+  PriceContract copyWithCompanion(PriceContractsCompanion data) {
+    return PriceContract(
+      id: data.id.present ? data.id.value : this.id,
+      internalName: data.internalName.present
+          ? data.internalName.value
+          : this.internalName,
+      displayName: data.displayName.present
+          ? data.displayName.value
+          : this.displayName,
+      pricePerKwh: data.pricePerKwh.present
+          ? data.pricePerKwh.value
+          : this.pricePerKwh,
+      monthlyBasePrice: data.monthlyBasePrice.present
+          ? data.monthlyBasePrice.value
+          : this.monthlyBasePrice,
+      validFrom: data.validFrom.present ? data.validFrom.value : this.validFrom,
+      brennwert: data.brennwert.present ? data.brennwert.value : this.brennwert,
+      zustandszahl: data.zustandszahl.present
+          ? data.zustandszahl.value
+          : this.zustandszahl,
+      isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PriceContract(')
+          ..write('id: $id, ')
+          ..write('internalName: $internalName, ')
+          ..write('displayName: $displayName, ')
+          ..write('pricePerKwh: $pricePerKwh, ')
+          ..write('monthlyBasePrice: $monthlyBasePrice, ')
+          ..write('validFrom: $validFrom, ')
+          ..write('brennwert: $brennwert, ')
+          ..write('zustandszahl: $zustandszahl, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('remoteId: $remoteId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    internalName,
+    displayName,
+    pricePerKwh,
+    monthlyBasePrice,
+    validFrom,
+    brennwert,
+    zustandszahl,
+    isSynced,
+    remoteId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PriceContract &&
+          other.id == this.id &&
+          other.internalName == this.internalName &&
+          other.displayName == this.displayName &&
+          other.pricePerKwh == this.pricePerKwh &&
+          other.monthlyBasePrice == this.monthlyBasePrice &&
+          other.validFrom == this.validFrom &&
+          other.brennwert == this.brennwert &&
+          other.zustandszahl == this.zustandszahl &&
+          other.isSynced == this.isSynced &&
+          other.remoteId == this.remoteId);
+}
+
+class PriceContractsCompanion extends UpdateCompanion<PriceContract> {
+  final Value<int> id;
+  final Value<String> internalName;
+  final Value<String> displayName;
+  final Value<double> pricePerKwh;
+  final Value<double> monthlyBasePrice;
+  final Value<int> validFrom;
+  final Value<double> brennwert;
+  final Value<double> zustandszahl;
+  final Value<bool> isSynced;
+  final Value<String?> remoteId;
+  const PriceContractsCompanion({
+    this.id = const Value.absent(),
+    this.internalName = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.pricePerKwh = const Value.absent(),
+    this.monthlyBasePrice = const Value.absent(),
+    this.validFrom = const Value.absent(),
+    this.brennwert = const Value.absent(),
+    this.zustandszahl = const Value.absent(),
+    this.isSynced = const Value.absent(),
+    this.remoteId = const Value.absent(),
+  });
+  PriceContractsCompanion.insert({
+    this.id = const Value.absent(),
+    required String internalName,
+    required String displayName,
+    required double pricePerKwh,
+    required double monthlyBasePrice,
+    required int validFrom,
+    this.brennwert = const Value.absent(),
+    this.zustandszahl = const Value.absent(),
+    this.isSynced = const Value.absent(),
+    this.remoteId = const Value.absent(),
+  }) : internalName = Value(internalName),
+       displayName = Value(displayName),
+       pricePerKwh = Value(pricePerKwh),
+       monthlyBasePrice = Value(monthlyBasePrice),
+       validFrom = Value(validFrom);
+  static Insertable<PriceContract> custom({
+    Expression<int>? id,
+    Expression<String>? internalName,
+    Expression<String>? displayName,
+    Expression<double>? pricePerKwh,
+    Expression<double>? monthlyBasePrice,
+    Expression<int>? validFrom,
+    Expression<double>? brennwert,
+    Expression<double>? zustandszahl,
+    Expression<bool>? isSynced,
+    Expression<String>? remoteId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (internalName != null) 'internal_name': internalName,
+      if (displayName != null) 'display_name': displayName,
+      if (pricePerKwh != null) 'price_per_kwh': pricePerKwh,
+      if (monthlyBasePrice != null) 'monthly_base_price': monthlyBasePrice,
+      if (validFrom != null) 'valid_from': validFrom,
+      if (brennwert != null) 'brennwert': brennwert,
+      if (zustandszahl != null) 'zustandszahl': zustandszahl,
+      if (isSynced != null) 'is_synced': isSynced,
+      if (remoteId != null) 'remote_id': remoteId,
+    });
+  }
+
+  PriceContractsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? internalName,
+    Value<String>? displayName,
+    Value<double>? pricePerKwh,
+    Value<double>? monthlyBasePrice,
+    Value<int>? validFrom,
+    Value<double>? brennwert,
+    Value<double>? zustandszahl,
+    Value<bool>? isSynced,
+    Value<String?>? remoteId,
+  }) {
+    return PriceContractsCompanion(
+      id: id ?? this.id,
+      internalName: internalName ?? this.internalName,
+      displayName: displayName ?? this.displayName,
+      pricePerKwh: pricePerKwh ?? this.pricePerKwh,
+      monthlyBasePrice: monthlyBasePrice ?? this.monthlyBasePrice,
+      validFrom: validFrom ?? this.validFrom,
+      brennwert: brennwert ?? this.brennwert,
+      zustandszahl: zustandszahl ?? this.zustandszahl,
+      isSynced: isSynced ?? this.isSynced,
+      remoteId: remoteId ?? this.remoteId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (internalName.present) {
+      map['internal_name'] = Variable<String>(internalName.value);
+    }
+    if (displayName.present) {
+      map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (pricePerKwh.present) {
+      map['price_per_kwh'] = Variable<double>(pricePerKwh.value);
+    }
+    if (monthlyBasePrice.present) {
+      map['monthly_base_price'] = Variable<double>(monthlyBasePrice.value);
+    }
+    if (validFrom.present) {
+      map['valid_from'] = Variable<int>(validFrom.value);
+    }
+    if (brennwert.present) {
+      map['brennwert'] = Variable<double>(brennwert.value);
+    }
+    if (zustandszahl.present) {
+      map['zustandszahl'] = Variable<double>(zustandszahl.value);
+    }
+    if (isSynced.present) {
+      map['is_synced'] = Variable<bool>(isSynced.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PriceContractsCompanion(')
+          ..write('id: $id, ')
+          ..write('internalName: $internalName, ')
+          ..write('displayName: $displayName, ')
+          ..write('pricePerKwh: $pricePerKwh, ')
+          ..write('monthlyBasePrice: $monthlyBasePrice, ')
+          ..write('validFrom: $validFrom, ')
+          ..write('brennwert: $brennwert, ')
+          ..write('zustandszahl: $zustandszahl, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('remoteId: $remoteId')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AppSettingsTable extends AppSettings
+    with TableInfo<$AppSettingsTable, AppSetting> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AppSettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _locationPlzMeta = const VerificationMeta(
+    'locationPlz',
+  );
+  @override
+  late final GeneratedColumn<String> locationPlz = GeneratedColumn<String>(
+    'location_plz',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _locationCityMeta = const VerificationMeta(
+    'locationCity',
+  );
+  @override
+  late final GeneratedColumn<String> locationCity = GeneratedColumn<String>(
+    'location_city',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _locationLatMeta = const VerificationMeta(
+    'locationLat',
+  );
+  @override
+  late final GeneratedColumn<double> locationLat = GeneratedColumn<double>(
+    'location_lat',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _locationLonMeta = const VerificationMeta(
+    'locationLon',
+  );
+  @override
+  late final GeneratedColumn<double> locationLon = GeneratedColumn<double>(
+    'location_lon',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _meterIntDigitsMeta = const VerificationMeta(
+    'meterIntDigits',
+  );
+  @override
+  late final GeneratedColumn<int> meterIntDigits = GeneratedColumn<int>(
+    'meter_int_digits',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    locationPlz,
+    locationCity,
+    locationLat,
+    locationLon,
+    meterIntDigits,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'app_settings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AppSetting> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('location_plz')) {
+      context.handle(
+        _locationPlzMeta,
+        locationPlz.isAcceptableOrUnknown(
+          data['location_plz']!,
+          _locationPlzMeta,
+        ),
+      );
+    }
+    if (data.containsKey('location_city')) {
+      context.handle(
+        _locationCityMeta,
+        locationCity.isAcceptableOrUnknown(
+          data['location_city']!,
+          _locationCityMeta,
+        ),
+      );
+    }
+    if (data.containsKey('location_lat')) {
+      context.handle(
+        _locationLatMeta,
+        locationLat.isAcceptableOrUnknown(
+          data['location_lat']!,
+          _locationLatMeta,
+        ),
+      );
+    }
+    if (data.containsKey('location_lon')) {
+      context.handle(
+        _locationLonMeta,
+        locationLon.isAcceptableOrUnknown(
+          data['location_lon']!,
+          _locationLonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('meter_int_digits')) {
+      context.handle(
+        _meterIntDigitsMeta,
+        meterIntDigits.isAcceptableOrUnknown(
+          data['meter_int_digits']!,
+          _meterIntDigitsMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AppSetting map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AppSetting(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      locationPlz: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}location_plz'],
+      ),
+      locationCity: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}location_city'],
+      ),
+      locationLat: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}location_lat'],
+      ),
+      locationLon: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}location_lon'],
+      ),
+      meterIntDigits: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}meter_int_digits'],
+      ),
+    );
+  }
+
+  @override
+  $AppSettingsTable createAlias(String alias) {
+    return $AppSettingsTable(attachedDatabase, alias);
+  }
+}
+
+class AppSetting extends DataClass implements Insertable<AppSetting> {
+  final int id;
+  final String? locationPlz;
+  final String? locationCity;
+  final double? locationLat;
+  final double? locationLon;
+  final int? meterIntDigits;
+  const AppSetting({
+    required this.id,
+    this.locationPlz,
+    this.locationCity,
+    this.locationLat,
+    this.locationLon,
+    this.meterIntDigits,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || locationPlz != null) {
+      map['location_plz'] = Variable<String>(locationPlz);
+    }
+    if (!nullToAbsent || locationCity != null) {
+      map['location_city'] = Variable<String>(locationCity);
+    }
+    if (!nullToAbsent || locationLat != null) {
+      map['location_lat'] = Variable<double>(locationLat);
+    }
+    if (!nullToAbsent || locationLon != null) {
+      map['location_lon'] = Variable<double>(locationLon);
+    }
+    if (!nullToAbsent || meterIntDigits != null) {
+      map['meter_int_digits'] = Variable<int>(meterIntDigits);
+    }
+    return map;
+  }
+
+  AppSettingsCompanion toCompanion(bool nullToAbsent) {
+    return AppSettingsCompanion(
+      id: Value(id),
+      locationPlz: locationPlz == null && nullToAbsent
+          ? const Value.absent()
+          : Value(locationPlz),
+      locationCity: locationCity == null && nullToAbsent
+          ? const Value.absent()
+          : Value(locationCity),
+      locationLat: locationLat == null && nullToAbsent
+          ? const Value.absent()
+          : Value(locationLat),
+      locationLon: locationLon == null && nullToAbsent
+          ? const Value.absent()
+          : Value(locationLon),
+      meterIntDigits: meterIntDigits == null && nullToAbsent
+          ? const Value.absent()
+          : Value(meterIntDigits),
+    );
+  }
+
+  factory AppSetting.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AppSetting(
+      id: serializer.fromJson<int>(json['id']),
+      locationPlz: serializer.fromJson<String?>(json['locationPlz']),
+      locationCity: serializer.fromJson<String?>(json['locationCity']),
+      locationLat: serializer.fromJson<double?>(json['locationLat']),
+      locationLon: serializer.fromJson<double?>(json['locationLon']),
+      meterIntDigits: serializer.fromJson<int?>(json['meterIntDigits']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'locationPlz': serializer.toJson<String?>(locationPlz),
+      'locationCity': serializer.toJson<String?>(locationCity),
+      'locationLat': serializer.toJson<double?>(locationLat),
+      'locationLon': serializer.toJson<double?>(locationLon),
+      'meterIntDigits': serializer.toJson<int?>(meterIntDigits),
+    };
+  }
+
+  AppSetting copyWith({
+    int? id,
+    Value<String?> locationPlz = const Value.absent(),
+    Value<String?> locationCity = const Value.absent(),
+    Value<double?> locationLat = const Value.absent(),
+    Value<double?> locationLon = const Value.absent(),
+    Value<int?> meterIntDigits = const Value.absent(),
+  }) => AppSetting(
+    id: id ?? this.id,
+    locationPlz: locationPlz.present ? locationPlz.value : this.locationPlz,
+    locationCity: locationCity.present ? locationCity.value : this.locationCity,
+    locationLat: locationLat.present ? locationLat.value : this.locationLat,
+    locationLon: locationLon.present ? locationLon.value : this.locationLon,
+    meterIntDigits: meterIntDigits.present
+        ? meterIntDigits.value
+        : this.meterIntDigits,
+  );
+  AppSetting copyWithCompanion(AppSettingsCompanion data) {
+    return AppSetting(
+      id: data.id.present ? data.id.value : this.id,
+      locationPlz: data.locationPlz.present
+          ? data.locationPlz.value
+          : this.locationPlz,
+      locationCity: data.locationCity.present
+          ? data.locationCity.value
+          : this.locationCity,
+      locationLat: data.locationLat.present
+          ? data.locationLat.value
+          : this.locationLat,
+      locationLon: data.locationLon.present
+          ? data.locationLon.value
+          : this.locationLon,
+      meterIntDigits: data.meterIntDigits.present
+          ? data.meterIntDigits.value
+          : this.meterIntDigits,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AppSetting(')
+          ..write('id: $id, ')
+          ..write('locationPlz: $locationPlz, ')
+          ..write('locationCity: $locationCity, ')
+          ..write('locationLat: $locationLat, ')
+          ..write('locationLon: $locationLon, ')
+          ..write('meterIntDigits: $meterIntDigits')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    locationPlz,
+    locationCity,
+    locationLat,
+    locationLon,
+    meterIntDigits,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AppSetting &&
+          other.id == this.id &&
+          other.locationPlz == this.locationPlz &&
+          other.locationCity == this.locationCity &&
+          other.locationLat == this.locationLat &&
+          other.locationLon == this.locationLon &&
+          other.meterIntDigits == this.meterIntDigits);
+}
+
+class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
+  final Value<int> id;
+  final Value<String?> locationPlz;
+  final Value<String?> locationCity;
+  final Value<double?> locationLat;
+  final Value<double?> locationLon;
+  final Value<int?> meterIntDigits;
+  const AppSettingsCompanion({
+    this.id = const Value.absent(),
+    this.locationPlz = const Value.absent(),
+    this.locationCity = const Value.absent(),
+    this.locationLat = const Value.absent(),
+    this.locationLon = const Value.absent(),
+    this.meterIntDigits = const Value.absent(),
+  });
+  AppSettingsCompanion.insert({
+    this.id = const Value.absent(),
+    this.locationPlz = const Value.absent(),
+    this.locationCity = const Value.absent(),
+    this.locationLat = const Value.absent(),
+    this.locationLon = const Value.absent(),
+    this.meterIntDigits = const Value.absent(),
+  });
+  static Insertable<AppSetting> custom({
+    Expression<int>? id,
+    Expression<String>? locationPlz,
+    Expression<String>? locationCity,
+    Expression<double>? locationLat,
+    Expression<double>? locationLon,
+    Expression<int>? meterIntDigits,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (locationPlz != null) 'location_plz': locationPlz,
+      if (locationCity != null) 'location_city': locationCity,
+      if (locationLat != null) 'location_lat': locationLat,
+      if (locationLon != null) 'location_lon': locationLon,
+      if (meterIntDigits != null) 'meter_int_digits': meterIntDigits,
+    });
+  }
+
+  AppSettingsCompanion copyWith({
+    Value<int>? id,
+    Value<String?>? locationPlz,
+    Value<String?>? locationCity,
+    Value<double?>? locationLat,
+    Value<double?>? locationLon,
+    Value<int?>? meterIntDigits,
+  }) {
+    return AppSettingsCompanion(
+      id: id ?? this.id,
+      locationPlz: locationPlz ?? this.locationPlz,
+      locationCity: locationCity ?? this.locationCity,
+      locationLat: locationLat ?? this.locationLat,
+      locationLon: locationLon ?? this.locationLon,
+      meterIntDigits: meterIntDigits ?? this.meterIntDigits,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (locationPlz.present) {
+      map['location_plz'] = Variable<String>(locationPlz.value);
+    }
+    if (locationCity.present) {
+      map['location_city'] = Variable<String>(locationCity.value);
+    }
+    if (locationLat.present) {
+      map['location_lat'] = Variable<double>(locationLat.value);
+    }
+    if (locationLon.present) {
+      map['location_lon'] = Variable<double>(locationLon.value);
+    }
+    if (meterIntDigits.present) {
+      map['meter_int_digits'] = Variable<int>(meterIntDigits.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AppSettingsCompanion(')
+          ..write('id: $id, ')
+          ..write('locationPlz: $locationPlz, ')
+          ..write('locationCity: $locationCity, ')
+          ..write('locationLat: $locationLat, ')
+          ..write('locationLon: $locationLon, ')
+          ..write('meterIntDigits: $meterIntDigits')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $WeatherCachesTable extends WeatherCaches
+    with TableInfo<$WeatherCachesTable, WeatherCache> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WeatherCachesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _latMeta = const VerificationMeta('lat');
+  @override
+  late final GeneratedColumn<double> lat = GeneratedColumn<double>(
+    'lat',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lonMeta = const VerificationMeta('lon');
+  @override
+  late final GeneratedColumn<double> lon = GeneratedColumn<double>(
+    'lon',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tempMeanMeta = const VerificationMeta(
+    'tempMean',
+  );
+  @override
+  late final GeneratedColumn<double> tempMean = GeneratedColumn<double>(
+    'temp_mean',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, date, lat, lon, tempMean];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'weather_caches';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WeatherCache> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('lat')) {
+      context.handle(
+        _latMeta,
+        lat.isAcceptableOrUnknown(data['lat']!, _latMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_latMeta);
+    }
+    if (data.containsKey('lon')) {
+      context.handle(
+        _lonMeta,
+        lon.isAcceptableOrUnknown(data['lon']!, _lonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lonMeta);
+    }
+    if (data.containsKey('temp_mean')) {
+      context.handle(
+        _tempMeanMeta,
+        tempMean.isAcceptableOrUnknown(data['temp_mean']!, _tempMeanMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tempMeanMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  WeatherCache map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WeatherCache(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}date'],
+      )!,
+      lat: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}lat'],
+      )!,
+      lon: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}lon'],
+      )!,
+      tempMean: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}temp_mean'],
+      )!,
+    );
+  }
+
+  @override
+  $WeatherCachesTable createAlias(String alias) {
+    return $WeatherCachesTable(attachedDatabase, alias);
+  }
+}
+
+class WeatherCache extends DataClass implements Insertable<WeatherCache> {
+  final int id;
+  final String date;
+  final double lat;
+  final double lon;
+  final double tempMean;
+  const WeatherCache({
+    required this.id,
+    required this.date,
+    required this.lat,
+    required this.lon,
+    required this.tempMean,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['date'] = Variable<String>(date);
+    map['lat'] = Variable<double>(lat);
+    map['lon'] = Variable<double>(lon);
+    map['temp_mean'] = Variable<double>(tempMean);
+    return map;
+  }
+
+  WeatherCachesCompanion toCompanion(bool nullToAbsent) {
+    return WeatherCachesCompanion(
+      id: Value(id),
+      date: Value(date),
+      lat: Value(lat),
+      lon: Value(lon),
+      tempMean: Value(tempMean),
+    );
+  }
+
+  factory WeatherCache.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WeatherCache(
+      id: serializer.fromJson<int>(json['id']),
+      date: serializer.fromJson<String>(json['date']),
+      lat: serializer.fromJson<double>(json['lat']),
+      lon: serializer.fromJson<double>(json['lon']),
+      tempMean: serializer.fromJson<double>(json['tempMean']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'date': serializer.toJson<String>(date),
+      'lat': serializer.toJson<double>(lat),
+      'lon': serializer.toJson<double>(lon),
+      'tempMean': serializer.toJson<double>(tempMean),
+    };
+  }
+
+  WeatherCache copyWith({
+    int? id,
+    String? date,
+    double? lat,
+    double? lon,
+    double? tempMean,
+  }) => WeatherCache(
+    id: id ?? this.id,
+    date: date ?? this.date,
+    lat: lat ?? this.lat,
+    lon: lon ?? this.lon,
+    tempMean: tempMean ?? this.tempMean,
+  );
+  WeatherCache copyWithCompanion(WeatherCachesCompanion data) {
+    return WeatherCache(
+      id: data.id.present ? data.id.value : this.id,
+      date: data.date.present ? data.date.value : this.date,
+      lat: data.lat.present ? data.lat.value : this.lat,
+      lon: data.lon.present ? data.lon.value : this.lon,
+      tempMean: data.tempMean.present ? data.tempMean.value : this.tempMean,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WeatherCache(')
+          ..write('id: $id, ')
+          ..write('date: $date, ')
+          ..write('lat: $lat, ')
+          ..write('lon: $lon, ')
+          ..write('tempMean: $tempMean')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, date, lat, lon, tempMean);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WeatherCache &&
+          other.id == this.id &&
+          other.date == this.date &&
+          other.lat == this.lat &&
+          other.lon == this.lon &&
+          other.tempMean == this.tempMean);
+}
+
+class WeatherCachesCompanion extends UpdateCompanion<WeatherCache> {
+  final Value<int> id;
+  final Value<String> date;
+  final Value<double> lat;
+  final Value<double> lon;
+  final Value<double> tempMean;
+  const WeatherCachesCompanion({
+    this.id = const Value.absent(),
+    this.date = const Value.absent(),
+    this.lat = const Value.absent(),
+    this.lon = const Value.absent(),
+    this.tempMean = const Value.absent(),
+  });
+  WeatherCachesCompanion.insert({
+    this.id = const Value.absent(),
+    required String date,
+    required double lat,
+    required double lon,
+    required double tempMean,
+  }) : date = Value(date),
+       lat = Value(lat),
+       lon = Value(lon),
+       tempMean = Value(tempMean);
+  static Insertable<WeatherCache> custom({
+    Expression<int>? id,
+    Expression<String>? date,
+    Expression<double>? lat,
+    Expression<double>? lon,
+    Expression<double>? tempMean,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (date != null) 'date': date,
+      if (lat != null) 'lat': lat,
+      if (lon != null) 'lon': lon,
+      if (tempMean != null) 'temp_mean': tempMean,
+    });
+  }
+
+  WeatherCachesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? date,
+    Value<double>? lat,
+    Value<double>? lon,
+    Value<double>? tempMean,
+  }) {
+    return WeatherCachesCompanion(
+      id: id ?? this.id,
+      date: date ?? this.date,
+      lat: lat ?? this.lat,
+      lon: lon ?? this.lon,
+      tempMean: tempMean ?? this.tempMean,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
+    if (lat.present) {
+      map['lat'] = Variable<double>(lat.value);
+    }
+    if (lon.present) {
+      map['lon'] = Variable<double>(lon.value);
+    }
+    if (tempMean.present) {
+      map['temp_mean'] = Variable<double>(tempMean.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WeatherCachesCompanion(')
+          ..write('id: $id, ')
+          ..write('date: $date, ')
+          ..write('lat: $lat, ')
+          ..write('lon: $lon, ')
+          ..write('tempMean: $tempMean')
+          ..write(')'))
+        .toString();
+  }
+}
+
+abstract class _$AppDatabase extends GeneratedDatabase {
+  _$AppDatabase(QueryExecutor e) : super(e);
+  $AppDatabaseManager get managers => $AppDatabaseManager(this);
+  late final $MeterReadingsTable meterReadings = $MeterReadingsTable(this);
+  late final $PriceContractsTable priceContracts = $PriceContractsTable(this);
+  late final $AppSettingsTable appSettings = $AppSettingsTable(this);
+  late final $WeatherCachesTable weatherCaches = $WeatherCachesTable(this);
+  late final ReadingsDao readingsDao = ReadingsDao(this as AppDatabase);
+  late final ContractsDao contractsDao = ContractsDao(this as AppDatabase);
+  late final SettingsDao settingsDao = SettingsDao(this as AppDatabase);
+  late final WeatherDao weatherDao = WeatherDao(this as AppDatabase);
+  @override
+  Iterable<TableInfo<Table, Object?>> get allTables =>
+      allSchemaEntities.whereType<TableInfo<Table, Object?>>();
+  @override
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    meterReadings,
+    priceContracts,
+    appSettings,
+    weatherCaches,
+  ];
+}
+
+typedef $$MeterReadingsTableCreateCompanionBuilder =
+    MeterReadingsCompanion Function({
+      Value<int> id,
+      required double value,
+      required DateTime timestamp,
+      Value<String?> note,
+      Value<String?> imagePath,
+      Value<bool> isSynced,
+      Value<String?> remoteId,
+    });
+typedef $$MeterReadingsTableUpdateCompanionBuilder =
+    MeterReadingsCompanion Function({
+      Value<int> id,
+      Value<double> value,
+      Value<DateTime> timestamp,
+      Value<String?> note,
+      Value<String?> imagePath,
+      Value<bool> isSynced,
+      Value<String?> remoteId,
+    });
+
+class $$MeterReadingsTableFilterComposer
+    extends Composer<_$AppDatabase, $MeterReadingsTable> {
+  $$MeterReadingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get imagePath => $composableBuilder(
+    column: $table.imagePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MeterReadingsTableOrderingComposer
+    extends Composer<_$AppDatabase, $MeterReadingsTable> {
+  $$MeterReadingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get imagePath => $composableBuilder(
+    column: $table.imagePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MeterReadingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MeterReadingsTable> {
+  $$MeterReadingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<double> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get timestamp =>
+      $composableBuilder(column: $table.timestamp, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get imagePath =>
+      $composableBuilder(column: $table.imagePath, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSynced =>
+      $composableBuilder(column: $table.isSynced, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+}
+
+class $$MeterReadingsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MeterReadingsTable,
+          MeterReading,
+          $$MeterReadingsTableFilterComposer,
+          $$MeterReadingsTableOrderingComposer,
+          $$MeterReadingsTableAnnotationComposer,
+          $$MeterReadingsTableCreateCompanionBuilder,
+          $$MeterReadingsTableUpdateCompanionBuilder,
+          (
+            MeterReading,
+            BaseReferences<_$AppDatabase, $MeterReadingsTable, MeterReading>,
+          ),
+          MeterReading,
+          PrefetchHooks Function()
+        > {
+  $$MeterReadingsTableTableManager(_$AppDatabase db, $MeterReadingsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MeterReadingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MeterReadingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MeterReadingsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<double> value = const Value.absent(),
+                Value<DateTime> timestamp = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<String?> imagePath = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+              }) => MeterReadingsCompanion(
+                id: id,
+                value: value,
+                timestamp: timestamp,
+                note: note,
+                imagePath: imagePath,
+                isSynced: isSynced,
+                remoteId: remoteId,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required double value,
+                required DateTime timestamp,
+                Value<String?> note = const Value.absent(),
+                Value<String?> imagePath = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+              }) => MeterReadingsCompanion.insert(
+                id: id,
+                value: value,
+                timestamp: timestamp,
+                note: note,
+                imagePath: imagePath,
+                isSynced: isSynced,
+                remoteId: remoteId,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MeterReadingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MeterReadingsTable,
+      MeterReading,
+      $$MeterReadingsTableFilterComposer,
+      $$MeterReadingsTableOrderingComposer,
+      $$MeterReadingsTableAnnotationComposer,
+      $$MeterReadingsTableCreateCompanionBuilder,
+      $$MeterReadingsTableUpdateCompanionBuilder,
+      (
+        MeterReading,
+        BaseReferences<_$AppDatabase, $MeterReadingsTable, MeterReading>,
+      ),
+      MeterReading,
+      PrefetchHooks Function()
+    >;
+typedef $$PriceContractsTableCreateCompanionBuilder =
+    PriceContractsCompanion Function({
+      Value<int> id,
+      required String internalName,
+      required String displayName,
+      required double pricePerKwh,
+      required double monthlyBasePrice,
+      required int validFrom,
+      Value<double> brennwert,
+      Value<double> zustandszahl,
+      Value<bool> isSynced,
+      Value<String?> remoteId,
+    });
+typedef $$PriceContractsTableUpdateCompanionBuilder =
+    PriceContractsCompanion Function({
+      Value<int> id,
+      Value<String> internalName,
+      Value<String> displayName,
+      Value<double> pricePerKwh,
+      Value<double> monthlyBasePrice,
+      Value<int> validFrom,
+      Value<double> brennwert,
+      Value<double> zustandszahl,
+      Value<bool> isSynced,
+      Value<String?> remoteId,
+    });
+
+class $$PriceContractsTableFilterComposer
+    extends Composer<_$AppDatabase, $PriceContractsTable> {
+  $$PriceContractsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get internalName => $composableBuilder(
+    column: $table.internalName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pricePerKwh => $composableBuilder(
+    column: $table.pricePerKwh,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get monthlyBasePrice => $composableBuilder(
+    column: $table.monthlyBasePrice,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get validFrom => $composableBuilder(
+    column: $table.validFrom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get brennwert => $composableBuilder(
+    column: $table.brennwert,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get zustandszahl => $composableBuilder(
+    column: $table.zustandszahl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PriceContractsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PriceContractsTable> {
+  $$PriceContractsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get internalName => $composableBuilder(
+    column: $table.internalName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get pricePerKwh => $composableBuilder(
+    column: $table.pricePerKwh,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get monthlyBasePrice => $composableBuilder(
+    column: $table.monthlyBasePrice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get validFrom => $composableBuilder(
+    column: $table.validFrom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get brennwert => $composableBuilder(
+    column: $table.brennwert,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get zustandszahl => $composableBuilder(
+    column: $table.zustandszahl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PriceContractsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PriceContractsTable> {
+  $$PriceContractsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get internalName => $composableBuilder(
+    column: $table.internalName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get pricePerKwh => $composableBuilder(
+    column: $table.pricePerKwh,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get monthlyBasePrice => $composableBuilder(
+    column: $table.monthlyBasePrice,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get validFrom =>
+      $composableBuilder(column: $table.validFrom, builder: (column) => column);
+
+  GeneratedColumn<double> get brennwert =>
+      $composableBuilder(column: $table.brennwert, builder: (column) => column);
+
+  GeneratedColumn<double> get zustandszahl => $composableBuilder(
+    column: $table.zustandszahl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isSynced =>
+      $composableBuilder(column: $table.isSynced, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+}
+
+class $$PriceContractsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PriceContractsTable,
+          PriceContract,
+          $$PriceContractsTableFilterComposer,
+          $$PriceContractsTableOrderingComposer,
+          $$PriceContractsTableAnnotationComposer,
+          $$PriceContractsTableCreateCompanionBuilder,
+          $$PriceContractsTableUpdateCompanionBuilder,
+          (
+            PriceContract,
+            BaseReferences<_$AppDatabase, $PriceContractsTable, PriceContract>,
+          ),
+          PriceContract,
+          PrefetchHooks Function()
+        > {
+  $$PriceContractsTableTableManager(
+    _$AppDatabase db,
+    $PriceContractsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PriceContractsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PriceContractsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PriceContractsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> internalName = const Value.absent(),
+                Value<String> displayName = const Value.absent(),
+                Value<double> pricePerKwh = const Value.absent(),
+                Value<double> monthlyBasePrice = const Value.absent(),
+                Value<int> validFrom = const Value.absent(),
+                Value<double> brennwert = const Value.absent(),
+                Value<double> zustandszahl = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+              }) => PriceContractsCompanion(
+                id: id,
+                internalName: internalName,
+                displayName: displayName,
+                pricePerKwh: pricePerKwh,
+                monthlyBasePrice: monthlyBasePrice,
+                validFrom: validFrom,
+                brennwert: brennwert,
+                zustandszahl: zustandszahl,
+                isSynced: isSynced,
+                remoteId: remoteId,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String internalName,
+                required String displayName,
+                required double pricePerKwh,
+                required double monthlyBasePrice,
+                required int validFrom,
+                Value<double> brennwert = const Value.absent(),
+                Value<double> zustandszahl = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+              }) => PriceContractsCompanion.insert(
+                id: id,
+                internalName: internalName,
+                displayName: displayName,
+                pricePerKwh: pricePerKwh,
+                monthlyBasePrice: monthlyBasePrice,
+                validFrom: validFrom,
+                brennwert: brennwert,
+                zustandszahl: zustandszahl,
+                isSynced: isSynced,
+                remoteId: remoteId,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PriceContractsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PriceContractsTable,
+      PriceContract,
+      $$PriceContractsTableFilterComposer,
+      $$PriceContractsTableOrderingComposer,
+      $$PriceContractsTableAnnotationComposer,
+      $$PriceContractsTableCreateCompanionBuilder,
+      $$PriceContractsTableUpdateCompanionBuilder,
+      (
+        PriceContract,
+        BaseReferences<_$AppDatabase, $PriceContractsTable, PriceContract>,
+      ),
+      PriceContract,
+      PrefetchHooks Function()
+    >;
+typedef $$AppSettingsTableCreateCompanionBuilder =
+    AppSettingsCompanion Function({
+      Value<int> id,
+      Value<String?> locationPlz,
+      Value<String?> locationCity,
+      Value<double?> locationLat,
+      Value<double?> locationLon,
+      Value<int?> meterIntDigits,
+    });
+typedef $$AppSettingsTableUpdateCompanionBuilder =
+    AppSettingsCompanion Function({
+      Value<int> id,
+      Value<String?> locationPlz,
+      Value<String?> locationCity,
+      Value<double?> locationLat,
+      Value<double?> locationLon,
+      Value<int?> meterIntDigits,
+    });
+
+class $$AppSettingsTableFilterComposer
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get locationPlz => $composableBuilder(
+    column: $table.locationPlz,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get locationCity => $composableBuilder(
+    column: $table.locationCity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get locationLat => $composableBuilder(
+    column: $table.locationLat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get locationLon => $composableBuilder(
+    column: $table.locationLon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get meterIntDigits => $composableBuilder(
+    column: $table.meterIntDigits,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AppSettingsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get locationPlz => $composableBuilder(
+    column: $table.locationPlz,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get locationCity => $composableBuilder(
+    column: $table.locationCity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get locationLat => $composableBuilder(
+    column: $table.locationLat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get locationLon => $composableBuilder(
+    column: $table.locationLon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get meterIntDigits => $composableBuilder(
+    column: $table.meterIntDigits,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AppSettingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AppSettingsTable> {
+  $$AppSettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get locationPlz => $composableBuilder(
+    column: $table.locationPlz,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get locationCity => $composableBuilder(
+    column: $table.locationCity,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get locationLat => $composableBuilder(
+    column: $table.locationLat,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get locationLon => $composableBuilder(
+    column: $table.locationLon,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get meterIntDigits => $composableBuilder(
+    column: $table.meterIntDigits,
+    builder: (column) => column,
+  );
+}
+
+class $$AppSettingsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AppSettingsTable,
+          AppSetting,
+          $$AppSettingsTableFilterComposer,
+          $$AppSettingsTableOrderingComposer,
+          $$AppSettingsTableAnnotationComposer,
+          $$AppSettingsTableCreateCompanionBuilder,
+          $$AppSettingsTableUpdateCompanionBuilder,
+          (
+            AppSetting,
+            BaseReferences<_$AppDatabase, $AppSettingsTable, AppSetting>,
+          ),
+          AppSetting,
+          PrefetchHooks Function()
+        > {
+  $$AppSettingsTableTableManager(_$AppDatabase db, $AppSettingsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AppSettingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AppSettingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AppSettingsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String?> locationPlz = const Value.absent(),
+                Value<String?> locationCity = const Value.absent(),
+                Value<double?> locationLat = const Value.absent(),
+                Value<double?> locationLon = const Value.absent(),
+                Value<int?> meterIntDigits = const Value.absent(),
+              }) => AppSettingsCompanion(
+                id: id,
+                locationPlz: locationPlz,
+                locationCity: locationCity,
+                locationLat: locationLat,
+                locationLon: locationLon,
+                meterIntDigits: meterIntDigits,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String?> locationPlz = const Value.absent(),
+                Value<String?> locationCity = const Value.absent(),
+                Value<double?> locationLat = const Value.absent(),
+                Value<double?> locationLon = const Value.absent(),
+                Value<int?> meterIntDigits = const Value.absent(),
+              }) => AppSettingsCompanion.insert(
+                id: id,
+                locationPlz: locationPlz,
+                locationCity: locationCity,
+                locationLat: locationLat,
+                locationLon: locationLon,
+                meterIntDigits: meterIntDigits,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AppSettingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AppSettingsTable,
+      AppSetting,
+      $$AppSettingsTableFilterComposer,
+      $$AppSettingsTableOrderingComposer,
+      $$AppSettingsTableAnnotationComposer,
+      $$AppSettingsTableCreateCompanionBuilder,
+      $$AppSettingsTableUpdateCompanionBuilder,
+      (
+        AppSetting,
+        BaseReferences<_$AppDatabase, $AppSettingsTable, AppSetting>,
+      ),
+      AppSetting,
+      PrefetchHooks Function()
+    >;
+typedef $$WeatherCachesTableCreateCompanionBuilder =
+    WeatherCachesCompanion Function({
+      Value<int> id,
+      required String date,
+      required double lat,
+      required double lon,
+      required double tempMean,
+    });
+typedef $$WeatherCachesTableUpdateCompanionBuilder =
+    WeatherCachesCompanion Function({
+      Value<int> id,
+      Value<String> date,
+      Value<double> lat,
+      Value<double> lon,
+      Value<double> tempMean,
+    });
+
+class $$WeatherCachesTableFilterComposer
+    extends Composer<_$AppDatabase, $WeatherCachesTable> {
+  $$WeatherCachesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lat => $composableBuilder(
+    column: $table.lat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lon => $composableBuilder(
+    column: $table.lon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get tempMean => $composableBuilder(
+    column: $table.tempMean,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$WeatherCachesTableOrderingComposer
+    extends Composer<_$AppDatabase, $WeatherCachesTable> {
+  $$WeatherCachesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lat => $composableBuilder(
+    column: $table.lat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lon => $composableBuilder(
+    column: $table.lon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get tempMean => $composableBuilder(
+    column: $table.tempMean,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$WeatherCachesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $WeatherCachesTable> {
+  $$WeatherCachesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<double> get lat =>
+      $composableBuilder(column: $table.lat, builder: (column) => column);
+
+  GeneratedColumn<double> get lon =>
+      $composableBuilder(column: $table.lon, builder: (column) => column);
+
+  GeneratedColumn<double> get tempMean =>
+      $composableBuilder(column: $table.tempMean, builder: (column) => column);
+}
+
+class $$WeatherCachesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $WeatherCachesTable,
+          WeatherCache,
+          $$WeatherCachesTableFilterComposer,
+          $$WeatherCachesTableOrderingComposer,
+          $$WeatherCachesTableAnnotationComposer,
+          $$WeatherCachesTableCreateCompanionBuilder,
+          $$WeatherCachesTableUpdateCompanionBuilder,
+          (
+            WeatherCache,
+            BaseReferences<_$AppDatabase, $WeatherCachesTable, WeatherCache>,
+          ),
+          WeatherCache,
+          PrefetchHooks Function()
+        > {
+  $$WeatherCachesTableTableManager(_$AppDatabase db, $WeatherCachesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WeatherCachesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WeatherCachesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WeatherCachesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> date = const Value.absent(),
+                Value<double> lat = const Value.absent(),
+                Value<double> lon = const Value.absent(),
+                Value<double> tempMean = const Value.absent(),
+              }) => WeatherCachesCompanion(
+                id: id,
+                date: date,
+                lat: lat,
+                lon: lon,
+                tempMean: tempMean,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String date,
+                required double lat,
+                required double lon,
+                required double tempMean,
+              }) => WeatherCachesCompanion.insert(
+                id: id,
+                date: date,
+                lat: lat,
+                lon: lon,
+                tempMean: tempMean,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$WeatherCachesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $WeatherCachesTable,
+      WeatherCache,
+      $$WeatherCachesTableFilterComposer,
+      $$WeatherCachesTableOrderingComposer,
+      $$WeatherCachesTableAnnotationComposer,
+      $$WeatherCachesTableCreateCompanionBuilder,
+      $$WeatherCachesTableUpdateCompanionBuilder,
+      (
+        WeatherCache,
+        BaseReferences<_$AppDatabase, $WeatherCachesTable, WeatherCache>,
+      ),
+      WeatherCache,
+      PrefetchHooks Function()
+    >;
+
+class $AppDatabaseManager {
+  final _$AppDatabase _db;
+  $AppDatabaseManager(this._db);
+  $$MeterReadingsTableTableManager get meterReadings =>
+      $$MeterReadingsTableTableManager(_db, _db.meterReadings);
+  $$PriceContractsTableTableManager get priceContracts =>
+      $$PriceContractsTableTableManager(_db, _db.priceContracts);
+  $$AppSettingsTableTableManager get appSettings =>
+      $$AppSettingsTableTableManager(_db, _db.appSettings);
+  $$WeatherCachesTableTableManager get weatherCaches =>
+      $$WeatherCachesTableTableManager(_db, _db.weatherCaches);
+}

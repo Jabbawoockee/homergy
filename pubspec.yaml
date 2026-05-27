@@ -1,0 +1,53 @@
+name: gas_track
+description: "Homergy — Gaszähler ablesen, Verbrauch & Kosten verfolgen"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # Kamera & Bildauswahl
+  image_picker: ^1.1.2
+
+  # On-device OCR
+  google_mlkit_text_recognition: ^0.13.1
+
+  # Lokale Datenbank
+  drift: ^2.22.1
+  sqlite3_flutter_libs: ^0.5.25
+  path_provider: ^2.1.5
+  path: ^1.9.0
+
+  # Charts
+  fl_chart: ^0.69.0
+
+  # Datum & Formatierung
+  intl: ^0.20.2
+
+  # Shared Preferences (für Einstellungen wie Gaspreis)
+  shared_preferences: ^2.3.3
+
+  # Google Fonts
+  google_fonts: ^6.2.1
+
+  # HTTP für Open-Meteo Wetterdaten
+  http: ^1.2.2
+
+  # Supabase (Cloud-Sync & Auth)
+  supabase_flutter: ^2.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  drift_dev: ^2.22.1
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true

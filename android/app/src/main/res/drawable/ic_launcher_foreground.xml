@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="56"
+    android:viewportHeight="56">
+    <!-- Viewport 56×56, flame path in 24×24 space, translated to center -->
+    <group
+        android:translateX="16"
+        android:translateY="16">
+        <!-- Outer flame — amber -->
+        <path
+            android:fillColor="#F59E0B"
+            android:pathData="M12,2C12,2 5,9 5,15C5,18.87 8.13,22 12,22C15.87,22 19,18.87 19,15C19,9 12,2 12,2Z"/>
+        <!-- Inner hot-spot — warm white -->
+        <path
+            android:fillColor="#FFF3CD"
+            android:pathData="M12,9C12,9 9.5,13 9.5,15.5C9.5,16.88 10.62,18 12,18C13.38,18 14.5,16.88 14.5,15.5C14.5,13 12,9 12,9Z"/>
+    </group>
+</vector>
