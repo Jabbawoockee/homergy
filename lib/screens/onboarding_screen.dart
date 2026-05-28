@@ -29,6 +29,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _loginEmailController = TextEditingController();
   bool _isSendingLink = false;
   bool _linkSent = false;
+  bool _isSyncing = false;
   StreamSubscription<AuthState>? _authSub;
 
   // New-user flow
@@ -70,7 +71,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // ---------------------------------------------------------------------------
 
   Future<void> _finishWithLogin() async {
-    SyncService().syncAll();
+    if (mounted) setState(() => _isSyncing = true);
+    await SyncService().syncAll(); // await so data is ready before navigation
     await _settingsService.setOnboardingDone();
     if (mounted) Navigator.of(context).pushReplacementNamed('/main');
   }
@@ -455,7 +457,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               onTap: _isSendingLink ? null : _sendMagicLink,
             ),
           ] else ...[
-            // Link sent — waiting state
+            // Link sent — waiting / syncing state
             const Spacer(),
             Center(
               child: Container(
@@ -466,13 +468,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   shape: BoxShape.circle,
                   boxShadow: AppColors.neu(10),
                 ),
-                child: const Icon(Icons.mark_email_read_outlined,
-                    color: AppColors.green, size: 36),
+                child: _isSyncing
+                    ? const Padding(
+                        padding: EdgeInsets.all(22),
+                        child: CircularProgressIndicator(
+                          color: AppColors.green,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const Icon(Icons.mark_email_read_outlined,
+                        color: AppColors.green, size: 36),
               ),
             ),
             const SizedBox(height: 28),
             Text(
-              'E-Mail gesendet!',
+              _isSyncing ? 'Daten werden geladen …' : 'E-Mail gesendet!',
               textAlign: TextAlign.center,
               style: GoogleFonts.spaceMono(
                 fontSize: 18,
@@ -483,7 +493,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Wir haben einen Anmeldelink an\n${_loginEmailController.text.trim()}\ngesendet.',
+              _isSyncing
+                  ? 'Deine Daten werden aus der Cloud synchronisiert.\nEinen Moment …'
+                  : 'Wir haben einen Anmeldelink an\n${_loginEmailController.text.trim()}\ngesendet.',
               textAlign: TextAlign.center,
               style: GoogleFonts.rajdhani(
                 fontSize: 15,
@@ -492,6 +504,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
             const SizedBox(height: 20),
+            if (!_isSyncing)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(

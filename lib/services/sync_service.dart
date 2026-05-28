@@ -110,40 +110,48 @@ class SyncService {
   Future<void> _syncSettings(String userId) async {
     try {
       final local = await _db.getSettings();
-      final hasLocalData = local != null &&
-        (local.locationPlz?.isNotEmpty == true ||
-            local.meterIntDigits != null);
-    if (hasLocalData) {
-        // Push local settings → Supabase (upsert by user_id)
-        await _client.from(_settingsTable).upsert({
-          'user_id': userId,
-          'location_plz': local!.locationPlz,
-          'location_city': local.locationCity,
-          'location_lat': local.locationLat,
-          'location_lon': local.locationLon,
-          'meter_int_digits': local.meterIntDigits,
-          'updated_at': DateTime.now().toUtc().toIso8601String(),
-        }, onConflict: 'user_id');
-        debugPrint('[Sync] Settings pushed');
-      } else {
-        // No local settings → pull from Supabase (new device)
-        final remote = await _client
-            .from(_settingsTable)
-            .select()
-            .eq('user_id', userId)
-            .maybeSingle();
-        if (remote != null) {
+
+      // Always fetch remote first — needed for new-device login.
+      final remote = await _client
+          .from(_settingsTable)
+          .select()
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      // Pull location from remote if local has none.
+      final localHasLocation = local?.locationPlz?.isNotEmpty == true;
+      if (!localHasLocation && remote != null) {
+        final remotePlz = remote['location_plz'] as String? ?? '';
+        if (remotePlz.isNotEmpty) {
           await _db.saveLocation(
-            plz: remote['location_plz'] as String? ?? '',
+            plz: remotePlz,
             city: remote['location_city'] as String? ?? '',
             lat: (remote['location_lat'] as num?)?.toDouble(),
             lon: (remote['location_lon'] as num?)?.toDouble(),
           );
-          if (remote['meter_int_digits'] != null) {
-            await _db.saveMeterIntDigits(remote['meter_int_digits'] as int);
-          }
-          debugPrint('[Sync] Settings pulled from remote');
+          debugPrint('[Sync] Settings location pulled from remote');
         }
+      }
+
+      // Pull meterIntDigits from remote if not set locally.
+      if (local?.meterIntDigits == null && remote?['meter_int_digits'] != null) {
+        await _db.saveMeterIntDigits(remote!['meter_int_digits'] as int);
+        debugPrint('[Sync] Settings meterIntDigits pulled from remote');
+      }
+
+      // Push merged local state to remote.
+      final merged = await _db.getSettings();
+      if (merged != null) {
+        await _client.from(_settingsTable).upsert({
+          'user_id': userId,
+          'location_plz': merged.locationPlz,
+          'location_city': merged.locationCity,
+          'location_lat': merged.locationLat,
+          'location_lon': merged.locationLon,
+          'meter_int_digits': merged.meterIntDigits,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        }, onConflict: 'user_id');
+        debugPrint('[Sync] Settings pushed');
       }
     } catch (e) {
       debugPrint('[Sync] Settings sync failed: $e');

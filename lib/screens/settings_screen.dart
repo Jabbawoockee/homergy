@@ -52,10 +52,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (data.event == AuthChangeEvent.userUpdated) _linkSent = false;
         });
         // Only sync when a real (non-anonymous) account is active.
+        // Reload UI data after sync so location + contracts appear immediately.
         if ((data.event == AuthChangeEvent.userUpdated ||
                 data.event == AuthChangeEvent.signedIn) &&
             !SupabaseService.isAnonymous) {
-          SyncService().syncAll();
+          SyncService().syncAll().then((_) {
+            if (mounted) {
+              _loadPrice();
+              _loadLocation();
+              _loadMeterType();
+            }
+          });
         }
       }
     });
@@ -571,7 +578,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onSignOut: _signOut,
                 onSyncNow: () async {
                   await SyncService().syncAll();
-                  _showSnack('Synchronisierung abgeschlossen.');
+                  if (mounted) {
+                    _loadPrice();
+                    _loadLocation();
+                    _loadMeterType();
+                    _showSnack('Synchronisierung abgeschlossen.');
+                  }
                 },
               ),
 
