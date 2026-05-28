@@ -292,10 +292,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _signOut() async {
     await SupabaseService.signOut();
-    await SupabaseService.ensureSignedIn();
+    await AppDatabase.instance.clearAllUserData();
+    await _settingsService.resetOnboarding();
     if (mounted) {
-      setState(() => _linkSent = false);
-      _showSnack('Abgemeldet. Neues anonymes Konto erstellt.');
+      Navigator.of(context).pushNamedAndRemoveUntil('/onboarding', (_) => false);
     }
   }
 
@@ -576,15 +576,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 emailController: _emailController,
                 onSendLink: _sendAccountLink,
                 onSignOut: _signOut,
-                onSyncNow: () async {
-                  await SyncService().syncAll();
-                  if (mounted) {
-                    _loadPrice();
-                    _loadLocation();
-                    _loadMeterType();
-                    _showSnack('Synchronisierung abgeschlossen.');
-                  }
-                },
               ),
 
               const SizedBox(height: 32),
@@ -1074,7 +1065,6 @@ class _AccountSection extends StatelessWidget {
   final TextEditingController emailController;
   final VoidCallback onSendLink;
   final VoidCallback onSignOut;
-  final VoidCallback onSyncNow;
 
   const _AccountSection({
     required this.isSendingLink,
@@ -1082,7 +1072,6 @@ class _AccountSection extends StatelessWidget {
     required this.emailController,
     required this.onSendLink,
     required this.onSignOut,
-    required this.onSyncNow,
   });
 
   @override
@@ -1231,70 +1220,35 @@ class _AccountSection extends StatelessWidget {
             ),
           ],
 
-          const SizedBox(height: 12),
-
-          Row(
-            children: [
-              GestureDetector(
-                onTap: onSyncNow,
-                child: Container(
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: AppColors.neu(3),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.sync_rounded,
-                          size: 14, color: AppColors.textSecondary),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Jetzt sync.',
-                        style: GoogleFonts.rajdhani(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
+          if (!isAnon) ...[
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: onSignOut,
+              child: Container(
+                height: 36,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.logout_rounded, size: 14, color: AppColors.error),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Abmelden',
+                      style: GoogleFonts.rajdhani(
+                        fontSize: 13,
+                        color: AppColors.error,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              if (!isAnon) ...[
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: onSignOut,
-                  child: Container(
-                    height: 36,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.logout_rounded,
-                            size: 14, color: AppColors.error),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Abmelden',
-                          style: GoogleFonts.rajdhani(
-                            fontSize: 13,
-                            color: AppColors.error,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
+            ),
+          ],
         ],
       ),
     );

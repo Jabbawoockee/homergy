@@ -429,6 +429,14 @@ class AppDatabase extends _$AppDatabase {
 
   Future<Set<String>> getAllRemoteContractIds() =>
       contractsDao.getAllRemoteContractIds();
+
+  /// Wipes all user data from local DB (called on sign-out).
+  Future<void> clearAllUserData() async {
+    await delete(meterReadings).go();
+    await delete(priceContracts).go();
+    await delete(appSettings).go();
+    await delete(weatherCaches).go();
+  }
 }
 
 // ---------------------------------------------------------------------------
