@@ -51,8 +51,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         setState(() {
           if (data.event == AuthChangeEvent.userUpdated) _linkSent = false;
         });
-        if (data.event == AuthChangeEvent.userUpdated ||
-            data.event == AuthChangeEvent.signedIn) {
+        // Only sync when a real (non-anonymous) account is active.
+        if ((data.event == AuthChangeEvent.userUpdated ||
+                data.event == AuthChangeEvent.signedIn) &&
+            !SupabaseService.isAnonymous) {
           SyncService().syncAll();
         }
       }
@@ -264,12 +266,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     setState(() => _isSendingLink = true);
     try {
-      final isAnon = SupabaseService.isAnonymous;
-      if (isAnon) {
-        await SupabaseService.linkEmail(email);
-      } else {
-        await SupabaseService.signInWithMagicLink(email);
-      }
+      // Always use magic link — works for both new and existing accounts.
+      // linkEmail (updateUser) fails when the email is already registered.
+      await SupabaseService.signInWithMagicLink(email);
       if (mounted) {
         setState(() {
           _isSendingLink = false;
@@ -1110,7 +1109,7 @@ class _AccountSection extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             isAnon
-                ? 'Deine Daten sind nur auf diesem Gerät. Verknüpfe eine E-Mail, um sie geräteübergreifend nutzen zu können.'
+                ? 'Melde dich mit deinem Homergy-Konto an oder erstelle ein neues — deine Daten werden automatisch geladen.'
                 : 'Deine Ablesungen werden mit der Cloud synchronisiert.',
             style: GoogleFonts.rajdhani(
               fontSize: 13,
@@ -1163,7 +1162,7 @@ class _AccountSection extends StatelessWidget {
                 ),
                 cursorColor: AppColors.green,
                 decoration: InputDecoration(
-                  hintText: 'E-Mail für Kontoverknüpfung',
+                  hintText: 'E-Mail-Adresse eingeben',
                   hintStyle: GoogleFonts.rajdhani(
                       fontSize: 14, color: AppColors.textSecondary),
                   enabledBorder: OutlineInputBorder(
@@ -1207,7 +1206,7 @@ class _AccountSection extends StatelessWidget {
                               color: Colors.white, strokeWidth: 2),
                         )
                       : Text(
-                          'KONTO VERKNÜPFEN',
+                          'ANMELDELINK SENDEN',
                           style: GoogleFonts.spaceMono(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,

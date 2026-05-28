@@ -42,12 +42,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
-    // Listen for magic-link confirmation during onboarding
+    // Listen for magic-link confirmation during onboarding.
+    // Ignore anonymous sign-ins (emitted immediately on subscription from main()).
     _authSub = SupabaseService.client.auth.onAuthStateChange.listen((data) {
       if (!mounted) return;
       if (data.event == AuthChangeEvent.signedIn ||
           data.event == AuthChangeEvent.userUpdated) {
-        _finishWithLogin();
+        if (!SupabaseService.isAnonymous) {
+          _finishWithLogin();
+        }
       }
     });
   }
