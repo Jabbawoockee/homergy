@@ -62,10 +62,6 @@ class _ScanScreenState extends State<ScanScreen> {
     super.dispose();
   }
 
-  // ---------------------------------------------------------------------------
-  // Image picking
-  // ---------------------------------------------------------------------------
-
   Future<void> _pickImage(ImageSource source) async {
     try {
       final picked = await _picker.pickImage(
@@ -107,10 +103,6 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Save
-  // ---------------------------------------------------------------------------
-
   Future<void> _save() async {
     final text = _valueController.text.trim().replaceAll(',', '.');
     final parsed = double.tryParse(text);
@@ -133,7 +125,6 @@ class _ScanScreenState extends State<ScanScreen> {
         ),
       );
 
-      // Fire-and-forget background sync.
       SyncService().syncAll();
 
       if (mounted) {
@@ -146,7 +137,7 @@ class _ScanScreenState extends State<ScanScreen> {
               style: GoogleFonts.rajdhani(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black),
+                  color: Colors.white),
             ),
             duration: const Duration(seconds: 3),
           ),
@@ -166,7 +157,7 @@ class _ScanScreenState extends State<ScanScreen> {
         backgroundColor: AppColors.error,
         content: Text(msg,
             style: GoogleFonts.rajdhani(
-                fontSize: 15, fontWeight: FontWeight.w600)),
+                fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
         duration: const Duration(seconds: 4),
       ),
     );
@@ -208,10 +199,6 @@ class _ScanScreenState extends State<ScanScreen> {
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
-
   @override
   Widget build(BuildContext context) {
     String title;
@@ -234,7 +221,6 @@ class _ScanScreenState extends State<ScanScreen> {
           icon: const Icon(Icons.arrow_back_ios_new,
               color: AppColors.textPrimary, size: 20),
           onPressed: () {
-            // If editing after OCR, go back to review mode instead of leaving
             if (_isEditing && !_isManualEntry) {
               setState(() => _isEditing = false);
             } else {
@@ -247,7 +233,7 @@ class _ScanScreenState extends State<ScanScreen> {
           style: GoogleFonts.spaceMono(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: AppColors.amber,
+            color: AppColors.greenDark,
             letterSpacing: 4,
           ),
         ),
@@ -262,8 +248,6 @@ class _ScanScreenState extends State<ScanScreen> {
       ),
     );
   }
-
-  // ── Step 1: Pick image ──────────────────────────────────────────────────────
 
   Widget _buildPickStep() {
     return SingleChildScrollView(
@@ -305,15 +289,13 @@ class _ScanScreenState extends State<ScanScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.amber.withOpacity(0.07),
+              color: AppColors.amber.withOpacity(0.10),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: AppColors.amber.withOpacity(0.25), width: 1),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.wb_incandescent_outlined,
+                Icon(Icons.wb_incandescent_outlined,
                     color: AppColors.amber, size: 16),
                 const SizedBox(width: 10),
                 Expanded(
@@ -332,16 +314,14 @@ class _ScanScreenState extends State<ScanScreen> {
           const SizedBox(height: 24),
           Center(
             child: Opacity(
-              opacity: 0.06,
-              child: Icon(Icons.speed, size: 100, color: AppColors.amber),
+              opacity: 0.08,
+              child: Icon(Icons.speed, size: 100, color: AppColors.greenDark),
             ),
           ),
         ],
       ),
     );
   }
-
-  // ── Step 2a: Review mode (OCR result, read-only) ────────────────────────────
 
   Widget _buildReviewMode() {
     final hasValue = _valueController.text.isNotEmpty;
@@ -352,7 +332,6 @@ class _ScanScreenState extends State<ScanScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Photo preview with OCR overlay
           if (_imagePath != null)
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
@@ -368,17 +347,16 @@ class _ScanScreenState extends State<ScanScreen> {
                     Positioned.fill(
                       child: Container(
                         color: Colors.black.withOpacity(0.6),
-                        child: const Center(
+                        child: Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               CircularProgressIndicator(
                                   color: AppColors.amber, strokeWidth: 2),
-                              SizedBox(height: 12),
-                              Text('Texterkennung läuft…',
+                              const SizedBox(height: 12),
+                              const Text('Texterkennung läuft…',
                                   style: TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 14)),
+                                      color: Colors.white, fontSize: 14)),
                             ],
                           ),
                         ),
@@ -390,7 +368,6 @@ class _ScanScreenState extends State<ScanScreen> {
 
           const SizedBox(height: 24),
 
-          // Label
           Text(
             'ERKANNTER ZÄHLERSTAND',
             style: GoogleFonts.rajdhani(
@@ -402,19 +379,12 @@ class _ScanScreenState extends State<ScanScreen> {
           ),
           const SizedBox(height: 10),
 
-          // Read-only value display
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: hasValue
-                    ? AppColors.amber.withOpacity(0.6)
-                    : AppColors.border,
-                width: 1,
-              ),
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: AppColors.neu(5),
             ),
             child: hasValue
                 ? FittedBox(
@@ -440,22 +410,17 @@ class _ScanScreenState extends State<ScanScreen> {
                   ),
           ),
 
-          // OCR raw hint
           if (_ocrRawHint != null) ...[
             const SizedBox(height: 8),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.amber.withOpacity(0.08),
+                color: AppColors.amber.withOpacity(0.10),
                 borderRadius: BorderRadius.circular(8),
-                border:
-                    Border.all(color: AppColors.amber.withOpacity(0.25)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline,
-                      color: AppColors.amber, size: 14),
+                  Icon(Icons.info_outline, color: AppColors.amber, size: 14),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -473,32 +438,24 @@ class _ScanScreenState extends State<ScanScreen> {
 
           const SizedBox(height: 32),
 
-          // Primary button: ÜBERNEHMEN
           _ActionButton(
             label: 'ÜBERNEHMEN',
             icon: Icons.check_rounded,
-            color: AppColors.amber,
-            textColor: Colors.black,
+            isPrimary: true,
             isLoading: _isSaving,
-            onPressed: _isProcessing || _isSaving || !hasValue
-                ? null
-                : _save,
+            onPressed: _isProcessing || _isSaving || !hasValue ? null : _save,
           ),
           const SizedBox(height: 12),
 
-          // Secondary row: NOCHMAL | ANPASSEN
           Row(
             children: [
               Expanded(
                 child: _ActionButton(
                   label: 'NOCHMAL',
                   icon: Icons.refresh_rounded,
-                  color: AppColors.surface,
-                  textColor: AppColors.textPrimary,
+                  isPrimary: false,
                   isLoading: false,
-                  borderColor: AppColors.border,
-                  onPressed:
-                      _isProcessing || _isSaving ? null : _resetToPickStep,
+                  onPressed: _isProcessing || _isSaving ? null : _resetToPickStep,
                 ),
               ),
               const SizedBox(width: 12),
@@ -506,12 +463,9 @@ class _ScanScreenState extends State<ScanScreen> {
                 child: _ActionButton(
                   label: 'ANPASSEN',
                   icon: Icons.edit_rounded,
-                  color: AppColors.surface,
-                  textColor: AppColors.amber,
+                  isPrimary: false,
                   isLoading: false,
-                  borderColor: AppColors.amber.withOpacity(0.4),
-                  onPressed:
-                      _isProcessing || _isSaving ? null : _startEditing,
+                  onPressed: _isProcessing || _isSaving ? null : _startEditing,
                 ),
               ),
             ],
@@ -521,8 +475,6 @@ class _ScanScreenState extends State<ScanScreen> {
     );
   }
 
-  // ── Step 2b: Edit mode (manual input with keyboard) ─────────────────────────
-
   Widget _buildEditMode() {
     return SingleChildScrollView(
       key: const ValueKey('edit'),
@@ -530,7 +482,6 @@ class _ScanScreenState extends State<ScanScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Smaller photo preview (only for photo scans)
           if (_imagePath != null && !_isManualEntry) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -544,7 +495,6 @@ class _ScanScreenState extends State<ScanScreen> {
             const SizedBox(height: 20),
           ],
 
-          // Label
           Text(
             'ZÄHLERSTAND (m³)',
             style: GoogleFonts.rajdhani(
@@ -556,24 +506,21 @@ class _ScanScreenState extends State<ScanScreen> {
           ),
           const SizedBox(height: 8),
 
-          // Editable value field — auto-focused, keyboard opens
           Container(
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: const Color(0xFFDFE5DA),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: AppColors.amber.withOpacity(0.6), width: 1),
             ),
             child: TextField(
               controller: _valueController,
               focusNode: _editFocusNode,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: GoogleFonts.spaceMono(
                 fontSize: 32,
                 fontWeight: FontWeight.w700,
                 color: AppColors.amber,
               ),
+              cursorColor: AppColors.green,
               decoration: InputDecoration(
                 hintText: '00000.00',
                 hintStyle: GoogleFonts.spaceMono(
@@ -595,7 +542,6 @@ class _ScanScreenState extends State<ScanScreen> {
 
           const SizedBox(height: 20),
 
-          // Note field
           Text(
             'NOTIZ (OPTIONAL)',
             style: GoogleFonts.rajdhani(
@@ -608,9 +554,8 @@ class _ScanScreenState extends State<ScanScreen> {
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: const Color(0xFFDFE5DA),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border, width: 1),
             ),
             child: TextField(
               controller: _noteController,
@@ -618,6 +563,7 @@ class _ScanScreenState extends State<ScanScreen> {
                 fontSize: 16,
                 color: AppColors.textPrimary,
               ),
+              cursorColor: AppColors.green,
               decoration: InputDecoration(
                 hintText: 'z.B. Zählerstand nach Heizungscheck',
                 hintStyle: GoogleFonts.rajdhani(
@@ -633,26 +579,21 @@ class _ScanScreenState extends State<ScanScreen> {
 
           const SizedBox(height: 32),
 
-          // Save
           _ActionButton(
             label: 'SPEICHERN',
             icon: Icons.check_rounded,
-            color: AppColors.amber,
-            textColor: Colors.black,
+            isPrimary: true,
             isLoading: _isSaving,
             onPressed: _isSaving ? null : _save,
           ),
 
-          // Back to review (only when editing an OCR result, not manual entry)
           if (!_isManualEntry) ...[
             const SizedBox(height: 12),
             _ActionButton(
               label: 'ZURÜCK',
               icon: Icons.arrow_back_rounded,
-              color: AppColors.surface,
-              textColor: AppColors.textPrimary,
+              isPrimary: false,
               isLoading: false,
-              borderColor: AppColors.border,
               onPressed: _isSaving
                   ? null
                   : () => setState(() => _isEditing = false),
@@ -688,9 +629,9 @@ class _PickButton extends StatelessWidget {
       child: Container(
         height: 88,
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.background,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border, width: 1),
+          boxShadow: AppColors.neu(5),
         ),
         child: Row(
           children: [
@@ -730,7 +671,7 @@ class _PickButton extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios,
+            Icon(Icons.arrow_forward_ios,
                 color: AppColors.textSecondary, size: 14),
             const SizedBox(width: 16),
           ],
@@ -743,20 +684,16 @@ class _PickButton extends StatelessWidget {
 class _ActionButton extends StatelessWidget {
   final String label;
   final IconData icon;
-  final Color color;
-  final Color textColor;
+  final bool isPrimary;
   final bool isLoading;
-  final Color? borderColor;
   final VoidCallback? onPressed;
 
   const _ActionButton({
     required this.label,
     required this.icon,
-    required this.color,
-    required this.textColor,
+    required this.isPrimary,
     required this.isLoading,
     required this.onPressed,
-    this.borderColor,
   });
 
   @override
@@ -768,20 +705,17 @@ class _ActionButton extends StatelessWidget {
         child: Container(
           height: 54,
           decoration: BoxDecoration(
-            color: color,
+            color: isPrimary ? AppColors.green : AppColors.background,
             borderRadius: BorderRadius.circular(14),
-            border: borderColor != null
-                ? Border.all(color: borderColor!, width: 1)
-                : null,
-            boxShadow: color == AppColors.amber
+            boxShadow: isPrimary
                 ? [
-                    BoxShadow(
-                      color: AppColors.amber.withOpacity(0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    )
+                    const BoxShadow(
+                      color: Color(0xFF3A5E3D),
+                      offset: Offset(0, 4),
+                      blurRadius: 8,
+                    ),
                   ]
-                : null,
+                : AppColors.neu(4),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -791,17 +725,20 @@ class _ActionButton extends StatelessWidget {
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
-                      color: textColor, strokeWidth: 2),
+                      color: isPrimary ? Colors.white : AppColors.green,
+                      strokeWidth: 2),
                 )
               else
-                Icon(icon, color: textColor, size: 18),
+                Icon(icon,
+                    color: isPrimary ? Colors.white : AppColors.textSecondary,
+                    size: 18),
               const SizedBox(width: 10),
               Text(
                 label,
                 style: GoogleFonts.spaceMono(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: textColor,
+                  color: isPrimary ? Colors.white : AppColors.textPrimary,
                   letterSpacing: 2,
                 ),
               ),

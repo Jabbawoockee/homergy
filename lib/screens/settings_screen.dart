@@ -45,15 +45,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadPrice();
     _loadMeterType();
     _loadLocation();
-    // Refresh session so the UI reflects the latest auth state (e.g. after email confirmation).
     SupabaseService.client.auth.refreshSession().catchError((_) {});
-    // Rebuild whenever auth state changes (sign-in, email link confirmed, sign-out).
     _authSub = SupabaseService.client.auth.onAuthStateChange.listen((data) {
       if (mounted) {
         setState(() {
           if (data.event == AuthChangeEvent.userUpdated) _linkSent = false;
         });
-        // After email confirmed or magic link sign-in: sync everything
         if (data.event == AuthChangeEvent.userUpdated ||
             data.event == AuthChangeEvent.signedIn) {
           SyncService().syncAll();
@@ -104,7 +101,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     setState(() => _isSavingLocation = true);
     await AppDatabase.instance.saveLocation(plz: plz, city: city);
-    // Geocode in background
     final coords = await WeatherService().geocode(city, plz);
     if (coords != null) {
       final s = await AppDatabase.instance.getSettings();
@@ -196,8 +192,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         zustandszahl: Value(zz),
       ));
     } else {
-      // Price update within same contract: INSERT a new row so old prices
-      // are preserved for historical month-by-month calculations.
       final count =
           await AppDatabase.instance.countContractsByDisplayName(providerName);
       final internalName = '${providerName}_${count + 1}';
@@ -230,11 +224,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
       builder: (context, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: AppColors.amber,
-            onPrimary: Colors.black,
-            surface: AppColors.surface,
+        data: ThemeData.light().copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: AppColors.green,
+            onPrimary: Colors.white,
+            surface: AppColors.background,
             onSurface: AppColors.textPrimary,
           ),
           dialogTheme: const DialogThemeData(backgroundColor: AppColors.background),
@@ -272,10 +266,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final isAnon = SupabaseService.isAnonymous;
       if (isAnon) {
-        // Upgrade anonymous → real account
         await SupabaseService.linkEmail(email);
       } else {
-        // Sign in on new device
         await SupabaseService.signInWithMagicLink(email);
       }
       if (mounted) {
@@ -325,14 +317,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               const SizedBox(height: 4),
               Text(
                 'EINSTELLUNGEN',
                 style: GoogleFonts.spaceMono(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.amber,
+                  color: AppColors.greenDark,
                   letterSpacing: 4,
                 ),
               ),
@@ -355,9 +346,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border, width: 1),
+                  boxShadow: AppColors.neu(7),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,15 +390,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 height: 48,
                                 decoration: BoxDecoration(
                                   color: _meterIntDigits == d
-                                      ? AppColors.amber
+                                      ? AppColors.green
                                       : AppColors.background,
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: _meterIntDigits == d
-                                        ? AppColors.amber
-                                        : AppColors.border,
-                                    width: 1,
-                                  ),
+                                  boxShadow: _meterIntDigits == d
+                                      ? [
+                                          const BoxShadow(
+                                            color: Color(0xFF3A5E3D),
+                                            offset: Offset(0, 3),
+                                            blurRadius: 6,
+                                          ),
+                                        ]
+                                      : AppColors.neu(4),
                                 ),
                                 child: Center(
                                   child: Text(
@@ -416,7 +410,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       fontSize: 18,
                                       fontWeight: FontWeight.w700,
                                       color: _meterIntDigits == d
-                                          ? Colors.black
+                                          ? Colors.white
                                           : AppColors.textSecondary,
                                     ),
                                   ),
@@ -449,9 +443,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border, width: 1),
+                  boxShadow: AppColors.neu(7),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -487,11 +481,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: AppColors.green.withOpacity(0.08),
+                          color: AppColors.green.withOpacity(0.10),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: AppColors.green.withOpacity(0.25),
-                              width: 1),
                         ),
                         child: Row(
                           children: [
@@ -594,25 +585,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border, width: 1),
+                  boxShadow: AppColors.neu(7),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-                    // ── Aktueller Vertrag Info ─────────────────────────────
                     if (_latestContract != null) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: AppColors.amber.withOpacity(0.08),
+                          color: AppColors.amber.withOpacity(0.10),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                              color: AppColors.amber.withOpacity(0.25),
-                              width: 1),
                         ),
                         child: Row(
                           children: [
@@ -650,7 +637,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // ── Neuer Vertrag? Toggle ──────────────────────────
                       Text(
                         'Neuer Vertrag?',
                         style: GoogleFonts.rajdhani(
@@ -689,7 +675,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 16),
                     ],
 
-                    // ── Lieferant ─────────────────────────────────────────
                     if (_latestContract == null || _isNewContract) ...[
                       Row(
                         children: [
@@ -721,7 +706,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 20),
                     ],
 
-                    // ── Preis pro kWh ──────────────────────────────────────
                     Row(
                       children: [
                         const Icon(Icons.bolt_rounded,
@@ -753,7 +737,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                     const SizedBox(height: 20),
 
-                    // ── Monatlicher Grundpreis ─────────────────────────────
                     Row(
                       children: [
                         const Icon(Icons.calendar_month_outlined,
@@ -785,7 +768,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                     const SizedBox(height: 20),
 
-                    // ── Gültig seit ────────────────────────────────────────
                     Row(
                       children: [
                         const Icon(Icons.event_rounded,
@@ -815,14 +797,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         height: 50,
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                         decoration: BoxDecoration(
-                          color: AppColors.background,
+                          color: const Color(0xFFDFE5DA),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: _priceValidFrom == null
-                                ? AppColors.border
-                                : AppColors.amber.withOpacity(0.5),
-                            width: 1,
-                          ),
                         ),
                         child: Row(
                           children: [
@@ -831,7 +807,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               size: 18,
                               color: _priceValidFrom == null
                                   ? AppColors.textSecondary
-                                  : AppColors.amber,
+                                  : AppColors.green,
                             ),
                             const SizedBox(width: 12),
                             Text(
@@ -858,7 +834,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Divider(color: AppColors.border, height: 1),
                     const SizedBox(height: 20),
 
-                    // ── Abrechnungsfaktoren ────────────────────────────────
                     Row(
                       children: [
                         const Icon(Icons.calculate_outlined,
@@ -878,7 +853,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           onTap: () => showDialog(
                             context: context,
                             builder: (_) => AlertDialog(
-                              backgroundColor: AppColors.surface,
+                              backgroundColor: AppColors.background,
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16)),
                               title: Text(
@@ -906,7 +881,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     style: GoogleFonts.rajdhani(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
-                                      color: AppColors.amber,
+                                      color: AppColors.green,
                                     ),
                                   ),
                                 ),
@@ -1008,44 +983,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border, width: 1),
+                  boxShadow: AppColors.neu(7),
                 ),
-                child: Column(
+                child: const Column(
                   children: [
-                    _InfoRow(
-                      label: 'App',
-                      value: 'Homergy',
-                    ),
-                    const SizedBox(height: 12),
-                    _InfoRow(
-                      label: 'Version',
-                      value: 'v1.0.0',
-                    ),
-                    const SizedBox(height: 12),
-                    _InfoRow(
-                      label: 'Datenbank',
-                      value: 'SQLite (Drift)',
-                    ),
-                    const SizedBox(height: 12),
-                    _InfoRow(
-                      label: 'OCR',
-                      value: 'Google ML Kit',
-                    ),
+                    _InfoRow(label: 'App', value: 'Homergy'),
+                    SizedBox(height: 12),
+                    _InfoRow(label: 'Version', value: 'v1.0.0'),
+                    SizedBox(height: 12),
+                    _InfoRow(label: 'Datenbank', value: 'SQLite (Drift)'),
+                    SizedBox(height: 12),
+                    _InfoRow(label: 'OCR', value: 'Google ML Kit'),
                   ],
                 ),
               ),
 
               const SizedBox(height: 32),
 
-              // Decorative footer
               Center(
                 child: Column(
                   children: [
                     Icon(
                       Icons.local_fire_department,
-                      color: AppColors.amber.withOpacity(0.3),
+                      color: AppColors.green.withOpacity(0.3),
                       size: 32,
                     ),
                     const SizedBox(height: 8),
@@ -1120,14 +1082,13 @@ class _AccountSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border, width: 1),
+        boxShadow: AppColors.neu(7),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Status row
           Row(
             children: [
               Icon(
@@ -1161,15 +1122,13 @@ class _AccountSection extends StatelessWidget {
           const SizedBox(height: 16),
 
           if (!isAnon) ...[
-            // Already linked — nothing more to do here
+            // Already linked
           ] else if (linkSent) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.green.withOpacity(0.1),
+                color: AppColors.green.withOpacity(0.10),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                    color: AppColors.green.withOpacity(0.3), width: 1),
               ),
               child: Row(
                 children: [
@@ -1190,31 +1149,37 @@ class _AccountSection extends StatelessWidget {
               ),
             ),
           ] else ...[
-            TextField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
-              style: GoogleFonts.rajdhani(
-                fontSize: 15,
-                color: AppColors.textPrimary,
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFDFE5DA),
+                borderRadius: BorderRadius.circular(10),
               ),
-              cursorColor: AppColors.amber,
-              decoration: InputDecoration(
-                hintText: 'E-Mail für Kontoverknüpfung',
-                hintStyle: GoogleFonts.rajdhani(
-                    fontSize: 14, color: AppColors.textSecondary),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: AppColors.border),
+              child: TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                style: GoogleFonts.rajdhani(
+                  fontSize: 15,
+                  color: AppColors.textPrimary,
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide:
-                      const BorderSide(color: AppColors.amber, width: 1.5),
+                cursorColor: AppColors.green,
+                decoration: InputDecoration(
+                  hintText: 'E-Mail für Kontoverknüpfung',
+                  hintStyle: GoogleFonts.rajdhani(
+                      fontSize: 14, color: AppColors.textSecondary),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide:
+                        const BorderSide(color: AppColors.green, width: 1.5),
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFDFE5DA),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
                 ),
-                filled: true,
-                fillColor: AppColors.background,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
               ),
             ),
             const SizedBox(height: 10),
@@ -1223,13 +1188,13 @@ class _AccountSection extends StatelessWidget {
               child: Container(
                 height: 46,
                 decoration: BoxDecoration(
-                  color: AppColors.amber,
+                  color: AppColors.green,
                   borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
-                      color: AppColors.amber.withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+                      color: Color(0xFF3A5E3D),
+                      blurRadius: 8,
+                      offset: Offset(0, 3),
                     ),
                   ],
                 ),
@@ -1239,14 +1204,14 @@ class _AccountSection extends StatelessWidget {
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                              color: Colors.black, strokeWidth: 2),
+                              color: Colors.white, strokeWidth: 2),
                         )
                       : Text(
                           'KONTO VERKNÜPFEN',
                           style: GoogleFonts.spaceMono(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: Colors.black,
+                            color: Colors.white,
                             letterSpacing: 1.5,
                           ),
                         ),
@@ -1257,7 +1222,6 @@ class _AccountSection extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Sync now + sign out row
           Row(
             children: [
               GestureDetector(
@@ -1268,7 +1232,7 @@ class _AccountSection extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.background,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.border, width: 1),
+                    boxShadow: AppColors.neu(3),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1298,8 +1262,6 @@ class _AccountSection extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppColors.error.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: AppColors.error.withOpacity(0.25), width: 1),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -1347,19 +1309,17 @@ class _PriceField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: const Color(0xFFDFE5DA),
         borderRadius: BorderRadius.circular(10),
-        border:
-            Border.all(color: AppColors.amber.withOpacity(0.4), width: 1),
       ),
       child: TextField(
         controller: controller,
-        keyboardType:
-            const TextInputType.numberWithOptions(decimal: true),
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
         style: GoogleFonts.spaceMono(
           fontSize: 16,
           color: AppColors.textPrimary,
         ),
+        cursorColor: AppColors.green,
         decoration: InputDecoration(
           border: InputBorder.none,
           contentPadding:
@@ -1401,13 +1361,13 @@ class _SaveButton extends StatelessWidget {
       child: Container(
         height: 46,
         decoration: BoxDecoration(
-          color: AppColors.amber,
+          color: AppColors.green,
           borderRadius: BorderRadius.circular(10),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
-              color: AppColors.amber.withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: Color(0xFF3A5E3D),
+              blurRadius: 8,
+              offset: Offset(0, 3),
             ),
           ],
         ),
@@ -1417,14 +1377,14 @@ class _SaveButton extends StatelessWidget {
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
-                      color: Colors.black, strokeWidth: 2),
+                      color: Colors.white, strokeWidth: 2),
                 )
               : Text(
                   label,
                   style: GoogleFonts.spaceMono(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: Colors.white,
                     letterSpacing: 1.5,
                   ),
                 ),
@@ -1435,7 +1395,7 @@ class _SaveButton extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Toggle chip for binary selection (e.g., "Neuer Vertrag?")
+// Toggle chip for binary selection
 // ---------------------------------------------------------------------------
 
 class _ToggleChip extends StatelessWidget {
@@ -1455,15 +1415,19 @@ class _ToggleChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? AppColors.amber : AppColors.background,
+          color: selected ? AppColors.green : AppColors.background,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? AppColors.amber : AppColors.border,
-            width: 1,
-          ),
+          boxShadow: selected
+              ? [
+                  const BoxShadow(
+                    color: Color(0xFF3A5E3D),
+                    offset: Offset(0, 2),
+                    blurRadius: 5,
+                  ),
+                ]
+              : AppColors.neu(3),
         ),
         child: Text(
           label,
@@ -1471,7 +1435,7 @@ class _ToggleChip extends StatelessWidget {
           style: GoogleFonts.rajdhani(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.black : AppColors.textSecondary,
+            color: selected ? Colors.white : AppColors.textSecondary,
           ),
         ),
       ),
@@ -1480,7 +1444,7 @@ class _ToggleChip extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Plain text input field (for provider name)
+// Plain text input field
 // ---------------------------------------------------------------------------
 
 class _TextField extends StatelessWidget {
@@ -1493,10 +1457,8 @@ class _TextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: const Color(0xFFDFE5DA),
         borderRadius: BorderRadius.circular(10),
-        border:
-            Border.all(color: AppColors.amber.withOpacity(0.4), width: 1),
       ),
       child: TextField(
         controller: controller,
@@ -1504,6 +1466,7 @@ class _TextField extends StatelessWidget {
           fontSize: 16,
           color: AppColors.textPrimary,
         ),
+        cursorColor: AppColors.green,
         decoration: InputDecoration(
           border: InputBorder.none,
           contentPadding:

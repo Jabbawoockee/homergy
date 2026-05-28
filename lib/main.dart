@@ -29,9 +29,9 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: Brightness.dark,
       systemNavigationBarColor: AppColors.background,
-      systemNavigationBarIconBrightness: Brightness.light,
+      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
 
@@ -67,12 +67,12 @@ class GasTrackApp extends StatelessWidget {
   }
 
   ThemeData _buildTheme() {
-    final base = ThemeData.dark();
+    final base = ThemeData.light();
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.background,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.amber,
-        secondary: AppColors.green,
+      colorScheme: const ColorScheme.light(
+        primary: AppColors.green,
+        secondary: AppColors.amber,
         surface: AppColors.surface,
         error: AppColors.error,
       ),
@@ -81,16 +81,16 @@ class GasTrackApp extends StatelessWidget {
         displayColor: AppColors.textPrimary,
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.textPrimary,
         contentTextStyle: GoogleFonts.rajdhani(
           fontSize: 15,
-          color: AppColors.textPrimary,
+          color: AppColors.background,
         ),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.background,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
@@ -133,10 +133,19 @@ class _MainShellState extends State<MainShell> {
   Widget _buildNavBar() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: const Border(
-          top: BorderSide(color: AppColors.border, width: 1),
-        ),
+        color: AppColors.background,
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFFFFFF).withOpacity(0.90),
+            offset: const Offset(-4, -4),
+            blurRadius: 8,
+          ),
+          const BoxShadow(
+            color: Color(0xFFC2CFC0),
+            offset: Offset(0, -2),
+            blurRadius: 6,
+          ),
+        ],
       ),
       child: SafeArea(
         top: false,
@@ -186,7 +195,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? AppColors.amber : AppColors.textSecondary;
+    final color = isActive ? AppColors.green : AppColors.textSecondary;
 
     return Expanded(
       child: GestureDetector(
@@ -216,7 +225,7 @@ class _NavItem extends StatelessWidget {
                 width: isActive ? 20 : 0,
                 height: 2,
                 decoration: BoxDecoration(
-                  color: AppColors.amber,
+                  color: AppColors.green,
                   borderRadius: BorderRadius.circular(1),
                 ),
               ),

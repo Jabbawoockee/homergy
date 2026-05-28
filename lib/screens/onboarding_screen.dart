@@ -45,7 +45,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final plz = _plzController.text.trim();
       final city = _cityController.text.trim();
       if (plz.isNotEmpty || city.isNotEmpty) {
-        // Save PLZ + city immediately; geocode in background
         await AppDatabase.instance.saveLocation(plz: plz, city: city);
         _geocodeInBackground(city, plz);
       }
@@ -76,7 +75,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Progress indicator
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
               child: Row(
@@ -88,7 +86,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // Pages
             Expanded(
               child: PageView(
                 controller: _pageController,
@@ -107,7 +104,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // Bottom button(s)
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
               child: _currentPage == 0
@@ -173,7 +169,7 @@ class _MeterTypePage extends StatelessWidget {
             style: GoogleFonts.spaceMono(
               fontSize: 28,
               fontWeight: FontWeight.w700,
-              color: AppColors.amber,
+              color: AppColors.greenDark,
               letterSpacing: 6,
             ),
           ),
@@ -266,7 +262,7 @@ class _LocationPage extends StatelessWidget {
             style: GoogleFonts.spaceMono(
               fontSize: 28,
               fontWeight: FontWeight.w700,
-              color: AppColors.amber,
+              color: AppColors.greenDark,
               letterSpacing: 6,
             ),
           ),
@@ -296,19 +292,16 @@ class _LocationPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Info card
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.amber.withOpacity(0.07),
+              color: AppColors.amber.withOpacity(0.10),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: AppColors.amber.withOpacity(0.2), width: 1),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.thermostat_rounded,
+                Icon(Icons.thermostat_rounded,
                     size: 18, color: AppColors.amber),
                 const SizedBox(width: 10),
                 Expanded(
@@ -394,13 +387,13 @@ class _ActionButton extends StatelessWidget {
       child: Container(
         height: 58,
         decoration: BoxDecoration(
-          color: AppColors.amber,
+          color: AppColors.green,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
-              color: AppColors.amber.withOpacity(0.35),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
+              color: Color(0xFF3A5E3D),
+              offset: Offset(0, 5),
+              blurRadius: 10,
             ),
           ],
         ),
@@ -410,7 +403,7 @@ class _ActionButton extends StatelessWidget {
                   width: 22,
                   height: 22,
                   child: CircularProgressIndicator(
-                    color: Colors.black,
+                    color: Colors.white,
                     strokeWidth: 2,
                   ),
                 )
@@ -419,7 +412,7 @@ class _ActionButton extends StatelessWidget {
                   style: GoogleFonts.spaceMono(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: Colors.white,
                     letterSpacing: 3,
                   ),
                 ),
@@ -444,7 +437,7 @@ class _ProgressDot extends StatelessWidget {
       width: active ? 20 : 8,
       height: 8,
       decoration: BoxDecoration(
-        color: active ? AppColors.amber : AppColors.border,
+        color: active ? AppColors.green : AppColors.border,
         borderRadius: BorderRadius.circular(4),
       ),
     );
@@ -470,9 +463,8 @@ class _OnboardingTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFFDFE5DA),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.amber.withOpacity(0.3), width: 1),
       ),
       child: TextField(
         controller: controller,
@@ -481,7 +473,7 @@ class _OnboardingTextField extends StatelessWidget {
           fontSize: 16,
           color: AppColors.textPrimary,
         ),
-        cursorColor: AppColors.amber,
+        cursorColor: AppColors.green,
         decoration: InputDecoration(
           border: InputBorder.none,
           contentPadding:
@@ -498,7 +490,7 @@ class _OnboardingTextField extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Meter type card (unchanged from original)
+// Meter type card
 // ---------------------------------------------------------------------------
 
 class _MeterTypeCard extends StatelessWidget {
@@ -524,14 +516,17 @@ class _MeterTypeCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.amber.withOpacity(0.08)
-              : AppColors.surface,
+          color: AppColors.background,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? AppColors.amber : AppColors.border,
-            width: isSelected ? 1.5 : 1,
-          ),
+          boxShadow: isSelected
+              ? [
+                  const BoxShadow(
+                    color: Color(0xFF3A5E3D),
+                    offset: Offset(0, 3),
+                    blurRadius: 8,
+                  ),
+                ]
+              : AppColors.neu(5),
         ),
         child: Row(
           children: [
@@ -541,15 +536,14 @@ class _MeterTypeCard extends StatelessWidget {
               height: 20,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? AppColors.amber : Colors.transparent,
+                color: isSelected ? AppColors.green : Colors.transparent,
                 border: Border.all(
-                  color:
-                      isSelected ? AppColors.amber : AppColors.textSecondary,
+                  color: isSelected ? AppColors.green : AppColors.textSecondary,
                   width: 1.5,
                 ),
               ),
               child: isSelected
-                  ? const Icon(Icons.check, size: 12, color: Colors.black)
+                  ? const Icon(Icons.check, size: 12, color: Colors.white)
                   : null,
             ),
             const SizedBox(width: 16),
@@ -561,8 +555,7 @@ class _MeterTypeCard extends StatelessWidget {
                   style: GoogleFonts.rajdhani(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color:
-                        isSelected ? AppColors.amber : AppColors.textPrimary,
+                    color: isSelected ? AppColors.greenDark : AppColors.textPrimary,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -643,12 +636,14 @@ class _DigitBox extends StatelessWidget {
       width: 20,
       height: 24,
       decoration: BoxDecoration(
-        color: isDecimal ? const Color(0xFF2A1A1A) : AppColors.surface,
+        color: isDecimal
+            ? AppColors.amber.withOpacity(0.12)
+            : AppColors.background,
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
           color: isDecimal
-              ? const Color(0xFF8B2020).withOpacity(0.6)
-              : AppColors.amber.withOpacity(0.4),
+              ? AppColors.amber.withOpacity(0.4)
+              : AppColors.green.withOpacity(0.4),
           width: 1,
         ),
       ),
@@ -658,7 +653,7 @@ class _DigitBox extends StatelessWidget {
           style: GoogleFonts.spaceMono(
             fontSize: 11,
             fontWeight: FontWeight.w700,
-            color: isDecimal ? const Color(0xFFFF6B6B) : AppColors.amber,
+            color: isDecimal ? AppColors.amber : AppColors.greenDark,
           ),
         ),
       ),

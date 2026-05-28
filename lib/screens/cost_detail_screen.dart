@@ -27,28 +27,22 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
           months: [], hasContracts: false, providerName: '', displayStart: null);
     }
 
-    // Current provider = displayName of the contract with the latest validFrom
     final latestContract = allContracts.last;
     final providerName = latestContract.displayName;
 
-    // All price entries for this provider (ascending by validFrom — already sorted)
     final providerContracts =
         allContracts.where((c) => c.displayName == providerName).toList();
 
-    // Show months from the earliest entry of this provider
     final displayStart =
         DateTime.fromMillisecondsSinceEpoch(providerContracts.first.validFrom);
 
-    // All readings sorted ascending
     final rawReadings = await AppDatabase.instance.watchAllReadings().first;
     final readings = List<MeterReading>.from(rawReadings)
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-    // Readings that fall within (or after) the display start
     final relevant =
         readings.where((r) => !r.timestamp.isBefore(displayStart)).toList();
 
-    // Anchor: the last reading recorded strictly before displayStart
     final beforeStart =
         readings.where((r) => r.timestamp.isBefore(displayStart)).toList();
     double? rollingAnchor =
@@ -63,7 +57,6 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
       );
     }
 
-    // Max and min reading value per (year, month) — for delta and fallback anchor
     final maxByYM = <String, double>{};
     final minByYM = <String, double>{};
     for (final r in relevant) {
@@ -77,7 +70,6 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
     final now = DateTime.now();
     final months = <_MonthData>[];
 
-    // Iterate every month from displayStart to now (handles multi-year spans)
     int year = displayStart.year;
     int month = displayStart.month;
 
@@ -89,8 +81,6 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
         double? prevMax = rollingAnchor;
 
         if (prevMax == null) {
-          // No prior anchor: use the minimum reading within this month so we
-          // can at least compute within-month consumption for the first entry.
           final monthMin = minByYM[k];
           if (monthMin != null && monthMin < monthMax) {
             prevMax = monthMin;
@@ -98,7 +88,6 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
         }
 
         if (prevMax != null) {
-          // Find which contract was active at the end of this month
           final lastDay = month < 12
               ? DateTime(year, month + 1, 0)
               : DateTime(year, 12, 31);
@@ -129,11 +118,9 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
           ));
         }
 
-        // This month's max becomes the anchor for the following month
         rollingAnchor = monthMax;
       }
 
-      // Advance to next month
       month++;
       if (month > 12) {
         month = 1;
@@ -160,7 +147,6 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Static header (back + title)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Row(
@@ -176,7 +162,7 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
                     style: GoogleFonts.spaceMono(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.amber,
+                      color: AppColors.greenDark,
                       letterSpacing: 3,
                     ),
                   ),
@@ -192,7 +178,7 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
                   if (!snapshot.hasData) {
                     return const Center(
                         child: CircularProgressIndicator(
-                            color: AppColors.amber, strokeWidth: 2));
+                            color: AppColors.green, strokeWidth: 2));
                   }
                   final data = snapshot.data!;
 
@@ -225,10 +211,9 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Provider + date-range info
           Row(
             children: [
-              const Icon(Icons.business_rounded,
+              Icon(Icons.business_rounded,
                   size: 14, color: AppColors.amber),
               const SizedBox(width: 6),
               Text(
@@ -252,7 +237,6 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Monthly cards
           for (final month in data.months) ...[
             _MonthCard(
               month: month,
@@ -264,14 +248,12 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
 
           const SizedBox(height: 4),
 
-          // Grand total
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppColors.amber.withOpacity(0.08),
+              color: AppColors.background,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: AppColors.amber.withOpacity(0.4), width: 1.5),
+              boxShadow: AppColors.neu(7),
             ),
             child: Column(
               children: [
@@ -287,8 +269,7 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
                   bold: false,
                 ),
                 const SizedBox(height: 12),
-                Container(
-                    height: 1, color: AppColors.amber.withOpacity(0.4)),
+                Container(height: 1, color: AppColors.border),
                 const SizedBox(height: 12),
                 _TotalRow(
                   label: 'GESAMT',
@@ -465,9 +446,9 @@ class _MonthCardState extends State<_MonthCard> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border, width: 1),
+        boxShadow: AppColors.neu(6),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -528,9 +509,7 @@ class _MonthCardState extends State<_MonthCard> {
                         ),
                         const SizedBox(width: 5),
                         Icon(
-                          _showCalc
-                              ? Icons.info
-                              : Icons.info_outline,
+                          _showCalc ? Icons.info : Icons.info_outline,
                           size: 14,
                           color: _showCalc
                               ? AppColors.amber
@@ -576,7 +555,7 @@ class _MonthCardState extends State<_MonthCard> {
             label: 'Gesamt',
             value: eurFmt.format(month.total),
             bold: true,
-            valueColor: AppColors.amber,
+            valueColor: AppColors.greenDark,
           ),
         ],
       ),
@@ -645,7 +624,7 @@ class _TotalRow extends StatelessWidget {
           style: GoogleFonts.rajdhani(
             fontSize: bold ? 16 : 14,
             fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-            color: bold ? AppColors.amber : AppColors.textSecondary,
+            color: bold ? AppColors.greenDark : AppColors.textSecondary,
             letterSpacing: bold ? 1 : 0.3,
           ),
         ),
@@ -654,7 +633,7 @@ class _TotalRow extends StatelessWidget {
           style: GoogleFonts.spaceMono(
             fontSize: bold ? 18 : 14,
             fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
-            color: bold ? AppColors.amber : AppColors.textPrimary,
+            color: bold ? AppColors.greenDark : AppColors.textPrimary,
           ),
         ),
       ],

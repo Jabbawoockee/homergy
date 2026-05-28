@@ -47,7 +47,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Text(
@@ -55,7 +54,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 style: GoogleFonts.spaceMono(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.amber,
+                  color: AppColors.greenDark,
                   letterSpacing: 5,
                 ),
               ),
@@ -81,7 +80,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                   if (!snapshot.hasData) {
                     return const Center(
-                      child: CircularProgressIndicator(color: AppColors.amber),
+                      child: CircularProgressIndicator(color: AppColors.green),
                     );
                   }
 
@@ -93,7 +92,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                   return Column(
                     children: [
-                      // Bar chart
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                         child: _MonthlyChart(monthlyData: monthlyData),
@@ -101,7 +99,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                       const SizedBox(height: 20),
 
-                      // Divider
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Row(
@@ -136,7 +133,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                       const SizedBox(height: 12),
 
-                      // Readings list
                       Expanded(
                         child: ListView.builder(
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -162,8 +158,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             return Dismissible(
                               key: Key('reading_${reading.id}'),
                               direction: DismissDirection.endToStart,
-                              confirmDismiss: (_) =>
-                                  _confirmDelete(context),
+                              confirmDismiss: (_) => _confirmDelete(context),
                               onDismissed: (_) async {
                                 final remoteId = reading.remoteId;
                                 await AppDatabase.instance
@@ -172,16 +167,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   SyncService().deleteRemote(remoteId);
                                 }
                                 if (context.mounted) {
-                                  ScaffoldMessenger.of(context)
-                                      .showSnackBar(
+                                  ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      backgroundColor:
-                                          AppColors.surface,
+                                      backgroundColor: AppColors.textPrimary,
                                       content: Text(
                                         'Ablesung gelöscht.',
                                         style: GoogleFonts.rajdhani(
                                           fontSize: 14,
-                                          color: AppColors.textPrimary,
+                                          color: AppColors.background,
                                         ),
                                       ),
                                     ),
@@ -195,8 +188,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 alignment: Alignment.centerRight,
-                                padding:
-                                    const EdgeInsets.only(right: 20),
+                                padding: const EdgeInsets.only(right: 20),
                                 child: const Icon(Icons.delete_outline,
                                     color: Colors.white, size: 24),
                               ),
@@ -205,8 +197,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 delta: delta,
                                 cost: cost,
                                 onDelete: () async {
-                                  final confirm =
-                                      await _confirmDelete(context);
+                                  final confirm = await _confirmDelete(context);
                                   if (confirm) {
                                     final remoteId = reading.remoteId;
                                     await AppDatabase.instance
@@ -216,8 +207,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     }
                                   }
                                 },
-                                onEdit: () =>
-                                    _showEditDialog(context, reading),
+                                onEdit: () => _showEditDialog(context, reading),
                               ),
                             );
                           },
@@ -271,9 +261,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: AppColors.background,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Ablesung löschen?',
           style: GoogleFonts.rajdhani(
@@ -318,7 +307,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.background,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Zählerstand anpassen',
@@ -350,41 +339,47 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              focusNode: focusNode,
-              autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: GoogleFonts.spaceMono(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFDFE5DA),
+                borderRadius: BorderRadius.circular(10),
               ),
-              cursorColor: AppColors.amber,
-              decoration: InputDecoration(
-                labelText: 'Neuer Wert (m³)',
-                labelStyle: GoogleFonts.rajdhani(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                autofocus: true,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: GoogleFonts.spaceMono(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
                 ),
-                suffixText: 'm³',
-                suffixStyle: GoogleFonts.rajdhani(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
+                cursorColor: AppColors.green,
+                decoration: InputDecoration(
+                  labelText: 'Neuer Wert (m³)',
+                  labelStyle: GoogleFonts.rajdhani(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                  suffixText: 'm³',
+                  suffixStyle: GoogleFonts.rajdhani(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.green, width: 1.5),
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFDFE5DA),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: AppColors.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: AppColors.amber, width: 1.5),
-                ),
-                filled: true,
-                fillColor: AppColors.background,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
               ),
             ),
           ],
@@ -409,12 +404,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    backgroundColor: AppColors.surface,
+                    backgroundColor: AppColors.textPrimary,
                     content: Text(
                       'Ablesung aktualisiert.',
                       style: GoogleFonts.rajdhani(
                         fontSize: 14,
-                        color: AppColors.textPrimary,
+                        color: AppColors.background,
                       ),
                     ),
                   ),
@@ -426,7 +421,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               style: GoogleFonts.rajdhani(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: AppColors.amber,
+                color: AppColors.green,
               ),
             ),
           ),
@@ -438,7 +433,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
     focusNode.dispose();
   }
 
-  // Build list of (month label, consumption) for last 6 months.
   List<_MonthStat> _buildMonthlyData(List<MeterReading> readings) {
     final now = DateTime.now();
     final stats = <_MonthStat>[];
@@ -449,7 +443,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       final monthEnd =
           DateTime(monthDate.year, monthDate.month + 1, 0, 23, 59, 59);
 
-      // Readings in this month + the last reading before/on month end as reference.
       final inMonth = readings
           .where((r) =>
               !r.timestamp.isBefore(monthStart) &&
@@ -458,11 +451,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
       double consumption = 0;
       if (inMonth.length >= 2) {
-        // Sorted desc, so first is max, last is min within this month.
         consumption = inMonth.first.value - inMonth.last.value;
         if (consumption < 0) consumption = 0;
       } else if (inMonth.length == 1) {
-        // Find last reading before this month.
         final before = readings
             .where((r) => r.timestamp.isBefore(monthStart))
             .toList();
@@ -506,9 +497,9 @@ class _MonthlyChart extends StatelessWidget {
       height: 180,
       padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border, width: 1),
+        boxShadow: AppColors.neu(7),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,8 +576,8 @@ class _MonthlyChart extends StatelessWidget {
                           begin: Alignment.bottomCenter,
                           end: Alignment.topCenter,
                           colors: [
-                            AppColors.amber.withOpacity(0.5),
-                            AppColors.amber,
+                            AppColors.green.withOpacity(0.5),
+                            AppColors.green,
                           ],
                         ),
                       ),
@@ -595,13 +586,13 @@ class _MonthlyChart extends StatelessWidget {
                 }),
                 barTouchData: BarTouchData(
                   touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (_) => AppColors.border,
+                    getTooltipColor: (_) => AppColors.background,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       return BarTooltipItem(
                         '${rod.toY.toStringAsFixed(1)} m³',
                         GoogleFonts.spaceMono(
                           fontSize: 11,
-                          color: AppColors.amber,
+                          color: AppColors.greenDark,
                         ),
                       );
                     },
@@ -644,14 +635,13 @@ class _ReadingCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border, width: 1),
+        boxShadow: AppColors.neu(5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Date row
           Row(
             children: [
               Icon(Icons.access_time_rounded,
@@ -672,12 +662,10 @@ class _ReadingCard extends StatelessWidget {
                   width: 30,
                   height: 30,
                   decoration: BoxDecoration(
-                    color: AppColors.amber.withOpacity(0.1),
+                    color: AppColors.amber.withOpacity(0.10),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color: AppColors.amber.withOpacity(0.3), width: 1),
                   ),
-                  child: const Icon(Icons.edit_outlined,
+                  child: Icon(Icons.edit_outlined,
                       size: 15, color: AppColors.amber),
                 ),
               ),
@@ -688,12 +676,10 @@ class _ReadingCard extends StatelessWidget {
                   width: 30,
                   height: 30,
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
+                    color: AppColors.error.withOpacity(0.10),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color: AppColors.error.withOpacity(0.25), width: 1),
                   ),
-                  child: const Icon(Icons.delete_outline,
+                  child: Icon(Icons.delete_outline,
                       size: 16, color: AppColors.error),
                 ),
               ),
@@ -701,7 +687,6 @@ class _ReadingCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // Value row
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -737,7 +722,6 @@ class _ReadingCard extends StatelessWidget {
             ],
           ),
 
-          // Delta row
           if (delta != null) ...[
             const SizedBox(height: 6),
             Row(
@@ -768,20 +752,17 @@ class _ReadingCard extends StatelessWidget {
             ),
           ],
 
-          // Optional note
           if (reading.note != null && reading.note!.isNotEmpty) ...[
             const SizedBox(height: 8),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.background,
+                color: AppColors.border.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.notes,
-                      size: 12, color: AppColors.textSecondary),
+                  Icon(Icons.notes, size: 12, color: AppColors.textSecondary),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(

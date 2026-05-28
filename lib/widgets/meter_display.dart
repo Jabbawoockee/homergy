@@ -12,16 +12,9 @@ class MeterDisplay extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.amber.withOpacity(0.35), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.amber.withOpacity(0.08),
-            blurRadius: 24,
-            spreadRadius: 2,
-          ),
-        ],
+        boxShadow: AppColors.neu(8),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       child: FittedBox(
