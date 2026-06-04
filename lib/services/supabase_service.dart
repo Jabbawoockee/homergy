@@ -52,6 +52,16 @@ class SupabaseService {
     );
   }
 
+  /// Returns true if the given email is already registered in auth.users.
+  /// Requires the `check_email_exists` RPC function in Supabase.
+  static Future<bool> emailExists(String email) async {
+    final result = await client.rpc(
+      'check_email_exists',
+      params: {'p_email': email.toLowerCase().trim()},
+    );
+    return result == true;
+  }
+
   /// Signs out completely (back to anonymous on next launch).
   static Future<void> signOut() async {
     await client.auth.signOut();

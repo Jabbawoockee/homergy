@@ -48,4 +48,14 @@ class SettingsService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyOnboardingDone);
   }
+
+  Future<String> getTrackingMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('tracking_mode') ?? 'both';
+  }
+
+  Future<void> setTrackingMode(String mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('tracking_mode', mode);
+  }
 }
