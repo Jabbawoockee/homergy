@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../database/database.dart';
 import '../services/ocr_service.dart';
 import '../widgets/consumption_chart.dart';
+import 'electricity_cost_detail_screen.dart';
 import 'scan_screen.dart';
 
 const _neuBase    = Color(0xFFEAEEE6);
@@ -191,6 +192,7 @@ class _ElectricityDetailScreenState extends State<ElectricityDetailScreen> {
                                 unit: 'nur Arbeitskosten',
                                 icon: Icons.euro_outlined,
                                 iconColor: _neuAmber,
+                                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ElectricityCostDetailScreen())),
                               ),
                             ),
                           ],
@@ -245,11 +247,14 @@ class _StatCard extends StatelessWidget {
   final String label, value, unit;
   final IconData icon;
   final Color iconColor;
-  const _StatCard({required this.label, required this.value, required this.unit, required this.icon, required this.iconColor});
+  final VoidCallback? onTap;
+  const _StatCard({required this.label, required this.value, required this.unit, required this.icon, required this.iconColor, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(color: _neuBase, borderRadius: BorderRadius.circular(20), boxShadow: _neu(6)),
         child: Column(
@@ -259,13 +264,15 @@ class _StatCard extends StatelessWidget {
               Container(width: 32, height: 32, decoration: BoxDecoration(color: _neuBase, shape: BoxShape.circle, boxShadow: _neu(3)), child: Icon(icon, color: iconColor, size: 15)),
               const SizedBox(width: 8),
               Expanded(child: Text(label, style: GoogleFonts.rajdhani(fontSize: 12, fontWeight: FontWeight.w600, color: _neuTextSec, letterSpacing: 1))),
-              ]),
+            ]),
             const SizedBox(height: 12),
             Text(value, style: GoogleFonts.spaceMono(fontSize: 20, fontWeight: FontWeight.w700, color: _neuText)),
             if (unit.isNotEmpty) Text(unit, style: GoogleFonts.rajdhani(fontSize: 12, color: _neuTextSec)),
+            if (onTap != null) ...[const SizedBox(height: 6), Row(mainAxisAlignment: MainAxisAlignment.end, children: [Icon(Icons.chevron_right_rounded, size: 14, color: _neuTextSec.withOpacity(0.5))])],
           ],
         ),
-      );
+      ),
+    );
   }
 }
 
