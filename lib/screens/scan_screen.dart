@@ -12,7 +12,8 @@ import '../theme/colors.dart';
 enum _ScanStep { pickImage, confirm }
 
 class ScanScreen extends StatefulWidget {
-  const ScanScreen({super.key});
+  final MeterType meterType;
+  const ScanScreen({super.key, this.meterType = MeterType.gas});
 
   @override
   State<ScanScreen> createState() => _ScanScreenState();
@@ -35,6 +36,7 @@ class _ScanScreenState extends State<ScanScreen> {
   bool _isEditing = false;
   String? _ocrRawHint;
   int _meterIntDigits = 5;
+  int _meterDecDigits = 1;
   double? _lastReading;
 
   @override
@@ -44,12 +46,23 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   Future<void> _loadSettings() async {
-    final digits = await _settingsService.getMeterIntDigits();
-    final latest = await _db.getLatestReading();
+    final isElec = widget.meterType == MeterType.electricity;
+    int digits;
+    int decDigits = 1;
+    double? lastValue;
+    if (isElec) {
+      digits = await _settingsService.getElectricityIntDigits();
+      decDigits = await _settingsService.getElectricityDecDigits();
+      lastValue = (await _db.getLatestElectricityReading())?.value;
+    } else {
+      digits = await _settingsService.getMeterIntDigits();
+      lastValue = (await _db.getLatestReading())?.value;
+    }
     if (mounted) {
       setState(() {
         _meterIntDigits = digits;
-        _lastReading = latest?.value;
+        _meterDecDigits = decDigits;
+        _lastReading = lastValue;
       });
     }
   }
@@ -81,18 +94,30 @@ class _ScanScreenState extends State<ScanScreen> {
         _ocrRawHint = null;
       });
 
-      final result = await _ocrService.extractMeterReadingWithRaw(
-        picked.path,
-        intDigits: _meterIntDigits,
-        lastReading: _lastReading,
-      );
+      final OcrResult result;
+      if (widget.meterType == MeterType.electricity) {
+        result = await _ocrService.extractElectricityReading(
+          picked.path,
+          intDigits: _meterIntDigits,
+          decDigits: _meterDecDigits,
+        );
+      } else {
+        result = await _ocrService.extractMeterReadingWithRaw(
+          picked.path,
+          meterType: MeterType.gas,
+          intDigits: _meterIntDigits,
+          lastReading: _lastReading,
+        );
+      }
       if (mounted) {
         setState(() {
           _isProcessing = false;
           _valueController.text = result.reading ?? '';
-          _ocrRawHint = result.reading == null && result.rawText.isNotEmpty
-              ? 'Erkannt: "${result.rawText}"'
-              : null;
+          if (result.reading == null && result.rawText.isNotEmpty) {
+            _ocrRawHint = 'Erkannt: "${result.rawText}"';
+          } else {
+            _ocrRawHint = null;
+          }
         });
       }
     } catch (e) {
@@ -102,6 +127,8 @@ class _ScanScreenState extends State<ScanScreen> {
       }
     }
   }
+
+  String get _unit => widget.meterType == MeterType.gas ? 'm³' : 'kWh';
 
   Future<void> _save() async {
     final text = _valueController.text.trim().replaceAll(',', '.');
@@ -114,16 +141,22 @@ class _ScanScreenState extends State<ScanScreen> {
     setState(() => _isSaving = true);
 
     try {
-      await _db.insertReading(
-        MeterReadingsCompanion(
+      final note = Value(_noteController.text.trim().isEmpty ? null : _noteController.text.trim());
+      if (widget.meterType == MeterType.gas) {
+        await _db.insertReading(MeterReadingsCompanion(
           value: Value(parsed),
           timestamp: Value(DateTime.now()),
-          note: Value(_noteController.text.trim().isEmpty
-              ? null
-              : _noteController.text.trim()),
+          note: note,
           imagePath: Value(_imagePath),
-        ),
-      );
+        ));
+      } else {
+        await _db.insertElectricityReading(ElectricityReadingsCompanion(
+          value: Value(parsed),
+          timestamp: Value(DateTime.now()),
+          note: note,
+          imagePath: Value(_imagePath),
+        ));
+      }
 
       SyncService().syncAll();
 
@@ -133,11 +166,8 @@ class _ScanScreenState extends State<ScanScreen> {
           SnackBar(
             backgroundColor: AppColors.green,
             content: Text(
-              'Zählerstand ${parsed.toStringAsFixed(2)} m³ gespeichert.',
-              style: GoogleFonts.rajdhani(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white),
+              'Zählerstand ${parsed.toStringAsFixed(2)} $_unit gespeichert.',
+              style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
             ),
             duration: const Duration(seconds: 3),
           ),
@@ -257,7 +287,9 @@ class _ScanScreenState extends State<ScanScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Foto des Gaszählers aufnehmen oder aus der Galerie wählen.',
+            widget.meterType == MeterType.gas
+                ? 'Foto des Gaszählers aufnehmen oder aus der Galerie wählen.'
+                : 'Foto des Stromzählers aufnehmen oder aus der Galerie wählen.',
             style: GoogleFonts.rajdhani(
               fontSize: 16,
               color: AppColors.textSecondary,
@@ -391,7 +423,7 @@ class _ScanScreenState extends State<ScanScreen> {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      '${_valueController.text}  m³',
+                      '${_valueController.text}  $_unit',
                       style: GoogleFonts.spaceMono(
                         fontSize: 36,
                         fontWeight: FontWeight.w700,
@@ -496,7 +528,7 @@ class _ScanScreenState extends State<ScanScreen> {
           ],
 
           Text(
-            'ZÄHLERSTAND (m³)',
+            'ZÄHLERSTAND ($_unit)',
             style: GoogleFonts.rajdhani(
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -530,7 +562,7 @@ class _ScanScreenState extends State<ScanScreen> {
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 14),
-                suffixText: 'm³',
+                suffixText: _unit,
                 suffixStyle: GoogleFonts.rajdhani(
                   fontSize: 16,
                   color: AppColors.textSecondary,

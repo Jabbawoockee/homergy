@@ -30,6 +30,40 @@ class ContractsDaoManager {
       );
 }
 
+mixin _$ElectricityReadingsDaoMixin on DatabaseAccessor<AppDatabase> {
+  $ElectricityReadingsTable get electricityReadings =>
+      attachedDatabase.electricityReadings;
+  ElectricityReadingsDaoManager get managers =>
+      ElectricityReadingsDaoManager(this);
+}
+
+class ElectricityReadingsDaoManager {
+  final _$ElectricityReadingsDaoMixin _db;
+  ElectricityReadingsDaoManager(this._db);
+  $$ElectricityReadingsTableTableManager get electricityReadings =>
+      $$ElectricityReadingsTableTableManager(
+        _db.attachedDatabase,
+        _db.electricityReadings,
+      );
+}
+
+mixin _$ElectricityContractsDaoMixin on DatabaseAccessor<AppDatabase> {
+  $ElectricityContractsTable get electricityContracts =>
+      attachedDatabase.electricityContracts;
+  ElectricityContractsDaoManager get managers =>
+      ElectricityContractsDaoManager(this);
+}
+
+class ElectricityContractsDaoManager {
+  final _$ElectricityContractsDaoMixin _db;
+  ElectricityContractsDaoManager(this._db);
+  $$ElectricityContractsTableTableManager get electricityContracts =>
+      $$ElectricityContractsTableTableManager(
+        _db.attachedDatabase,
+        _db.electricityContracts,
+      );
+}
+
 mixin _$SettingsDaoMixin on DatabaseAccessor<AppDatabase> {
   $AppSettingsTable get appSettings => attachedDatabase.appSettings;
   SettingsDaoManager get managers => SettingsDaoManager(this);
@@ -487,6 +521,452 @@ class MeterReadingsCompanion extends UpdateCompanion<MeterReading> {
   @override
   String toString() {
     return (StringBuffer('MeterReadingsCompanion(')
+          ..write('id: $id, ')
+          ..write('value: $value, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('note: $note, ')
+          ..write('imagePath: $imagePath, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('remoteId: $remoteId')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ElectricityReadingsTable extends ElectricityReadings
+    with TableInfo<$ElectricityReadingsTable, ElectricityReading> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ElectricityReadingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<double> value = GeneratedColumn<double>(
+    'value',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _timestampMeta = const VerificationMeta(
+    'timestamp',
+  );
+  @override
+  late final GeneratedColumn<DateTime> timestamp = GeneratedColumn<DateTime>(
+    'timestamp',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _imagePathMeta = const VerificationMeta(
+    'imagePath',
+  );
+  @override
+  late final GeneratedColumn<String> imagePath = GeneratedColumn<String>(
+    'image_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isSyncedMeta = const VerificationMeta(
+    'isSynced',
+  );
+  @override
+  late final GeneratedColumn<bool> isSynced = GeneratedColumn<bool>(
+    'is_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_synced" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _remoteIdMeta = const VerificationMeta(
+    'remoteId',
+  );
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+    'remote_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    value,
+    timestamp,
+    note,
+    imagePath,
+    isSynced,
+    remoteId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'electricity_readings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ElectricityReading> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+        _valueMeta,
+        value.isAcceptableOrUnknown(data['value']!, _valueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    if (data.containsKey('timestamp')) {
+      context.handle(
+        _timestampMeta,
+        timestamp.isAcceptableOrUnknown(data['timestamp']!, _timestampMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_timestampMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('image_path')) {
+      context.handle(
+        _imagePathMeta,
+        imagePath.isAcceptableOrUnknown(data['image_path']!, _imagePathMeta),
+      );
+    }
+    if (data.containsKey('is_synced')) {
+      context.handle(
+        _isSyncedMeta,
+        isSynced.isAcceptableOrUnknown(data['is_synced']!, _isSyncedMeta),
+      );
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(
+        _remoteIdMeta,
+        remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ElectricityReading map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ElectricityReading(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      value: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}value'],
+      )!,
+      timestamp: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}timestamp'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      imagePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}image_path'],
+      ),
+      isSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_synced'],
+      )!,
+      remoteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_id'],
+      ),
+    );
+  }
+
+  @override
+  $ElectricityReadingsTable createAlias(String alias) {
+    return $ElectricityReadingsTable(attachedDatabase, alias);
+  }
+}
+
+class ElectricityReading extends DataClass
+    implements Insertable<ElectricityReading> {
+  final int id;
+  final double value;
+  final DateTime timestamp;
+  final String? note;
+  final String? imagePath;
+  final bool isSynced;
+  final String? remoteId;
+  const ElectricityReading({
+    required this.id,
+    required this.value,
+    required this.timestamp,
+    this.note,
+    this.imagePath,
+    required this.isSynced,
+    this.remoteId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['value'] = Variable<double>(value);
+    map['timestamp'] = Variable<DateTime>(timestamp);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    if (!nullToAbsent || imagePath != null) {
+      map['image_path'] = Variable<String>(imagePath);
+    }
+    map['is_synced'] = Variable<bool>(isSynced);
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
+    return map;
+  }
+
+  ElectricityReadingsCompanion toCompanion(bool nullToAbsent) {
+    return ElectricityReadingsCompanion(
+      id: Value(id),
+      value: Value(value),
+      timestamp: Value(timestamp),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      imagePath: imagePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imagePath),
+      isSynced: Value(isSynced),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+    );
+  }
+
+  factory ElectricityReading.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ElectricityReading(
+      id: serializer.fromJson<int>(json['id']),
+      value: serializer.fromJson<double>(json['value']),
+      timestamp: serializer.fromJson<DateTime>(json['timestamp']),
+      note: serializer.fromJson<String?>(json['note']),
+      imagePath: serializer.fromJson<String?>(json['imagePath']),
+      isSynced: serializer.fromJson<bool>(json['isSynced']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'value': serializer.toJson<double>(value),
+      'timestamp': serializer.toJson<DateTime>(timestamp),
+      'note': serializer.toJson<String?>(note),
+      'imagePath': serializer.toJson<String?>(imagePath),
+      'isSynced': serializer.toJson<bool>(isSynced),
+      'remoteId': serializer.toJson<String?>(remoteId),
+    };
+  }
+
+  ElectricityReading copyWith({
+    int? id,
+    double? value,
+    DateTime? timestamp,
+    Value<String?> note = const Value.absent(),
+    Value<String?> imagePath = const Value.absent(),
+    bool? isSynced,
+    Value<String?> remoteId = const Value.absent(),
+  }) => ElectricityReading(
+    id: id ?? this.id,
+    value: value ?? this.value,
+    timestamp: timestamp ?? this.timestamp,
+    note: note.present ? note.value : this.note,
+    imagePath: imagePath.present ? imagePath.value : this.imagePath,
+    isSynced: isSynced ?? this.isSynced,
+    remoteId: remoteId.present ? remoteId.value : this.remoteId,
+  );
+  ElectricityReading copyWithCompanion(ElectricityReadingsCompanion data) {
+    return ElectricityReading(
+      id: data.id.present ? data.id.value : this.id,
+      value: data.value.present ? data.value.value : this.value,
+      timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
+      note: data.note.present ? data.note.value : this.note,
+      imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
+      isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ElectricityReading(')
+          ..write('id: $id, ')
+          ..write('value: $value, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('note: $note, ')
+          ..write('imagePath: $imagePath, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('remoteId: $remoteId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, value, timestamp, note, imagePath, isSynced, remoteId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ElectricityReading &&
+          other.id == this.id &&
+          other.value == this.value &&
+          other.timestamp == this.timestamp &&
+          other.note == this.note &&
+          other.imagePath == this.imagePath &&
+          other.isSynced == this.isSynced &&
+          other.remoteId == this.remoteId);
+}
+
+class ElectricityReadingsCompanion extends UpdateCompanion<ElectricityReading> {
+  final Value<int> id;
+  final Value<double> value;
+  final Value<DateTime> timestamp;
+  final Value<String?> note;
+  final Value<String?> imagePath;
+  final Value<bool> isSynced;
+  final Value<String?> remoteId;
+  const ElectricityReadingsCompanion({
+    this.id = const Value.absent(),
+    this.value = const Value.absent(),
+    this.timestamp = const Value.absent(),
+    this.note = const Value.absent(),
+    this.imagePath = const Value.absent(),
+    this.isSynced = const Value.absent(),
+    this.remoteId = const Value.absent(),
+  });
+  ElectricityReadingsCompanion.insert({
+    this.id = const Value.absent(),
+    required double value,
+    required DateTime timestamp,
+    this.note = const Value.absent(),
+    this.imagePath = const Value.absent(),
+    this.isSynced = const Value.absent(),
+    this.remoteId = const Value.absent(),
+  }) : value = Value(value),
+       timestamp = Value(timestamp);
+  static Insertable<ElectricityReading> custom({
+    Expression<int>? id,
+    Expression<double>? value,
+    Expression<DateTime>? timestamp,
+    Expression<String>? note,
+    Expression<String>? imagePath,
+    Expression<bool>? isSynced,
+    Expression<String>? remoteId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (value != null) 'value': value,
+      if (timestamp != null) 'timestamp': timestamp,
+      if (note != null) 'note': note,
+      if (imagePath != null) 'image_path': imagePath,
+      if (isSynced != null) 'is_synced': isSynced,
+      if (remoteId != null) 'remote_id': remoteId,
+    });
+  }
+
+  ElectricityReadingsCompanion copyWith({
+    Value<int>? id,
+    Value<double>? value,
+    Value<DateTime>? timestamp,
+    Value<String?>? note,
+    Value<String?>? imagePath,
+    Value<bool>? isSynced,
+    Value<String?>? remoteId,
+  }) {
+    return ElectricityReadingsCompanion(
+      id: id ?? this.id,
+      value: value ?? this.value,
+      timestamp: timestamp ?? this.timestamp,
+      note: note ?? this.note,
+      imagePath: imagePath ?? this.imagePath,
+      isSynced: isSynced ?? this.isSynced,
+      remoteId: remoteId ?? this.remoteId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<double>(value.value);
+    }
+    if (timestamp.present) {
+      map['timestamp'] = Variable<DateTime>(timestamp.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (imagePath.present) {
+      map['image_path'] = Variable<String>(imagePath.value);
+    }
+    if (isSynced.present) {
+      map['is_synced'] = Variable<bool>(isSynced.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ElectricityReadingsCompanion(')
           ..write('id: $id, ')
           ..write('value: $value, ')
           ..write('timestamp: $timestamp, ')
@@ -1126,6 +1606,532 @@ class PriceContractsCompanion extends UpdateCompanion<PriceContract> {
   }
 }
 
+class $ElectricityContractsTable extends ElectricityContracts
+    with TableInfo<$ElectricityContractsTable, ElectricityContract> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ElectricityContractsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _internalNameMeta = const VerificationMeta(
+    'internalName',
+  );
+  @override
+  late final GeneratedColumn<String> internalName = GeneratedColumn<String>(
+    'internal_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _displayNameMeta = const VerificationMeta(
+    'displayName',
+  );
+  @override
+  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
+    'display_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pricePerKwhMeta = const VerificationMeta(
+    'pricePerKwh',
+  );
+  @override
+  late final GeneratedColumn<double> pricePerKwh = GeneratedColumn<double>(
+    'price_per_kwh',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _monthlyBasePriceMeta = const VerificationMeta(
+    'monthlyBasePrice',
+  );
+  @override
+  late final GeneratedColumn<double> monthlyBasePrice = GeneratedColumn<double>(
+    'monthly_base_price',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _validFromMeta = const VerificationMeta(
+    'validFrom',
+  );
+  @override
+  late final GeneratedColumn<int> validFrom = GeneratedColumn<int>(
+    'valid_from',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isSyncedMeta = const VerificationMeta(
+    'isSynced',
+  );
+  @override
+  late final GeneratedColumn<bool> isSynced = GeneratedColumn<bool>(
+    'is_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_synced" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _remoteIdMeta = const VerificationMeta(
+    'remoteId',
+  );
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+    'remote_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    internalName,
+    displayName,
+    pricePerKwh,
+    monthlyBasePrice,
+    validFrom,
+    isSynced,
+    remoteId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'electricity_contracts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ElectricityContract> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('internal_name')) {
+      context.handle(
+        _internalNameMeta,
+        internalName.isAcceptableOrUnknown(
+          data['internal_name']!,
+          _internalNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_internalNameMeta);
+    }
+    if (data.containsKey('display_name')) {
+      context.handle(
+        _displayNameMeta,
+        displayName.isAcceptableOrUnknown(
+          data['display_name']!,
+          _displayNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_displayNameMeta);
+    }
+    if (data.containsKey('price_per_kwh')) {
+      context.handle(
+        _pricePerKwhMeta,
+        pricePerKwh.isAcceptableOrUnknown(
+          data['price_per_kwh']!,
+          _pricePerKwhMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_pricePerKwhMeta);
+    }
+    if (data.containsKey('monthly_base_price')) {
+      context.handle(
+        _monthlyBasePriceMeta,
+        monthlyBasePrice.isAcceptableOrUnknown(
+          data['monthly_base_price']!,
+          _monthlyBasePriceMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_monthlyBasePriceMeta);
+    }
+    if (data.containsKey('valid_from')) {
+      context.handle(
+        _validFromMeta,
+        validFrom.isAcceptableOrUnknown(data['valid_from']!, _validFromMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_validFromMeta);
+    }
+    if (data.containsKey('is_synced')) {
+      context.handle(
+        _isSyncedMeta,
+        isSynced.isAcceptableOrUnknown(data['is_synced']!, _isSyncedMeta),
+      );
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(
+        _remoteIdMeta,
+        remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ElectricityContract map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ElectricityContract(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      internalName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}internal_name'],
+      )!,
+      displayName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}display_name'],
+      )!,
+      pricePerKwh: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}price_per_kwh'],
+      )!,
+      monthlyBasePrice: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monthly_base_price'],
+      )!,
+      validFrom: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}valid_from'],
+      )!,
+      isSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_synced'],
+      )!,
+      remoteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_id'],
+      ),
+    );
+  }
+
+  @override
+  $ElectricityContractsTable createAlias(String alias) {
+    return $ElectricityContractsTable(attachedDatabase, alias);
+  }
+}
+
+class ElectricityContract extends DataClass
+    implements Insertable<ElectricityContract> {
+  final int id;
+  final String internalName;
+  final String displayName;
+  final double pricePerKwh;
+  final double monthlyBasePrice;
+  final int validFrom;
+  final bool isSynced;
+  final String? remoteId;
+  const ElectricityContract({
+    required this.id,
+    required this.internalName,
+    required this.displayName,
+    required this.pricePerKwh,
+    required this.monthlyBasePrice,
+    required this.validFrom,
+    required this.isSynced,
+    this.remoteId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['internal_name'] = Variable<String>(internalName);
+    map['display_name'] = Variable<String>(displayName);
+    map['price_per_kwh'] = Variable<double>(pricePerKwh);
+    map['monthly_base_price'] = Variable<double>(monthlyBasePrice);
+    map['valid_from'] = Variable<int>(validFrom);
+    map['is_synced'] = Variable<bool>(isSynced);
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
+    return map;
+  }
+
+  ElectricityContractsCompanion toCompanion(bool nullToAbsent) {
+    return ElectricityContractsCompanion(
+      id: Value(id),
+      internalName: Value(internalName),
+      displayName: Value(displayName),
+      pricePerKwh: Value(pricePerKwh),
+      monthlyBasePrice: Value(monthlyBasePrice),
+      validFrom: Value(validFrom),
+      isSynced: Value(isSynced),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+    );
+  }
+
+  factory ElectricityContract.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ElectricityContract(
+      id: serializer.fromJson<int>(json['id']),
+      internalName: serializer.fromJson<String>(json['internalName']),
+      displayName: serializer.fromJson<String>(json['displayName']),
+      pricePerKwh: serializer.fromJson<double>(json['pricePerKwh']),
+      monthlyBasePrice: serializer.fromJson<double>(json['monthlyBasePrice']),
+      validFrom: serializer.fromJson<int>(json['validFrom']),
+      isSynced: serializer.fromJson<bool>(json['isSynced']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'internalName': serializer.toJson<String>(internalName),
+      'displayName': serializer.toJson<String>(displayName),
+      'pricePerKwh': serializer.toJson<double>(pricePerKwh),
+      'monthlyBasePrice': serializer.toJson<double>(monthlyBasePrice),
+      'validFrom': serializer.toJson<int>(validFrom),
+      'isSynced': serializer.toJson<bool>(isSynced),
+      'remoteId': serializer.toJson<String?>(remoteId),
+    };
+  }
+
+  ElectricityContract copyWith({
+    int? id,
+    String? internalName,
+    String? displayName,
+    double? pricePerKwh,
+    double? monthlyBasePrice,
+    int? validFrom,
+    bool? isSynced,
+    Value<String?> remoteId = const Value.absent(),
+  }) => ElectricityContract(
+    id: id ?? this.id,
+    internalName: internalName ?? this.internalName,
+    displayName: displayName ?? this.displayName,
+    pricePerKwh: pricePerKwh ?? this.pricePerKwh,
+    monthlyBasePrice: monthlyBasePrice ?? this.monthlyBasePrice,
+    validFrom: validFrom ?? this.validFrom,
+    isSynced: isSynced ?? this.isSynced,
+    remoteId: remoteId.present ? remoteId.value : this.remoteId,
+  );
+  ElectricityContract copyWithCompanion(ElectricityContractsCompanion data) {
+    return ElectricityContract(
+      id: data.id.present ? data.id.value : this.id,
+      internalName: data.internalName.present
+          ? data.internalName.value
+          : this.internalName,
+      displayName: data.displayName.present
+          ? data.displayName.value
+          : this.displayName,
+      pricePerKwh: data.pricePerKwh.present
+          ? data.pricePerKwh.value
+          : this.pricePerKwh,
+      monthlyBasePrice: data.monthlyBasePrice.present
+          ? data.monthlyBasePrice.value
+          : this.monthlyBasePrice,
+      validFrom: data.validFrom.present ? data.validFrom.value : this.validFrom,
+      isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ElectricityContract(')
+          ..write('id: $id, ')
+          ..write('internalName: $internalName, ')
+          ..write('displayName: $displayName, ')
+          ..write('pricePerKwh: $pricePerKwh, ')
+          ..write('monthlyBasePrice: $monthlyBasePrice, ')
+          ..write('validFrom: $validFrom, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('remoteId: $remoteId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    internalName,
+    displayName,
+    pricePerKwh,
+    monthlyBasePrice,
+    validFrom,
+    isSynced,
+    remoteId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ElectricityContract &&
+          other.id == this.id &&
+          other.internalName == this.internalName &&
+          other.displayName == this.displayName &&
+          other.pricePerKwh == this.pricePerKwh &&
+          other.monthlyBasePrice == this.monthlyBasePrice &&
+          other.validFrom == this.validFrom &&
+          other.isSynced == this.isSynced &&
+          other.remoteId == this.remoteId);
+}
+
+class ElectricityContractsCompanion
+    extends UpdateCompanion<ElectricityContract> {
+  final Value<int> id;
+  final Value<String> internalName;
+  final Value<String> displayName;
+  final Value<double> pricePerKwh;
+  final Value<double> monthlyBasePrice;
+  final Value<int> validFrom;
+  final Value<bool> isSynced;
+  final Value<String?> remoteId;
+  const ElectricityContractsCompanion({
+    this.id = const Value.absent(),
+    this.internalName = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.pricePerKwh = const Value.absent(),
+    this.monthlyBasePrice = const Value.absent(),
+    this.validFrom = const Value.absent(),
+    this.isSynced = const Value.absent(),
+    this.remoteId = const Value.absent(),
+  });
+  ElectricityContractsCompanion.insert({
+    this.id = const Value.absent(),
+    required String internalName,
+    required String displayName,
+    required double pricePerKwh,
+    required double monthlyBasePrice,
+    required int validFrom,
+    this.isSynced = const Value.absent(),
+    this.remoteId = const Value.absent(),
+  }) : internalName = Value(internalName),
+       displayName = Value(displayName),
+       pricePerKwh = Value(pricePerKwh),
+       monthlyBasePrice = Value(monthlyBasePrice),
+       validFrom = Value(validFrom);
+  static Insertable<ElectricityContract> custom({
+    Expression<int>? id,
+    Expression<String>? internalName,
+    Expression<String>? displayName,
+    Expression<double>? pricePerKwh,
+    Expression<double>? monthlyBasePrice,
+    Expression<int>? validFrom,
+    Expression<bool>? isSynced,
+    Expression<String>? remoteId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (internalName != null) 'internal_name': internalName,
+      if (displayName != null) 'display_name': displayName,
+      if (pricePerKwh != null) 'price_per_kwh': pricePerKwh,
+      if (monthlyBasePrice != null) 'monthly_base_price': monthlyBasePrice,
+      if (validFrom != null) 'valid_from': validFrom,
+      if (isSynced != null) 'is_synced': isSynced,
+      if (remoteId != null) 'remote_id': remoteId,
+    });
+  }
+
+  ElectricityContractsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? internalName,
+    Value<String>? displayName,
+    Value<double>? pricePerKwh,
+    Value<double>? monthlyBasePrice,
+    Value<int>? validFrom,
+    Value<bool>? isSynced,
+    Value<String?>? remoteId,
+  }) {
+    return ElectricityContractsCompanion(
+      id: id ?? this.id,
+      internalName: internalName ?? this.internalName,
+      displayName: displayName ?? this.displayName,
+      pricePerKwh: pricePerKwh ?? this.pricePerKwh,
+      monthlyBasePrice: monthlyBasePrice ?? this.monthlyBasePrice,
+      validFrom: validFrom ?? this.validFrom,
+      isSynced: isSynced ?? this.isSynced,
+      remoteId: remoteId ?? this.remoteId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (internalName.present) {
+      map['internal_name'] = Variable<String>(internalName.value);
+    }
+    if (displayName.present) {
+      map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (pricePerKwh.present) {
+      map['price_per_kwh'] = Variable<double>(pricePerKwh.value);
+    }
+    if (monthlyBasePrice.present) {
+      map['monthly_base_price'] = Variable<double>(monthlyBasePrice.value);
+    }
+    if (validFrom.present) {
+      map['valid_from'] = Variable<int>(validFrom.value);
+    }
+    if (isSynced.present) {
+      map['is_synced'] = Variable<bool>(isSynced.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ElectricityContractsCompanion(')
+          ..write('id: $id, ')
+          ..write('internalName: $internalName, ')
+          ..write('displayName: $displayName, ')
+          ..write('pricePerKwh: $pricePerKwh, ')
+          ..write('monthlyBasePrice: $monthlyBasePrice, ')
+          ..write('validFrom: $validFrom, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('remoteId: $remoteId')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $AppSettingsTable extends AppSettings
     with TableInfo<$AppSettingsTable, AppSetting> {
   @override
@@ -1200,6 +2206,26 @@ class $AppSettingsTable extends AppSettings
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _electricityIntDigitsMeta =
+      const VerificationMeta('electricityIntDigits');
+  @override
+  late final GeneratedColumn<int> electricityIntDigits = GeneratedColumn<int>(
+    'electricity_int_digits',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _electricityDecDigitsMeta =
+      const VerificationMeta('electricityDecDigits');
+  @override
+  late final GeneratedColumn<int> electricityDecDigits = GeneratedColumn<int>(
+    'electricity_dec_digits',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1208,6 +2234,8 @@ class $AppSettingsTable extends AppSettings
     locationLat,
     locationLon,
     meterIntDigits,
+    electricityIntDigits,
+    electricityDecDigits,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1269,6 +2297,24 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('electricity_int_digits')) {
+      context.handle(
+        _electricityIntDigitsMeta,
+        electricityIntDigits.isAcceptableOrUnknown(
+          data['electricity_int_digits']!,
+          _electricityIntDigitsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('electricity_dec_digits')) {
+      context.handle(
+        _electricityDecDigitsMeta,
+        electricityDecDigits.isAcceptableOrUnknown(
+          data['electricity_dec_digits']!,
+          _electricityDecDigitsMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1302,6 +2348,14 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.int,
         data['${effectivePrefix}meter_int_digits'],
       ),
+      electricityIntDigits: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}electricity_int_digits'],
+      ),
+      electricityDecDigits: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}electricity_dec_digits'],
+      ),
     );
   }
 
@@ -1318,6 +2372,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final double? locationLat;
   final double? locationLon;
   final int? meterIntDigits;
+  final int? electricityIntDigits;
+  final int? electricityDecDigits;
   const AppSetting({
     required this.id,
     this.locationPlz,
@@ -1325,6 +2381,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     this.locationLat,
     this.locationLon,
     this.meterIntDigits,
+    this.electricityIntDigits,
+    this.electricityDecDigits,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1344,6 +2402,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     }
     if (!nullToAbsent || meterIntDigits != null) {
       map['meter_int_digits'] = Variable<int>(meterIntDigits);
+    }
+    if (!nullToAbsent || electricityIntDigits != null) {
+      map['electricity_int_digits'] = Variable<int>(electricityIntDigits);
+    }
+    if (!nullToAbsent || electricityDecDigits != null) {
+      map['electricity_dec_digits'] = Variable<int>(electricityDecDigits);
     }
     return map;
   }
@@ -1366,6 +2430,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       meterIntDigits: meterIntDigits == null && nullToAbsent
           ? const Value.absent()
           : Value(meterIntDigits),
+      electricityIntDigits: electricityIntDigits == null && nullToAbsent
+          ? const Value.absent()
+          : Value(electricityIntDigits),
+      electricityDecDigits: electricityDecDigits == null && nullToAbsent
+          ? const Value.absent()
+          : Value(electricityDecDigits),
     );
   }
 
@@ -1381,6 +2451,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       locationLat: serializer.fromJson<double?>(json['locationLat']),
       locationLon: serializer.fromJson<double?>(json['locationLon']),
       meterIntDigits: serializer.fromJson<int?>(json['meterIntDigits']),
+      electricityIntDigits: serializer.fromJson<int?>(
+        json['electricityIntDigits'],
+      ),
+      electricityDecDigits: serializer.fromJson<int?>(
+        json['electricityDecDigits'],
+      ),
     );
   }
   @override
@@ -1393,6 +2469,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'locationLat': serializer.toJson<double?>(locationLat),
       'locationLon': serializer.toJson<double?>(locationLon),
       'meterIntDigits': serializer.toJson<int?>(meterIntDigits),
+      'electricityIntDigits': serializer.toJson<int?>(electricityIntDigits),
+      'electricityDecDigits': serializer.toJson<int?>(electricityDecDigits),
     };
   }
 
@@ -1403,6 +2481,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     Value<double?> locationLat = const Value.absent(),
     Value<double?> locationLon = const Value.absent(),
     Value<int?> meterIntDigits = const Value.absent(),
+    Value<int?> electricityIntDigits = const Value.absent(),
+    Value<int?> electricityDecDigits = const Value.absent(),
   }) => AppSetting(
     id: id ?? this.id,
     locationPlz: locationPlz.present ? locationPlz.value : this.locationPlz,
@@ -1412,6 +2492,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     meterIntDigits: meterIntDigits.present
         ? meterIntDigits.value
         : this.meterIntDigits,
+    electricityIntDigits: electricityIntDigits.present
+        ? electricityIntDigits.value
+        : this.electricityIntDigits,
+    electricityDecDigits: electricityDecDigits.present
+        ? electricityDecDigits.value
+        : this.electricityDecDigits,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -1431,6 +2517,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       meterIntDigits: data.meterIntDigits.present
           ? data.meterIntDigits.value
           : this.meterIntDigits,
+      electricityIntDigits: data.electricityIntDigits.present
+          ? data.electricityIntDigits.value
+          : this.electricityIntDigits,
+      electricityDecDigits: data.electricityDecDigits.present
+          ? data.electricityDecDigits.value
+          : this.electricityDecDigits,
     );
   }
 
@@ -1442,7 +2534,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('locationCity: $locationCity, ')
           ..write('locationLat: $locationLat, ')
           ..write('locationLon: $locationLon, ')
-          ..write('meterIntDigits: $meterIntDigits')
+          ..write('meterIntDigits: $meterIntDigits, ')
+          ..write('electricityIntDigits: $electricityIntDigits, ')
+          ..write('electricityDecDigits: $electricityDecDigits')
           ..write(')'))
         .toString();
   }
@@ -1455,6 +2549,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     locationLat,
     locationLon,
     meterIntDigits,
+    electricityIntDigits,
+    electricityDecDigits,
   );
   @override
   bool operator ==(Object other) =>
@@ -1465,7 +2561,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.locationCity == this.locationCity &&
           other.locationLat == this.locationLat &&
           other.locationLon == this.locationLon &&
-          other.meterIntDigits == this.meterIntDigits);
+          other.meterIntDigits == this.meterIntDigits &&
+          other.electricityIntDigits == this.electricityIntDigits &&
+          other.electricityDecDigits == this.electricityDecDigits);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -1475,6 +2573,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<double?> locationLat;
   final Value<double?> locationLon;
   final Value<int?> meterIntDigits;
+  final Value<int?> electricityIntDigits;
+  final Value<int?> electricityDecDigits;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.locationPlz = const Value.absent(),
@@ -1482,6 +2582,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.locationLat = const Value.absent(),
     this.locationLon = const Value.absent(),
     this.meterIntDigits = const Value.absent(),
+    this.electricityIntDigits = const Value.absent(),
+    this.electricityDecDigits = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -1490,6 +2592,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.locationLat = const Value.absent(),
     this.locationLon = const Value.absent(),
     this.meterIntDigits = const Value.absent(),
+    this.electricityIntDigits = const Value.absent(),
+    this.electricityDecDigits = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<int>? id,
@@ -1498,6 +2602,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<double>? locationLat,
     Expression<double>? locationLon,
     Expression<int>? meterIntDigits,
+    Expression<int>? electricityIntDigits,
+    Expression<int>? electricityDecDigits,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1506,6 +2612,10 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (locationLat != null) 'location_lat': locationLat,
       if (locationLon != null) 'location_lon': locationLon,
       if (meterIntDigits != null) 'meter_int_digits': meterIntDigits,
+      if (electricityIntDigits != null)
+        'electricity_int_digits': electricityIntDigits,
+      if (electricityDecDigits != null)
+        'electricity_dec_digits': electricityDecDigits,
     });
   }
 
@@ -1516,6 +2626,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<double?>? locationLat,
     Value<double?>? locationLon,
     Value<int?>? meterIntDigits,
+    Value<int?>? electricityIntDigits,
+    Value<int?>? electricityDecDigits,
   }) {
     return AppSettingsCompanion(
       id: id ?? this.id,
@@ -1524,6 +2636,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       locationLat: locationLat ?? this.locationLat,
       locationLon: locationLon ?? this.locationLon,
       meterIntDigits: meterIntDigits ?? this.meterIntDigits,
+      electricityIntDigits: electricityIntDigits ?? this.electricityIntDigits,
+      electricityDecDigits: electricityDecDigits ?? this.electricityDecDigits,
     );
   }
 
@@ -1548,6 +2662,12 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (meterIntDigits.present) {
       map['meter_int_digits'] = Variable<int>(meterIntDigits.value);
     }
+    if (electricityIntDigits.present) {
+      map['electricity_int_digits'] = Variable<int>(electricityIntDigits.value);
+    }
+    if (electricityDecDigits.present) {
+      map['electricity_dec_digits'] = Variable<int>(electricityDecDigits.value);
+    }
     return map;
   }
 
@@ -1559,7 +2679,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('locationCity: $locationCity, ')
           ..write('locationLat: $locationLat, ')
           ..write('locationLon: $locationLon, ')
-          ..write('meterIntDigits: $meterIntDigits')
+          ..write('meterIntDigits: $meterIntDigits, ')
+          ..write('electricityIntDigits: $electricityIntDigits, ')
+          ..write('electricityDecDigits: $electricityDecDigits')
           ..write(')'))
         .toString();
   }
@@ -1909,11 +3031,19 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $MeterReadingsTable meterReadings = $MeterReadingsTable(this);
+  late final $ElectricityReadingsTable electricityReadings =
+      $ElectricityReadingsTable(this);
   late final $PriceContractsTable priceContracts = $PriceContractsTable(this);
+  late final $ElectricityContractsTable electricityContracts =
+      $ElectricityContractsTable(this);
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   late final $WeatherCachesTable weatherCaches = $WeatherCachesTable(this);
   late final ReadingsDao readingsDao = ReadingsDao(this as AppDatabase);
+  late final ElectricityReadingsDao electricityReadingsDao =
+      ElectricityReadingsDao(this as AppDatabase);
   late final ContractsDao contractsDao = ContractsDao(this as AppDatabase);
+  late final ElectricityContractsDao electricityContractsDao =
+      ElectricityContractsDao(this as AppDatabase);
   late final SettingsDao settingsDao = SettingsDao(this as AppDatabase);
   late final WeatherDao weatherDao = WeatherDao(this as AppDatabase);
   @override
@@ -1922,7 +3052,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     meterReadings,
+    electricityReadings,
     priceContracts,
+    electricityContracts,
     appSettings,
     weatherCaches,
   ];
@@ -2158,6 +3290,254 @@ typedef $$MeterReadingsTableProcessedTableManager =
         BaseReferences<_$AppDatabase, $MeterReadingsTable, MeterReading>,
       ),
       MeterReading,
+      PrefetchHooks Function()
+    >;
+typedef $$ElectricityReadingsTableCreateCompanionBuilder =
+    ElectricityReadingsCompanion Function({
+      Value<int> id,
+      required double value,
+      required DateTime timestamp,
+      Value<String?> note,
+      Value<String?> imagePath,
+      Value<bool> isSynced,
+      Value<String?> remoteId,
+    });
+typedef $$ElectricityReadingsTableUpdateCompanionBuilder =
+    ElectricityReadingsCompanion Function({
+      Value<int> id,
+      Value<double> value,
+      Value<DateTime> timestamp,
+      Value<String?> note,
+      Value<String?> imagePath,
+      Value<bool> isSynced,
+      Value<String?> remoteId,
+    });
+
+class $$ElectricityReadingsTableFilterComposer
+    extends Composer<_$AppDatabase, $ElectricityReadingsTable> {
+  $$ElectricityReadingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get imagePath => $composableBuilder(
+    column: $table.imagePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ElectricityReadingsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ElectricityReadingsTable> {
+  $$ElectricityReadingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get imagePath => $composableBuilder(
+    column: $table.imagePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ElectricityReadingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ElectricityReadingsTable> {
+  $$ElectricityReadingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<double> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get timestamp =>
+      $composableBuilder(column: $table.timestamp, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get imagePath =>
+      $composableBuilder(column: $table.imagePath, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSynced =>
+      $composableBuilder(column: $table.isSynced, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+}
+
+class $$ElectricityReadingsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ElectricityReadingsTable,
+          ElectricityReading,
+          $$ElectricityReadingsTableFilterComposer,
+          $$ElectricityReadingsTableOrderingComposer,
+          $$ElectricityReadingsTableAnnotationComposer,
+          $$ElectricityReadingsTableCreateCompanionBuilder,
+          $$ElectricityReadingsTableUpdateCompanionBuilder,
+          (
+            ElectricityReading,
+            BaseReferences<
+              _$AppDatabase,
+              $ElectricityReadingsTable,
+              ElectricityReading
+            >,
+          ),
+          ElectricityReading,
+          PrefetchHooks Function()
+        > {
+  $$ElectricityReadingsTableTableManager(
+    _$AppDatabase db,
+    $ElectricityReadingsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ElectricityReadingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ElectricityReadingsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ElectricityReadingsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<double> value = const Value.absent(),
+                Value<DateTime> timestamp = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<String?> imagePath = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+              }) => ElectricityReadingsCompanion(
+                id: id,
+                value: value,
+                timestamp: timestamp,
+                note: note,
+                imagePath: imagePath,
+                isSynced: isSynced,
+                remoteId: remoteId,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required double value,
+                required DateTime timestamp,
+                Value<String?> note = const Value.absent(),
+                Value<String?> imagePath = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+              }) => ElectricityReadingsCompanion.insert(
+                id: id,
+                value: value,
+                timestamp: timestamp,
+                note: note,
+                imagePath: imagePath,
+                isSynced: isSynced,
+                remoteId: remoteId,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ElectricityReadingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ElectricityReadingsTable,
+      ElectricityReading,
+      $$ElectricityReadingsTableFilterComposer,
+      $$ElectricityReadingsTableOrderingComposer,
+      $$ElectricityReadingsTableAnnotationComposer,
+      $$ElectricityReadingsTableCreateCompanionBuilder,
+      $$ElectricityReadingsTableUpdateCompanionBuilder,
+      (
+        ElectricityReading,
+        BaseReferences<
+          _$AppDatabase,
+          $ElectricityReadingsTable,
+          ElectricityReading
+        >,
+      ),
+      ElectricityReading,
       PrefetchHooks Function()
     >;
 typedef $$PriceContractsTableCreateCompanionBuilder =
@@ -2461,6 +3841,281 @@ typedef $$PriceContractsTableProcessedTableManager =
       PriceContract,
       PrefetchHooks Function()
     >;
+typedef $$ElectricityContractsTableCreateCompanionBuilder =
+    ElectricityContractsCompanion Function({
+      Value<int> id,
+      required String internalName,
+      required String displayName,
+      required double pricePerKwh,
+      required double monthlyBasePrice,
+      required int validFrom,
+      Value<bool> isSynced,
+      Value<String?> remoteId,
+    });
+typedef $$ElectricityContractsTableUpdateCompanionBuilder =
+    ElectricityContractsCompanion Function({
+      Value<int> id,
+      Value<String> internalName,
+      Value<String> displayName,
+      Value<double> pricePerKwh,
+      Value<double> monthlyBasePrice,
+      Value<int> validFrom,
+      Value<bool> isSynced,
+      Value<String?> remoteId,
+    });
+
+class $$ElectricityContractsTableFilterComposer
+    extends Composer<_$AppDatabase, $ElectricityContractsTable> {
+  $$ElectricityContractsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get internalName => $composableBuilder(
+    column: $table.internalName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pricePerKwh => $composableBuilder(
+    column: $table.pricePerKwh,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get monthlyBasePrice => $composableBuilder(
+    column: $table.monthlyBasePrice,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get validFrom => $composableBuilder(
+    column: $table.validFrom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ElectricityContractsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ElectricityContractsTable> {
+  $$ElectricityContractsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get internalName => $composableBuilder(
+    column: $table.internalName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get pricePerKwh => $composableBuilder(
+    column: $table.pricePerKwh,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get monthlyBasePrice => $composableBuilder(
+    column: $table.monthlyBasePrice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get validFrom => $composableBuilder(
+    column: $table.validFrom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ElectricityContractsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ElectricityContractsTable> {
+  $$ElectricityContractsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get internalName => $composableBuilder(
+    column: $table.internalName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get pricePerKwh => $composableBuilder(
+    column: $table.pricePerKwh,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get monthlyBasePrice => $composableBuilder(
+    column: $table.monthlyBasePrice,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get validFrom =>
+      $composableBuilder(column: $table.validFrom, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSynced =>
+      $composableBuilder(column: $table.isSynced, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+}
+
+class $$ElectricityContractsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ElectricityContractsTable,
+          ElectricityContract,
+          $$ElectricityContractsTableFilterComposer,
+          $$ElectricityContractsTableOrderingComposer,
+          $$ElectricityContractsTableAnnotationComposer,
+          $$ElectricityContractsTableCreateCompanionBuilder,
+          $$ElectricityContractsTableUpdateCompanionBuilder,
+          (
+            ElectricityContract,
+            BaseReferences<
+              _$AppDatabase,
+              $ElectricityContractsTable,
+              ElectricityContract
+            >,
+          ),
+          ElectricityContract,
+          PrefetchHooks Function()
+        > {
+  $$ElectricityContractsTableTableManager(
+    _$AppDatabase db,
+    $ElectricityContractsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ElectricityContractsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ElectricityContractsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ElectricityContractsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> internalName = const Value.absent(),
+                Value<String> displayName = const Value.absent(),
+                Value<double> pricePerKwh = const Value.absent(),
+                Value<double> monthlyBasePrice = const Value.absent(),
+                Value<int> validFrom = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+              }) => ElectricityContractsCompanion(
+                id: id,
+                internalName: internalName,
+                displayName: displayName,
+                pricePerKwh: pricePerKwh,
+                monthlyBasePrice: monthlyBasePrice,
+                validFrom: validFrom,
+                isSynced: isSynced,
+                remoteId: remoteId,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String internalName,
+                required String displayName,
+                required double pricePerKwh,
+                required double monthlyBasePrice,
+                required int validFrom,
+                Value<bool> isSynced = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+              }) => ElectricityContractsCompanion.insert(
+                id: id,
+                internalName: internalName,
+                displayName: displayName,
+                pricePerKwh: pricePerKwh,
+                monthlyBasePrice: monthlyBasePrice,
+                validFrom: validFrom,
+                isSynced: isSynced,
+                remoteId: remoteId,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ElectricityContractsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ElectricityContractsTable,
+      ElectricityContract,
+      $$ElectricityContractsTableFilterComposer,
+      $$ElectricityContractsTableOrderingComposer,
+      $$ElectricityContractsTableAnnotationComposer,
+      $$ElectricityContractsTableCreateCompanionBuilder,
+      $$ElectricityContractsTableUpdateCompanionBuilder,
+      (
+        ElectricityContract,
+        BaseReferences<
+          _$AppDatabase,
+          $ElectricityContractsTable,
+          ElectricityContract
+        >,
+      ),
+      ElectricityContract,
+      PrefetchHooks Function()
+    >;
 typedef $$AppSettingsTableCreateCompanionBuilder =
     AppSettingsCompanion Function({
       Value<int> id,
@@ -2469,6 +4124,8 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<double?> locationLat,
       Value<double?> locationLon,
       Value<int?> meterIntDigits,
+      Value<int?> electricityIntDigits,
+      Value<int?> electricityDecDigits,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -2478,6 +4135,8 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<double?> locationLat,
       Value<double?> locationLon,
       Value<int?> meterIntDigits,
+      Value<int?> electricityIntDigits,
+      Value<int?> electricityDecDigits,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -2516,6 +4175,16 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<int> get meterIntDigits => $composableBuilder(
     column: $table.meterIntDigits,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get electricityIntDigits => $composableBuilder(
+    column: $table.electricityIntDigits,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get electricityDecDigits => $composableBuilder(
+    column: $table.electricityDecDigits,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2558,6 +4227,16 @@ class $$AppSettingsTableOrderingComposer
     column: $table.meterIntDigits,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get electricityIntDigits => $composableBuilder(
+    column: $table.electricityIntDigits,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get electricityDecDigits => $composableBuilder(
+    column: $table.electricityDecDigits,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -2594,6 +4273,16 @@ class $$AppSettingsTableAnnotationComposer
 
   GeneratedColumn<int> get meterIntDigits => $composableBuilder(
     column: $table.meterIntDigits,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get electricityIntDigits => $composableBuilder(
+    column: $table.electricityIntDigits,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get electricityDecDigits => $composableBuilder(
+    column: $table.electricityDecDigits,
     builder: (column) => column,
   );
 }
@@ -2635,6 +4324,8 @@ class $$AppSettingsTableTableManager
                 Value<double?> locationLat = const Value.absent(),
                 Value<double?> locationLon = const Value.absent(),
                 Value<int?> meterIntDigits = const Value.absent(),
+                Value<int?> electricityIntDigits = const Value.absent(),
+                Value<int?> electricityDecDigits = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
                 locationPlz: locationPlz,
@@ -2642,6 +4333,8 @@ class $$AppSettingsTableTableManager
                 locationLat: locationLat,
                 locationLon: locationLon,
                 meterIntDigits: meterIntDigits,
+                electricityIntDigits: electricityIntDigits,
+                electricityDecDigits: electricityDecDigits,
               ),
           createCompanionCallback:
               ({
@@ -2651,6 +4344,8 @@ class $$AppSettingsTableTableManager
                 Value<double?> locationLat = const Value.absent(),
                 Value<double?> locationLon = const Value.absent(),
                 Value<int?> meterIntDigits = const Value.absent(),
+                Value<int?> electricityIntDigits = const Value.absent(),
+                Value<int?> electricityDecDigits = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 id: id,
                 locationPlz: locationPlz,
@@ -2658,6 +4353,8 @@ class $$AppSettingsTableTableManager
                 locationLat: locationLat,
                 locationLon: locationLon,
                 meterIntDigits: meterIntDigits,
+                electricityIntDigits: electricityIntDigits,
+                electricityDecDigits: electricityDecDigits,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -2884,8 +4581,12 @@ class $AppDatabaseManager {
   $AppDatabaseManager(this._db);
   $$MeterReadingsTableTableManager get meterReadings =>
       $$MeterReadingsTableTableManager(_db, _db.meterReadings);
+  $$ElectricityReadingsTableTableManager get electricityReadings =>
+      $$ElectricityReadingsTableTableManager(_db, _db.electricityReadings);
   $$PriceContractsTableTableManager get priceContracts =>
       $$PriceContractsTableTableManager(_db, _db.priceContracts);
+  $$ElectricityContractsTableTableManager get electricityContracts =>
+      $$ElectricityContractsTableTableManager(_db, _db.electricityContracts);
   $$AppSettingsTableTableManager get appSettings =>
       $$AppSettingsTableTableManager(_db, _db.appSettings);
   $$WeatherCachesTableTableManager get weatherCaches =>

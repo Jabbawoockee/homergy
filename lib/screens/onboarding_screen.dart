@@ -36,7 +36,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController = PageController();
   final _plzController = TextEditingController();
   final _cityController = TextEditingController();
-  int _selectedDigits = 5;
+  int _selectedDigits = 5;         // gas intDigits
+  int _selectedElecIntDigits = 6;  // electricity intDigits
+  int _selectedElecDecDigits = 1;  // electricity decDigits
   int _currentPage = 0;
   bool _saving = false;
 
@@ -105,6 +107,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _finishNewUser({bool skipLocation = false}) async {
     setState(() => _saving = true);
     await _settingsService.setMeterIntDigits(_selectedDigits);
+    await _settingsService.setElectricityIntDigits(_selectedElecIntDigits);
+    await _settingsService.setElectricityDecDigits(_selectedElecDecDigits);
 
     if (!skipLocation) {
       final plz = _plzController.text.trim();
@@ -584,6 +588,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               _ProgressDot(active: _currentPage >= 0),
               const SizedBox(width: 6),
               _ProgressDot(active: _currentPage >= 1),
+              const SizedBox(width: 6),
+              _ProgressDot(active: _currentPage >= 2),
             ],
           ),
         ),
@@ -598,6 +604,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 selectedDigits: _selectedDigits,
                 onSelect: (d) => setState(() => _selectedDigits = d),
               ),
+              _ElecMeterPage(
+                intDigits: _selectedElecIntDigits,
+                decDigits: _selectedElecDecDigits,
+                onIntSelect: (d) => setState(() => _selectedElecIntDigits = d),
+                onDecSelect: (d) => setState(() => _selectedElecDecDigits = d),
+              ),
               _LocationPage(
                 plzController: _plzController,
                 cityController: _cityController,
@@ -608,7 +620,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          child: _currentPage == 0
+          child: _currentPage < 2
               ? _ActionButton(
                   label: 'WEITER',
                   isBusy: false,
@@ -677,7 +689,7 @@ class _MeterTypePage extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'EINRICHTUNG  ·  SCHRITT 1 VON 2',
+            'EINRICHTUNG  ·  SCHRITT 1 VON 3',
             style: GoogleFonts.rajdhani(
               fontSize: 12,
               fontWeight: FontWeight.w500,
@@ -740,7 +752,202 @@ class _MeterTypePage extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Page 2 — Location
+// Page 2 — Electricity meter configuration
+// ---------------------------------------------------------------------------
+
+class _ElecMeterPage extends StatelessWidget {
+  final int intDigits;
+  final int decDigits;
+  final ValueChanged<int> onIntSelect;
+  final ValueChanged<int> onDecSelect;
+
+  const _ElecMeterPage({
+    required this.intDigits,
+    required this.decDigits,
+    required this.onIntSelect,
+    required this.onDecSelect,
+  });
+
+  static const _elecBlue = Color(0xFF5B8DB8);
+  static const _elecBlueDk = Color(0xFF3D6A8A);
+
+  @override
+  Widget build(BuildContext context) {
+    final total = intDigits + decDigits;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('HOMERGY', style: GoogleFonts.spaceMono(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.greenDark, letterSpacing: 6)),
+          const SizedBox(height: 6),
+          Text('EINRICHTUNG  ·  SCHRITT 2 VON 3', style: GoogleFonts.rajdhani(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary, letterSpacing: 3)),
+          const SizedBox(height: 28),
+          Container(height: 1, color: AppColors.border),
+          const SizedBox(height: 24),
+
+          Row(children: [
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(color: _elecBlue.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.bolt_rounded, color: _elecBlue, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Text('STROMZÄHLER EINRICHTEN', style: GoogleFonts.spaceMono(fontSize: 12, fontWeight: FontWeight.w700, color: _elecBlueDk, letterSpacing: 0.5)),
+          ]),
+          const SizedBox(height: 12),
+          Text(
+            'Schau auf deinen Stromzähler und zähle die Stellen im Anzeigefeld — links vom Komma und rechts vom Komma.',
+            style: GoogleFonts.rajdhani(fontSize: 14, color: AppColors.textSecondary, height: 1.5),
+          ),
+          const SizedBox(height: 24),
+
+          // Live preview
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(12)),
+            child: Column(
+              children: [
+                Text('kWh', style: GoogleFonts.spaceMono(fontSize: 11, color: Colors.white60, letterSpacing: 2)),
+                const SizedBox(height: 8),
+                _ElecMiniDisplay(intDigits: intDigits, decDigits: decDigits),
+                const SizedBox(height: 8),
+                Text(
+                  'Gesamt $total Ziffern — OCR prüft genau $total Stellen',
+                  style: GoogleFonts.rajdhani(fontSize: 11, color: Colors.white38, letterSpacing: 0.5),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // intDigits selector
+          Text('STELLEN VOR DEM KOMMA', style: GoogleFonts.rajdhani(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 2)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (final d in [5, 6, 7]) ...[
+                Expanded(child: _ElecDigitButton(value: d, selected: intDigits == d, color: _elecBlue, onTap: () => onIntSelect(d))),
+                if (d < 7) const SizedBox(width: 10),
+              ],
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // decDigits selector
+          Text('STELLEN NACH DEM KOMMA', style: GoogleFonts.rajdhani(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 2)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (final d in [1, 2, 3]) ...[
+                Expanded(child: _ElecDigitButton(value: d, selected: decDigits == d, color: _elecBlue, onTap: () => onDecSelect(d))),
+                if (d < 3) const SizedBox(width: 10),
+              ],
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: _elecBlue.withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline_rounded, size: 16, color: _elecBlue),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Die rot markierte Dezimaltrommel zeigt die Stellen nach dem Komma. Diese Einstellung kann jederzeit in den Einstellungen geändert werden.',
+                    style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ElecDigitButton extends StatelessWidget {
+  final int value;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+  const _ElecDigitButton({required this.value, required this.selected, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 52,
+        decoration: BoxDecoration(
+          color: selected ? color : AppColors.background,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: selected
+              ? [BoxShadow(color: color.withOpacity(0.4), offset: const Offset(0, 3), blurRadius: 8)]
+              : AppColors.neu(4),
+        ),
+        child: Center(
+          child: Text('$value', style: GoogleFonts.spaceMono(fontSize: 20, fontWeight: FontWeight.w700, color: selected ? Colors.white : AppColors.textSecondary)),
+        ),
+      ),
+    );
+  }
+}
+
+class _ElecMiniDisplay extends StatelessWidget {
+  final int intDigits;
+  final int decDigits;
+  const _ElecMiniDisplay({required this.intDigits, required this.decDigits});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (int i = 0; i < intDigits; i++) ...[
+          _ElecDigitBox(isDecimal: false),
+          if (i < intDigits - 1) const SizedBox(width: 3),
+        ],
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 5),
+          child: Text(',', style: GoogleFonts.spaceMono(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white70)),
+        ),
+        for (int i = 0; i < decDigits; i++) ...[
+          _ElecDigitBox(isDecimal: true),
+          if (i < decDigits - 1) const SizedBox(width: 3),
+        ],
+      ],
+    );
+  }
+}
+
+class _ElecDigitBox extends StatelessWidget {
+  final bool isDecimal;
+  const _ElecDigitBox({required this.isDecimal});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 24, height: 30,
+      decoration: BoxDecoration(
+        color: isDecimal ? const Color(0xFF6B2020) : const Color(0xFF2A2A2A),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: isDecimal ? Colors.red.withOpacity(0.5) : Colors.white24, width: 1),
+      ),
+      child: Center(
+        child: Text('0', style: GoogleFonts.spaceMono(fontSize: 13, fontWeight: FontWeight.w700, color: isDecimal ? Colors.redAccent.shade100 : Colors.white70)),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Page 3 — Location
 // ---------------------------------------------------------------------------
 
 class _LocationPage extends StatelessWidget {
@@ -770,7 +977,7 @@ class _LocationPage extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'EINRICHTUNG  ·  SCHRITT 2 VON 2',
+            'EINRICHTUNG  ·  SCHRITT 3 VON 3',
             style: GoogleFonts.rajdhani(
               fontSize: 12,
               fontWeight: FontWeight.w500,

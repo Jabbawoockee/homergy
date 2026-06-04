@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../database/database.dart';
 import 'supabase_service.dart';
+import 'weather_service.dart';
 
 class SyncService {
   static final SyncService _instance = SyncService._();
@@ -12,9 +13,11 @@ class SyncService {
   final _db = AppDatabase.instance;
   SupabaseClient get _client => SupabaseService.client;
 
-  static const _readingsTable = 'meter_readings';
-  static const _settingsTable = 'user_settings';
-  static const _contractsTable = 'price_contracts';
+  static const _readingsTable           = 'meter_readings';
+  static const _settingsTable           = 'user_settings';
+  static const _contractsTable          = 'price_contracts';
+  static const _elecReadingsTable       = 'electricity_readings';
+  static const _elecContractsTable      = 'electricity_contracts';
 
   /// Push unsynced local records to Supabase, then pull missing remote records.
   Future<void> syncAll() async {
@@ -22,9 +25,33 @@ class SyncService {
     if (user == null) return;
     await _pushPendingReadings(user.id);
     await _pullMissingReadings(user.id);
+    await _pushPendingElectricityReadings(user.id);
+    await _pullMissingElectricityReadings(user.id);
     await _syncSettings(user.id);
     await _pushPendingContracts(user.id);
     await _pullMissingContracts(user.id);
+    await _pushPendingElectricityContracts(user.id);
+    await _pullMissingElectricityContracts(user.id);
+    await _prefetchWeather();
+  }
+
+  /// Pre-fetches weather for the last 30 days so the chart always has data,
+  /// independent of when the user last opened the chart.
+  Future<void> _prefetchWeather() async {
+    try {
+      final settings = await _db.getSettings();
+      if (settings?.locationLat == null || settings?.locationLon == null) return;
+      final now = DateTime.now();
+      await WeatherService().getTemperatures(
+        lat: settings!.locationLat!,
+        lon: settings.locationLon!,
+        start: DateTime(now.year, now.month, now.day - 30),
+        end: now,
+      );
+      debugPrint('[Sync] Weather pre-fetched');
+    } catch (e) {
+      debugPrint('[Sync] Weather pre-fetch failed: $e');
+    }
   }
 
   /// Sync only settings (call after saving location in settings screen).
@@ -104,6 +131,150 @@ class SyncService {
   }
 
   // ---------------------------------------------------------------------------
+  // Electricity readings
+  // ---------------------------------------------------------------------------
+
+  Future<void> _pushPendingElectricityReadings(String userId) async {
+    try {
+      final unsynced = await _db.getUnsyncedElectricityReadings();
+      for (final r in unsynced) {
+        if (r.remoteId == null) {
+          final response = await _client.from(_elecReadingsTable).insert({
+            'user_id': userId,
+            'value': r.value,
+            'timestamp': r.timestamp.toUtc().toIso8601String(),
+            'note': r.note,
+          }).select('id').single();
+          await _db.markElectricityReadingSynced(r.id, response['id'] as String);
+          debugPrint('[Sync] Elec reading inserted: local=${r.id} remote=${response['id']}');
+        } else {
+          await _client.from(_elecReadingsTable).update({
+            'value': r.value,
+            'note': r.note,
+          }).eq('id', r.remoteId!);
+          await _db.markElectricityReadingSynced(r.id, r.remoteId!);
+          debugPrint('[Sync] Elec reading updated: ${r.remoteId}');
+        }
+      }
+    } catch (e) {
+      debugPrint('[Sync] Elec readings push failed: $e');
+    }
+  }
+
+  Future<void> _pullMissingElectricityReadings(String userId) async {
+    try {
+      final knownIds = await _db.getAllRemoteElectricityIds();
+      final List<dynamic> remote = await _client
+          .from(_elecReadingsTable)
+          .select('id, value, timestamp, note')
+          .eq('user_id', userId)
+          .order('timestamp', ascending: false);
+
+      for (final row in remote) {
+        final remoteId = row['id'] as String;
+        if (!knownIds.contains(remoteId)) {
+          await _db.insertElectricityReading(ElectricityReadingsCompanion(
+            value: Value((row['value'] as num).toDouble()),
+            timestamp:
+                Value(DateTime.parse(row['timestamp'] as String).toLocal()),
+            note: Value(row['note'] as String?),
+            isSynced: const Value(true),
+            remoteId: Value(remoteId),
+          ));
+          debugPrint('[Sync] Elec reading pulled: $remoteId');
+        }
+      }
+    } catch (e) {
+      debugPrint('[Sync] Elec readings pull failed: $e');
+    }
+  }
+
+  /// Delete an electricity reading from Supabase.
+  Future<void> deleteRemoteElectricityReading(String remoteId) async {
+    try {
+      await _client.from(_elecReadingsTable).delete().eq('id', remoteId);
+      debugPrint('[Sync] Elec reading deleted remote: $remoteId');
+    } catch (e) {
+      debugPrint('[Sync] Elec reading remote delete failed: $e');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Electricity contracts
+  // ---------------------------------------------------------------------------
+
+  Future<void> _pushPendingElectricityContracts(String userId) async {
+    try {
+      final unsynced = await _db.getUnsyncedElectricityContracts();
+      for (final c in unsynced) {
+        if (c.remoteId == null) {
+          final response = await _client.from(_elecContractsTable).insert({
+            'user_id': userId,
+            'internal_name': c.internalName,
+            'display_name': c.displayName,
+            'price_per_kwh': c.pricePerKwh,
+            'monthly_base_price': c.monthlyBasePrice,
+            'valid_from': c.validFrom,
+          }).select('id').single();
+          await _db.markElectricityContractSynced(c.id, response['id'] as String);
+          debugPrint('[Sync] Elec contract inserted: local=${c.id} remote=${response['id']}');
+        } else {
+          await _client.from(_elecContractsTable).update({
+            'internal_name': c.internalName,
+            'display_name': c.displayName,
+            'price_per_kwh': c.pricePerKwh,
+            'monthly_base_price': c.monthlyBasePrice,
+            'valid_from': c.validFrom,
+          }).eq('id', c.remoteId!);
+          await _db.markElectricityContractSynced(c.id, c.remoteId!);
+          debugPrint('[Sync] Elec contract updated: ${c.remoteId}');
+        }
+      }
+    } catch (e) {
+      debugPrint('[Sync] Elec contracts push failed: $e');
+    }
+  }
+
+  Future<void> _pullMissingElectricityContracts(String userId) async {
+    try {
+      final knownIds = await _db.getAllRemoteElectricityContractIds();
+      final List<dynamic> remote = await _client
+          .from(_elecContractsTable)
+          .select()
+          .eq('user_id', userId);
+
+      for (final row in remote) {
+        final remoteId = row['id'] as String;
+        if (!knownIds.contains(remoteId)) {
+          await _db.insertElectricityContract(ElectricityContractsCompanion(
+            internalName: Value(row['internal_name'] as String),
+            displayName: Value(row['display_name'] as String),
+            pricePerKwh: Value((row['price_per_kwh'] as num).toDouble()),
+            monthlyBasePrice:
+                Value((row['monthly_base_price'] as num).toDouble()),
+            validFrom: Value(row['valid_from'] as int),
+            isSynced: const Value(true),
+            remoteId: Value(remoteId),
+          ));
+          debugPrint('[Sync] Elec contract pulled: $remoteId');
+        }
+      }
+    } catch (e) {
+      debugPrint('[Sync] Elec contracts pull failed: $e');
+    }
+  }
+
+  /// Delete an electricity contract from Supabase.
+  Future<void> deleteRemoteElectricityContract(String remoteId) async {
+    try {
+      await _client.from(_elecContractsTable).delete().eq('id', remoteId);
+      debugPrint('[Sync] Elec contract deleted remote: $remoteId');
+    } catch (e) {
+      debugPrint('[Sync] Elec contract remote delete failed: $e');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Settings
   // ---------------------------------------------------------------------------
 
@@ -139,6 +310,20 @@ class SyncService {
         debugPrint('[Sync] Settings meterIntDigits pulled from remote');
       }
 
+      // Pull electricity digit settings from remote if not set locally.
+      if (local?.electricityIntDigits == null &&
+          remote?['electricity_int_digits'] != null) {
+        await _db.saveElectricityIntDigits(
+            remote!['electricity_int_digits'] as int);
+        debugPrint('[Sync] Settings electricityIntDigits pulled from remote');
+      }
+      if (local?.electricityDecDigits == null &&
+          remote?['electricity_dec_digits'] != null) {
+        await _db.saveElectricityDecDigits(
+            remote!['electricity_dec_digits'] as int);
+        debugPrint('[Sync] Settings electricityDecDigits pulled from remote');
+      }
+
       // Push merged local state to remote.
       final merged = await _db.getSettings();
       if (merged != null) {
@@ -149,6 +334,8 @@ class SyncService {
           'location_lat': merged.locationLat,
           'location_lon': merged.locationLon,
           'meter_int_digits': merged.meterIntDigits,
+          'electricity_int_digits': merged.electricityIntDigits,
+          'electricity_dec_digits': merged.electricityDecDigits,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         }, onConflict: 'user_id');
         debugPrint('[Sync] Settings pushed');

@@ -32,6 +32,8 @@ class AppSettings extends Table {
   RealColumn get locationLat => real().nullable()();
   RealColumn get locationLon => real().nullable()();
   IntColumn get meterIntDigits => integer().nullable()();
+  IntColumn get electricityIntDigits => integer().nullable()();
+  IntColumn get electricityDecDigits => integer().nullable()();
 }
 
 // ---------------------------------------------------------------------------
@@ -44,6 +46,37 @@ class WeatherCaches extends Table {
   RealColumn get lat => real()();
   RealColumn get lon => real()();
   RealColumn get tempMean => real()();
+}
+
+// ---------------------------------------------------------------------------
+// Electricity readings table
+// ---------------------------------------------------------------------------
+
+class ElectricityReadings extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  RealColumn get value => real()();
+  DateTimeColumn get timestamp => dateTime()();
+  TextColumn get note => text().nullable()();
+  TextColumn get imagePath => text().nullable()();
+  BoolColumn get isSynced =>
+      boolean().withDefault(const Constant(false))();
+  TextColumn get remoteId => text().nullable()();
+}
+
+// ---------------------------------------------------------------------------
+// Electricity contracts table (simpler than gas — no brennwert/zustandszahl)
+// ---------------------------------------------------------------------------
+
+class ElectricityContracts extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get internalName => text()();
+  TextColumn get displayName => text()();
+  RealColumn get pricePerKwh => real()();
+  RealColumn get monthlyBasePrice => real()();
+  IntColumn get validFrom => integer()(); // ms since epoch
+  BoolColumn get isSynced =>
+      boolean().withDefault(const Constant(false))();
+  TextColumn get remoteId => text().nullable()();
 }
 
 // ---------------------------------------------------------------------------
@@ -210,6 +243,122 @@ class ContractsDao extends DatabaseAccessor<AppDatabase>
 }
 
 // ---------------------------------------------------------------------------
+// DAO — Electricity Readings
+// ---------------------------------------------------------------------------
+
+@DriftAccessor(tables: [ElectricityReadings])
+class ElectricityReadingsDao extends DatabaseAccessor<AppDatabase>
+    with _$ElectricityReadingsDaoMixin {
+  ElectricityReadingsDao(super.db);
+
+  Stream<List<ElectricityReading>> watchAllReadings() =>
+      (select(electricityReadings)
+            ..orderBy([(t) => OrderingTerm.desc(t.timestamp)]))
+          .watch();
+
+  Future<int> insertReading(ElectricityReadingsCompanion companion) =>
+      into(electricityReadings).insert(companion);
+
+  Future<void> deleteReading(int id) =>
+      (delete(electricityReadings)..where((t) => t.id.equals(id))).go();
+
+  Future<ElectricityReading?> getLatestReading() async {
+    final results = await (select(electricityReadings)
+          ..orderBy([(t) => OrderingTerm.desc(t.timestamp)])
+          ..limit(1))
+        .get();
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<void> updateReadingValue(int id, double value) =>
+      (update(electricityReadings)..where((t) => t.id.equals(id))).write(
+        ElectricityReadingsCompanion(
+          value: Value(value),
+          isSynced: const Value(false),
+        ),
+      );
+
+  Future<List<ElectricityReading>> getUnsyncedReadings() =>
+      (select(electricityReadings)..where((t) => t.isSynced.equals(false)))
+          .get();
+
+  Future<void> markSynced(int localId, String remoteId) =>
+      (update(electricityReadings)..where((t) => t.id.equals(localId))).write(
+        ElectricityReadingsCompanion(
+          isSynced: const Value(true),
+          remoteId: Value(remoteId),
+        ),
+      );
+
+  Future<Set<String>> getAllRemoteIds() async {
+    final rows = await (select(electricityReadings)
+          ..where((t) => t.remoteId.isNotNull()))
+        .get();
+    return rows.map((r) => r.remoteId!).toSet();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// DAO — Electricity Contracts
+// ---------------------------------------------------------------------------
+
+@DriftAccessor(tables: [ElectricityContracts])
+class ElectricityContractsDao extends DatabaseAccessor<AppDatabase>
+    with _$ElectricityContractsDaoMixin {
+  ElectricityContractsDao(super.db);
+
+  Future<List<ElectricityContract>> getAllContracts() =>
+      (select(electricityContracts)
+            ..orderBy([(t) => OrderingTerm.asc(t.validFrom)]))
+          .get();
+
+  Future<ElectricityContract?> getLatestContract() async {
+    final results = await (select(electricityContracts)
+          ..orderBy([(t) => OrderingTerm.desc(t.validFrom)])
+          ..limit(1))
+        .get();
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<int> insertContract(ElectricityContractsCompanion entry) =>
+      into(electricityContracts).insert(entry);
+
+  Future<void> updateContract(ElectricityContractsCompanion entry) =>
+      (update(electricityContracts)
+            ..where((t) => t.id.equals(entry.id.value)))
+          .write(entry);
+
+  Future<void> deleteContract(int id) =>
+      (delete(electricityContracts)..where((t) => t.id.equals(id))).go();
+
+  Future<int> countByDisplayName(String displayName) async {
+    final results = await (select(electricityContracts)
+          ..where((t) => t.displayName.equals(displayName)))
+        .get();
+    return results.length;
+  }
+
+  Future<List<ElectricityContract>> getUnsyncedContracts() =>
+      (select(electricityContracts)..where((t) => t.isSynced.equals(false)))
+          .get();
+
+  Future<void> markContractSynced(int localId, String remoteId) =>
+      (update(electricityContracts)..where((t) => t.id.equals(localId))).write(
+        ElectricityContractsCompanion(
+          isSynced: const Value(true),
+          remoteId: Value(remoteId),
+        ),
+      );
+
+  Future<Set<String>> getAllRemoteContractIds() async {
+    final rows = await (select(electricityContracts)
+          ..where((t) => t.remoteId.isNotNull()))
+        .get();
+    return rows.map((r) => r.remoteId!).toSet();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // DAO — App Settings
 // ---------------------------------------------------------------------------
 
@@ -260,12 +409,30 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
   Future<void> saveMeterIntDigits(int digits) async {
     final existing = await getSettings();
     if (existing == null) {
-      await into(appSettings).insert(AppSettingsCompanion(
-        meterIntDigits: Value(digits),
-      ));
+      await into(appSettings).insert(AppSettingsCompanion(meterIntDigits: Value(digits)));
     } else {
       await (update(appSettings)..where((t) => t.id.equals(existing.id)))
           .write(AppSettingsCompanion(meterIntDigits: Value(digits)));
+    }
+  }
+
+  Future<void> saveElectricityIntDigits(int digits) async {
+    final existing = await getSettings();
+    if (existing == null) {
+      await into(appSettings).insert(AppSettingsCompanion(electricityIntDigits: Value(digits)));
+    } else {
+      await (update(appSettings)..where((t) => t.id.equals(existing.id)))
+          .write(AppSettingsCompanion(electricityIntDigits: Value(digits)));
+    }
+  }
+
+  Future<void> saveElectricityDecDigits(int digits) async {
+    final existing = await getSettings();
+    if (existing == null) {
+      await into(appSettings).insert(AppSettingsCompanion(electricityDecDigits: Value(digits)));
+    } else {
+      await (update(appSettings)..where((t) => t.id.equals(existing.id)))
+          .write(AppSettingsCompanion(electricityDecDigits: Value(digits)));
     }
   }
 }
@@ -303,8 +470,22 @@ class WeatherDao extends DatabaseAccessor<AppDatabase>
 // ---------------------------------------------------------------------------
 
 @DriftDatabase(
-  tables: [MeterReadings, PriceContracts, AppSettings, WeatherCaches],
-  daos: [ReadingsDao, ContractsDao, SettingsDao, WeatherDao],
+  tables: [
+    MeterReadings,
+    ElectricityReadings,
+    PriceContracts,
+    ElectricityContracts,
+    AppSettings,
+    WeatherCaches,
+  ],
+  daos: [
+    ReadingsDao,
+    ElectricityReadingsDao,
+    ContractsDao,
+    ElectricityContractsDao,
+    SettingsDao,
+    WeatherDao,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase._() : super(_openConnection());
@@ -315,7 +496,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -337,6 +518,16 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 6) {
         await migrator.addColumn(appSettings, appSettings.meterIntDigits);
+      }
+      if (from < 7) {
+        await migrator.createTable(electricityReadings);
+        await migrator.createTable(electricityContracts);
+      }
+      if (from < 8) {
+        await migrator.addColumn(appSettings, appSettings.electricityIntDigits);
+      }
+      if (from < 9) {
+        await migrator.addColumn(appSettings, appSettings.electricityDecDigits);
       }
     },
   );
@@ -371,6 +562,61 @@ class AppDatabase extends _$AppDatabase {
   Future<MeterReading?> getReadingById(int id) =>
       readingsDao.getReadingById(id);
 
+  // ── Electricity readings pass-throughs ──────────────────────────────────
+
+  Stream<List<ElectricityReading>> watchAllElectricityReadings() =>
+      electricityReadingsDao.watchAllReadings();
+
+  Future<int> insertElectricityReading(ElectricityReadingsCompanion companion) =>
+      electricityReadingsDao.insertReading(companion);
+
+  Future<void> deleteElectricityReading(int id) =>
+      electricityReadingsDao.deleteReading(id);
+
+  Future<ElectricityReading?> getLatestElectricityReading() =>
+      electricityReadingsDao.getLatestReading();
+
+  Future<void> updateElectricityReadingValue(int id, double value) =>
+      electricityReadingsDao.updateReadingValue(id, value);
+
+  Future<List<ElectricityReading>> getUnsyncedElectricityReadings() =>
+      electricityReadingsDao.getUnsyncedReadings();
+
+  Future<void> markElectricityReadingSynced(int localId, String remoteId) =>
+      electricityReadingsDao.markSynced(localId, remoteId);
+
+  Future<Set<String>> getAllRemoteElectricityIds() =>
+      electricityReadingsDao.getAllRemoteIds();
+
+  // ── Electricity contracts pass-throughs ─────────────────────────────────
+
+  Future<List<ElectricityContract>> getAllElectricityContracts() =>
+      electricityContractsDao.getAllContracts();
+
+  Future<ElectricityContract?> getLatestElectricityContract() =>
+      electricityContractsDao.getLatestContract();
+
+  Future<int> insertElectricityContract(ElectricityContractsCompanion entry) =>
+      electricityContractsDao.insertContract(entry);
+
+  Future<void> updateElectricityContract(ElectricityContractsCompanion entry) =>
+      electricityContractsDao.updateContract(entry);
+
+  Future<void> deleteElectricityContract(int id) =>
+      electricityContractsDao.deleteContract(id);
+
+  Future<int> countElectricityContractsByDisplayName(String displayName) =>
+      electricityContractsDao.countByDisplayName(displayName);
+
+  Future<List<ElectricityContract>> getUnsyncedElectricityContracts() =>
+      electricityContractsDao.getUnsyncedContracts();
+
+  Future<void> markElectricityContractSynced(int localId, String remoteId) =>
+      electricityContractsDao.markContractSynced(localId, remoteId);
+
+  Future<Set<String>> getAllRemoteElectricityContractIds() =>
+      electricityContractsDao.getAllRemoteContractIds();
+
   // ── Settings pass-throughs ───────────────────────────────────────────────
 
   Future<AppSetting?> getSettings() => settingsDao.getSettings();
@@ -388,6 +634,12 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> saveMeterIntDigits(int digits) =>
       settingsDao.saveMeterIntDigits(digits);
+
+  Future<void> saveElectricityIntDigits(int digits) =>
+      settingsDao.saveElectricityIntDigits(digits);
+
+  Future<void> saveElectricityDecDigits(int digits) =>
+      settingsDao.saveElectricityDecDigits(digits);
 
   // ── Weather cache pass-throughs ──────────────────────────────────────────
 
@@ -433,7 +685,9 @@ class AppDatabase extends _$AppDatabase {
   /// Wipes all user data from local DB (called on sign-out).
   Future<void> clearAllUserData() async {
     await delete(meterReadings).go();
+    await delete(electricityReadings).go();
     await delete(priceContracts).go();
+    await delete(electricityContracts).go();
     await delete(appSettings).go();
     await delete(weatherCaches).go();
   }

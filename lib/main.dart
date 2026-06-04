@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'database/database.dart';
-import 'screens/home_screen.dart';
+import 'screens/dashboard_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/settings_screen.dart';
@@ -113,7 +113,7 @@ class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
   static const _screens = [
-    HomeScreen(),
+    DashboardScreen(),
     HistoryScreen(),
     SettingsScreen(),
   ];

@@ -28,15 +28,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _emailController = TextEditingController();
   final _plzController = TextEditingController();
   final _cityController = TextEditingController();
+  // Electricity contract controllers
+  final _elecPriceController = TextEditingController();
+  final _elecBasePriceController = TextEditingController();
+  final _elecProviderController = TextEditingController();
   PriceContract? _latestContract;
+  ElectricityContract? _latestElecContract;
   AppSetting? _locationSettings;
   bool _isNewContract = false;
+  bool _isNewElecContract = false;
   DateTime? _priceValidFrom;
+  DateTime? _elecValidFrom;
   bool _isSaving = false;
+  bool _isSavingElec = false;
   bool _isSavingLocation = false;
   bool _isSendingLink = false;
   bool _linkSent = false;
   int _meterIntDigits = 5;
+  int _electricityIntDigits = 6;
+  int _electricityDecDigits = 1;
   StreamSubscription<AuthState>? _authSub;
 
   @override
@@ -71,21 +81,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadPrice() async {
     final contracts = await AppDatabase.instance.getAllContracts();
     final latest = contracts.isNotEmpty ? contracts.last : null;
+    final elecContracts = await AppDatabase.instance.getAllElectricityContracts();
+    final latestElec = elecContracts.isNotEmpty ? elecContracts.last : null;
     if (mounted) {
       setState(() {
         _latestContract = latest;
+        _latestElecContract = latestElec;
       });
       if (latest != null) {
         _priceController.text = latest.pricePerKwh.toStringAsFixed(4);
         _basePriceController.text = latest.monthlyBasePrice.toStringAsFixed(2);
-        _brennwertController.text =
-            latest.brennwert > 0 ? latest.brennwert.toStringAsFixed(4) : '';
-        _zustandszahlController.text = latest.zustandszahl > 0
-            ? latest.zustandszahl.toStringAsFixed(4)
-            : '';
-        _priceValidFrom =
-            DateTime.fromMillisecondsSinceEpoch(latest.validFrom);
+        _brennwertController.text = latest.brennwert > 0 ? latest.brennwert.toStringAsFixed(4) : '';
+        _zustandszahlController.text = latest.zustandszahl > 0 ? latest.zustandszahl.toStringAsFixed(4) : '';
+        _priceValidFrom = DateTime.fromMillisecondsSinceEpoch(latest.validFrom);
         _providerController.text = latest.displayName;
+      }
+      if (latestElec != null) {
+        _elecPriceController.text = latestElec.pricePerKwh.toStringAsFixed(4);
+        _elecBasePriceController.text = latestElec.monthlyBasePrice.toStringAsFixed(2);
+        _elecValidFrom = DateTime.fromMillisecondsSinceEpoch(latestElec.validFrom);
+        _elecProviderController.text = latestElec.displayName;
       }
     }
   }
@@ -128,15 +143,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadMeterType() async {
-    final digits = await _settingsService.getMeterIntDigits();
-    if (mounted) setState(() => _meterIntDigits = digits);
+    final gas = await _settingsService.getMeterIntDigits();
+    final elecInt = await _settingsService.getElectricityIntDigits();
+    final elecDec = await _settingsService.getElectricityDecDigits();
+    if (mounted) setState(() {
+      _meterIntDigits = gas;
+      _electricityIntDigits = elecInt;
+      _electricityDecDigits = elecDec;
+    });
   }
 
   Future<void> _saveMeterType(int digits) async {
     setState(() => _meterIntDigits = digits);
     await _settingsService.setMeterIntDigits(digits);
     SyncService().syncSettings();
-    _showSnack('Zählertyp gespeichert: $digits Vorkomma-Stellen');
+    _showSnack('Gaszähler-Typ gespeichert: $digits Vorkomma-Stellen');
+  }
+
+  Future<void> _saveElectricityMeterType(int digits) async {
+    setState(() => _electricityIntDigits = digits);
+    await _settingsService.setElectricityIntDigits(digits);
+    _showSnack('Stromzähler: $digits Vorkomma-Stellen gespeichert');
+  }
+
+  Future<void> _saveElectricityDecDigits(int digits) async {
+    setState(() => _electricityDecDigits = digits);
+    await _settingsService.setElectricityDecDigits(digits);
+    _showSnack('Stromzähler: $digits Nachkomma-Stellen gespeichert');
   }
 
   Future<void> _saveContract() async {
@@ -226,6 +259,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _saveElecContract() async {
+    final kwhText = _elecPriceController.text.trim().replaceAll(',', '.');
+    final kwhParsed = double.tryParse(kwhText);
+    if (kwhParsed == null || kwhParsed <= 0) { _showSnack('Pflichtfeld fehlt: Preis pro kWh', isError: true); return; }
+    final baseText = _elecBasePriceController.text.trim().replaceAll(',', '.');
+    if (baseText.isEmpty) { _showSnack('Pflichtfeld fehlt: Grundpreis (0,00 wenn kein Grundpreis)', isError: true); return; }
+    final baseParsed = double.tryParse(baseText) ?? -1;
+    if (baseParsed < 0) { _showSnack('Bitte einen gültigen Grundpreis eingeben.', isError: true); return; }
+    if (_elecValidFrom == null) { _showSnack('Pflichtfeld fehlt: Datum', isError: true); return; }
+    final bool creatingNew = _latestElecContract == null || _isNewElecContract;
+    final providerName = creatingNew ? _elecProviderController.text.trim() : _latestElecContract!.displayName;
+    if (providerName.isEmpty) { _showSnack('Pflichtfeld fehlt: Lieferant', isError: true); return; }
+
+    setState(() => _isSavingElec = true);
+    final count = await AppDatabase.instance.countElectricityContractsByDisplayName(providerName);
+    final internalName = '${providerName}_${count + 1}';
+    await AppDatabase.instance.insertElectricityContract(ElectricityContractsCompanion(
+      internalName: Value(internalName),
+      displayName: Value(providerName),
+      pricePerKwh: Value(kwhParsed),
+      monthlyBasePrice: Value(baseParsed),
+      validFrom: Value(_elecValidFrom!.millisecondsSinceEpoch),
+    ));
+    await _loadPrice();
+    if (mounted) {
+      setState(() { _isSavingElec = false; _isNewElecContract = false; });
+      _showSnack('Stromvertrag gespeichert.');
+    }
+  }
+
   Future<void> _pickValidFromDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -307,6 +370,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _brennwertController.dispose();
     _zustandszahlController.dispose();
     _providerController.dispose();
+    _elecPriceController.dispose();
+    _elecBasePriceController.dispose();
+    _elecProviderController.dispose();
     _emailController.dispose();
     _plzController.dispose();
     _cityController.dispose();
@@ -345,99 +411,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const SizedBox(height: 32),
 
-              // ── Section: Zählertyp ─────────────────────────────────────────
-              _SectionHeader(label: 'ZÄHLERTYP'),
+              // ── Section: Gaszählertyp ──────────────────────────────────────
+              _SectionHeader(label: 'GASZÄHLER — STELLENANZAHL'),
               const SizedBox(height: 12),
+              _DigitSelector(
+                icon: Icons.local_fire_department_outlined,
+                iconColor: AppColors.amber,
+                description: 'Wie viele Stellen stehen vor dem Komma auf deinem Gaszähler?',
+                selected: _meterIntDigits,
+                options: const [4, 5, 6],
+                formatHint: (d) => '${'0' * d},${'0' * 3} m³',
+                onSelect: _saveMeterType,
+              ),
 
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: AppColors.neu(7),
+              const SizedBox(height: 28),
+
+              // ── Section: Stromzählertyp ────────────────────────────────────
+              _SectionHeader(label: 'STROMZÄHLER — STELLENANZAHL'),
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'OCR prüft genau ${_electricityIntDigits + _electricityDecDigits} Stellen auf dem Foto.',
+                  style: GoogleFonts.spaceMono(fontSize: 11, color: const Color(0xFF5B8DB8)),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.speed_rounded,
-                            size: 16, color: AppColors.amber),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Vorkomma-Stellen',
-                          style: GoogleFonts.rajdhani(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Wie viele Stellen stehen vor dem Komma auf deinem Zähler?',
-                      style: GoogleFonts.rajdhani(
-                        fontSize: 13,
-                        color: AppColors.textSecondary.withOpacity(0.8),
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        for (final d in [4, 5, 6]) ...[
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => _saveMeterType(d),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: _meterIntDigits == d
-                                      ? AppColors.green
-                                      : AppColors.background,
-                                  borderRadius: BorderRadius.circular(10),
-                                  boxShadow: _meterIntDigits == d
-                                      ? [
-                                          const BoxShadow(
-                                            color: Color(0xFF3A5E3D),
-                                            offset: Offset(0, 3),
-                                            blurRadius: 6,
-                                          ),
-                                        ]
-                                      : AppColors.neu(4),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '$d',
-                                    style: GoogleFonts.spaceMono(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                      color: _meterIntDigits == d
-                                          ? Colors.white
-                                          : AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (d < 6) const SizedBox(width: 10),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Aktuell: $_meterIntDigits Stellen — Format: ${'0' * _meterIntDigits},${'0' * 3} m³',
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
+              ),
+              _DigitSelector(
+                icon: Icons.bolt_outlined,
+                iconColor: const Color(0xFF5B8DB8),
+                description: 'Stellen VOR dem Komma',
+                selected: _electricityIntDigits,
+                options: const [5, 6, 7],
+                formatHint: (d) => '${'0' * d},${'0' * _electricityDecDigits} kWh',
+                onSelect: _saveElectricityMeterType,
+              ),
+              const SizedBox(height: 16),
+              _DigitSelector(
+                icon: Icons.looks_one_outlined,
+                iconColor: const Color(0xFF5B8DB8),
+                description: 'Stellen NACH dem Komma (rote Dezimaltrommel)',
+                selected: _electricityDecDigits,
+                options: const [1, 2, 3],
+                formatHint: (d) => '${'0' * _electricityIntDigits},${'0' * d} kWh',
+                onSelect: _saveElectricityDecDigits,
               ),
 
               const SizedBox(height: 32),
@@ -978,6 +994,124 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const SizedBox(height: 32),
 
+              // ── Section: Strompreis ────────────────────────────────────────
+              _SectionHeader(label: 'STROMPREIS'),
+              const SizedBox(height: 12),
+
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(16), boxShadow: AppColors.neu(7)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_latestElecContract != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(color: const Color(0xFF5B8DB8).withOpacity(0.10), borderRadius: BorderRadius.circular(10)),
+                        child: Row(children: [
+                          const Icon(Icons.bolt_rounded, size: 15, color: Color(0xFF5B8DB8)),
+                          const SizedBox(width: 8),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(_latestElecContract!.displayName, style: GoogleFonts.rajdhani(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF5B8DB8), letterSpacing: 0.5)),
+                            Text(() {
+                              final d = DateTime.fromMillisecondsSinceEpoch(_latestElecContract!.validFrom);
+                              return 'seit ${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}  ·  ${_latestElecContract!.pricePerKwh.toStringAsFixed(4)} €/kWh';
+                            }(), style: GoogleFonts.spaceMono(fontSize: 11, color: AppColors.textSecondary)),
+                          ])),
+                        ]),
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Neuer Vertrag?', style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.5)),
+                      const SizedBox(height: 8),
+                      Row(children: [
+                        Expanded(child: _ToggleChip(label: 'Nein – Preis aktualisieren', selected: !_isNewElecContract, onTap: () => setState(() => _isNewElecContract = false))),
+                        const SizedBox(width: 8),
+                        Expanded(child: _ToggleChip(label: 'Ja – Neuer Anbieter', selected: _isNewElecContract, onTap: () { setState(() { _isNewElecContract = true; _elecProviderController.clear(); }); })),
+                      ]),
+                      const SizedBox(height: 16),
+                    ],
+
+                    if (_latestElecContract == null || _isNewElecContract) ...[
+                      Row(children: [
+                        const Icon(Icons.business_rounded, size: 16, color: AppColors.amber),
+                        const SizedBox(width: 8),
+                        Text('Lieferant', style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.5)),
+                        const SizedBox(width: 4),
+                        Text('*', style: GoogleFonts.rajdhani(fontSize: 15, color: AppColors.error, fontWeight: FontWeight.w700)),
+                      ]),
+                      const SizedBox(height: 8),
+                      _TextField(controller: _elecProviderController, hint: 'z.B. Stadtwerke Musterstadt'),
+                      const SizedBox(height: 20),
+                    ],
+
+                    Row(children: [
+                      const Icon(Icons.bolt_rounded, size: 16, color: AppColors.amber),
+                      const SizedBox(width: 8),
+                      Text('Preis pro kWh', style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.5)),
+                      const SizedBox(width: 4),
+                      Text('*', style: GoogleFonts.rajdhani(fontSize: 15, color: AppColors.error, fontWeight: FontWeight.w700)),
+                    ]),
+                    const SizedBox(height: 8),
+                    _PriceField(controller: _elecPriceController, suffix: '€/kWh', hint: 'z.B. 0.2890'),
+                    const SizedBox(height: 20),
+
+                    Row(children: [
+                      const Icon(Icons.calendar_month_outlined, size: 16, color: AppColors.amber),
+                      const SizedBox(width: 8),
+                      Text('Monatlicher Grundpreis', style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.5)),
+                      const SizedBox(width: 4),
+                      Text('*', style: GoogleFonts.rajdhani(fontSize: 15, color: AppColors.error, fontWeight: FontWeight.w700)),
+                    ]),
+                    const SizedBox(height: 8),
+                    _PriceField(controller: _elecBasePriceController, suffix: '€/Monat', hint: 'z.B. 12.00'),
+                    const SizedBox(height: 20),
+
+                    Row(children: [
+                      const Icon(Icons.event_rounded, size: 16, color: AppColors.amber),
+                      const SizedBox(width: 8),
+                      Text('Diese Preise gelten seit:', style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.5)),
+                      const SizedBox(width: 4),
+                      Text('*', style: GoogleFonts.rajdhani(fontSize: 15, color: AppColors.error, fontWeight: FontWeight.w700)),
+                    ]),
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _elecValidFrom ?? DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime.now(),
+                          builder: (context, child) => Theme(
+                            data: ThemeData.light().copyWith(colorScheme: const ColorScheme.light(primary: AppColors.green, onPrimary: Colors.white, surface: AppColors.background, onSurface: AppColors.textPrimary), dialogTheme: const DialogThemeData(backgroundColor: AppColors.background)),
+                            child: child!,
+                          ),
+                        );
+                        if (picked != null) setState(() => _elecValidFrom = picked);
+                      },
+                      child: Container(
+                        height: 50,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(color: const Color(0xFFDFE5DA), borderRadius: BorderRadius.circular(10)),
+                        child: Row(children: [
+                          Icon(Icons.calendar_today_rounded, size: 18, color: _elecValidFrom == null ? AppColors.textSecondary : AppColors.green),
+                          const SizedBox(width: 12),
+                          Text(
+                            _elecValidFrom == null ? 'Datum auswählen' : '${_elecValidFrom!.day.toString().padLeft(2, '0')}.${_elecValidFrom!.month.toString().padLeft(2, '0')}.${_elecValidFrom!.year}',
+                            style: _elecValidFrom == null ? GoogleFonts.rajdhani(fontSize: 15, color: AppColors.textSecondary) : GoogleFonts.spaceMono(fontSize: 15, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                          ),
+                        ]),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _SaveButton(label: 'VERTRAG SPEICHERN', isBusy: _isSavingElec, onTap: _saveElecContract),
+                    const SizedBox(height: 12),
+                    Text('Den Preis pro kWh findest du auf deiner Jahresabrechnung oder beim Versorger unter "Arbeitspreis".', style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary.withOpacity(0.7), height: 1.5)),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
               // ── Section: Info ──────────────────────────────────────────────
               _SectionHeader(label: 'APP-INFO'),
               const SizedBox(height: 12),
@@ -1036,6 +1170,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
 // ---------------------------------------------------------------------------
 // Helper widgets
 // ---------------------------------------------------------------------------
+
+class _DigitSelector extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String description;
+  final int selected;
+  final List<int> options;
+  final String Function(int) formatHint;
+  final void Function(int) onSelect;
+
+  const _DigitSelector({
+    required this.icon,
+    required this.iconColor,
+    required this.description,
+    required this.selected,
+    required this.options,
+    required this.formatHint,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(16), boxShadow: AppColors.neu(7)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(icon, size: 16, color: iconColor),
+            const SizedBox(width: 8),
+            Text('Vorkomma-Stellen', style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.5)),
+          ]),
+          const SizedBox(height: 6),
+          Text(description, style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary.withOpacity(0.8), height: 1.4)),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              for (int i = 0; i < options.length; i++) ...[
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => onSelect(options[i]),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: selected == options[i] ? AppColors.green : AppColors.background,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: selected == options[i] ? [const BoxShadow(color: Color(0xFF3A5E3D), offset: Offset(0, 3), blurRadius: 6)] : AppColors.neu(4),
+                      ),
+                      child: Center(child: Text('${options[i]}', style: GoogleFonts.spaceMono(fontSize: 18, fontWeight: FontWeight.w700, color: selected == options[i] ? Colors.white : AppColors.textSecondary))),
+                    ),
+                  ),
+                ),
+                if (i < options.length - 1) const SizedBox(width: 10),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text('Aktuell: $selected Stellen — Format: ${formatHint(selected)}', style: GoogleFonts.spaceMono(fontSize: 11, color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+}
 
 class _SectionHeader extends StatelessWidget {
   final String label;

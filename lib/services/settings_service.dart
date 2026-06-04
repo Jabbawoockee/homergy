@@ -7,13 +7,31 @@ class SettingsService {
   Future<int> getMeterIntDigits() async {
     final s = await AppDatabase.instance.getSettings();
     if (s?.meterIntDigits != null) return s!.meterIntDigits!;
-    // Migrate from SharedPreferences if present
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt('meter_int_digits') ?? 5;
   }
 
   Future<void> setMeterIntDigits(int digits) async {
     await AppDatabase.instance.saveMeterIntDigits(digits);
+  }
+
+  Future<int> getElectricityIntDigits() async {
+    final s = await AppDatabase.instance.getSettings();
+    return s?.electricityIntDigits ?? 6;
+  }
+
+  Future<void> setElectricityIntDigits(int digits) async {
+    await AppDatabase.instance.saveElectricityIntDigits(digits);
+  }
+
+  Future<int> getElectricityDecDigits() async {
+    final s = await AppDatabase.instance.getSettings();
+    // Default 1: most roller electricity meters show 1 decimal digit.
+    return s?.electricityDecDigits ?? 1;
+  }
+
+  Future<void> setElectricityDecDigits(int digits) async {
+    await AppDatabase.instance.saveElectricityDecDigits(digits);
   }
 
   Future<bool> isOnboardingDone() async {

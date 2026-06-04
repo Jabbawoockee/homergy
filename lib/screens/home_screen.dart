@@ -5,18 +5,31 @@ import 'package:intl/intl.dart';
 import '../database/database.dart';
 import '../services/cost_service.dart';
 import '../services/weather_service.dart';
-import '../theme/colors.dart';
-import '../widgets/meter_display.dart';
 import 'cost_detail_screen.dart';
 import 'scan_screen.dart';
 
-const _tempLineColor = Color(0xFF60A5FA);
+// ── Neumorphic Sage-Green palette (from color1.PNG + neum.png) ───────────────
+const _neuBase    = Color(0xFFEAEEE6); // warm sage off-white — THE base surface
+const _neuGreen   = Color(0xFF6B8F6B); // primary sage green (accent)
+const _neuGreenDk = Color(0xFF446B47); // deep forest green (headings, meter)
+const _neuAmber   = Color(0xFFB08B5E); // earthy amber/tan (secondary accent)
+const _neuText    = Color(0xFF2A3B2B); // near-black deep green
+const _neuTextSec = Color(0xFF7A8E7B); // muted sage secondary text
+const _tempLineColor = Color(0xFF7BA3C0); // muted blue for temperature line
 
-// ── Warm design palette ───────────────────────────────────────────────────────
-const _bgWarm      = Color(0xFF0E0C09);
-const _surfaceWarm = Color(0xFF1C1916);
-const _surface2    = Color(0xFF251F18);
-const _borderWarm  = Color(0xFF2E2820);
+/// Returns neumorphic dual-shadow: white highlight + sage-grey depth.
+List<BoxShadow> _neu([double d = 7]) => [
+  BoxShadow(
+    color: const Color(0xFFFFFFFF).withOpacity(0.90),
+    offset: Offset(-d, -d),
+    blurRadius: d * 2.0,
+  ),
+  BoxShadow(
+    color: const Color(0xFFC2CFC0),
+    offset: Offset(d, d),
+    blurRadius: d * 2.0,
+  ),
+];
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -62,10 +75,83 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Inline neumorphic meter value display (replaces dark-themed MeterDisplay widget).
+  Widget _buildMeterValue(double? value) {
+    if (value == null) {
+      return FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          '-------.---',
+          style: GoogleFonts.spaceMono(
+            fontSize: 48,
+            fontWeight: FontWeight.w700,
+            color: _neuTextSec.withOpacity(0.35),
+            letterSpacing: 3,
+          ),
+        ),
+      );
+    }
+    final formatted = value.toStringAsFixed(3);
+    final parts = formatted.split('.');
+    final intPart = parts[0];
+    final decPart = parts.length > 1 ? parts[1] : '000';
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            intPart,
+            style: GoogleFonts.spaceMono(
+              fontSize: 52,
+              fontWeight: FontWeight.w700,
+              color: _neuGreenDk,
+              letterSpacing: 3,
+            ),
+          ),
+          Text(
+            '.',
+            style: GoogleFonts.spaceMono(
+              fontSize: 40,
+              fontWeight: FontWeight.w700,
+              color: _neuGreen,
+            ),
+          ),
+          Text(
+            decPart,
+            style: GoogleFonts.spaceMono(
+              fontSize: 32,
+              fontWeight: FontWeight.w400,
+              color: _neuGreen.withOpacity(0.65),
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              'm³',
+              style: GoogleFonts.rajdhani(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: _neuTextSec,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgWarm,
+      backgroundColor: _neuBase,
       body: SafeArea(
         child: StreamBuilder<List<MeterReading>>(
           stream: AppDatabase.instance.watchAllReadings(),
@@ -78,7 +164,6 @@ class _HomeScreenState extends State<HomeScreen> {
             final monthStart = DateTime(now.year, now.month, 1);
             final monthEnd = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
 
-            // Filter readings for this month (sorted desc from stream).
             final monthReadings = readings
                 .where((r) =>
                     !r.timestamp.isBefore(monthStart) &&
@@ -87,12 +172,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
             double monthConsumption = 0;
             if (monthReadings.length >= 2) {
-              // Highest minus lowest value within the month.
               final values = monthReadings.map((r) => r.value).toList();
               monthConsumption = values.first - values.last;
               if (monthConsumption < 0) monthConsumption = 0;
             } else if (monthReadings.length == 1 && readings.length >= 2) {
-              // One reading this month → compare to latest reading from before.
               final beforeMonth = readings
                   .where((r) => r.timestamp.isBefore(monthStart))
                   .toList();
@@ -103,7 +186,6 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             }
 
-            // Nur Arbeitspreis (kein Grundpreis) auf der Kachel
             final monthCost = _costService.calculateCost(
               monthConsumption,
               pricePerKwh: _kwhPrice,
@@ -120,97 +202,70 @@ class _HomeScreenState extends State<HomeScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Scrollbarer Content-Bereich
                 Expanded(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: 22),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // ── Header ────────────────────────────────────────
+                          // ── Header ─────────────────────────────────────────
                           _buildHeader(),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 28),
 
-                          // ── Meter display card ────────────────────────────
+                          // ── Meter card ──────────────────────────────────────
                           Container(
-                            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+                            padding: const EdgeInsets.fromLTRB(22, 20, 22, 20),
                             decoration: BoxDecoration(
-                              color: _surfaceWarm,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: _borderWarm, width: 1),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.amber.withOpacity(0.05),
-                                  blurRadius: 30,
-                                  spreadRadius: 0,
-                                  offset: const Offset(0, -4),
-                                ),
-                              ],
+                              color: _neuBase,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: _neu(9),
                             ),
-                            child: Stack(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Amber top glow accent line
-                                Positioned(
-                                  top: 0,
-                                  left: 20,
-                                  right: 20,
-                                  child: Container(
-                                    height: 1,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(colors: [
-                                        Colors.transparent,
-                                        AppColors.amber.withOpacity(0.45),
-                                        Colors.transparent,
-                                      ]),
-                                    ),
+                                Text(
+                                  'AKTUELLER ZÄHLERSTAND',
+                                  style: GoogleFonts.rajdhani(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: _neuTextSec,
+                                    letterSpacing: 2,
                                   ),
                                 ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'AKTUELLER ZÄHLERSTAND',
-                                      style: GoogleFonts.rajdhani(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textSecondary,
-                                        letterSpacing: 2,
-                                      ),
+                                const SizedBox(height: 14),
+                                _buildMeterValue(lastReading?.value),
+                                if (lastReading != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Abgelesen am ${DateFormat('dd. MMM yyyy, HH:mm', 'de_DE').format(lastReading.timestamp)}',
+                                    style: GoogleFonts.rajdhani(
+                                      fontSize: 13,
+                                      color: _neuTextSec,
+                                      letterSpacing: 0.3,
                                     ),
-                                    const SizedBox(height: 10),
-                                    MeterDisplay(value: lastReading?.value),
-                                    if (lastReading != null) ...[
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Abgelesen am ${DateFormat('dd. MMM yyyy, HH:mm', 'de_DE').format(lastReading.timestamp)}',
-                                        style: GoogleFonts.rajdhani(
-                                          fontSize: 13,
-                                          color: AppColors.textSecondary,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
 
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 28),
 
-                          // ── Month stats ───────────────────────────────────
-                          Text(
-                            'DIESEN MONAT',
-                            style: GoogleFonts.rajdhani(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary,
-                              letterSpacing: 2,
+                          // ── Month stats ─────────────────────────────────────
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4, bottom: 12),
+                            child: Text(
+                              'DIESEN MONAT',
+                              style: GoogleFonts.rajdhani(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: _neuTextSec,
+                                letterSpacing: 2,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 8),
                           Row(
                             children: [
                               Expanded(
@@ -220,19 +275,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                   unit: 'm³',
                                   subValue: '≈ ${monthKwh.toStringAsFixed(1)} kWh',
                                   icon: Icons.local_fire_department_outlined,
-                                  iconColor: AppColors.amber,
+                                  iconColor: _neuGreenDk,
                                   onInfoTap: () => showDialog(
                                     context: context,
                                     builder: (_) => AlertDialog(
-                                      backgroundColor: _surfaceWarm,
+                                      backgroundColor: _neuBase,
                                       shape: RoundedRectangleBorder(
                                           borderRadius:
-                                              BorderRadius.circular(16)),
+                                              BorderRadius.circular(20)),
                                       content: Text(
                                         'Für eine genauere Berechnung gib in den Einstellungen deinen Gas-Brennwert sowie deine Gas-Zustandszahl an. Diese Werte bekommst du von deinem Gas-Anbieter.',
                                         style: GoogleFonts.rajdhani(
                                           fontSize: 14,
-                                          color: AppColors.textSecondary,
+                                          color: _neuTextSec,
                                           height: 1.5,
                                         ),
                                       ),
@@ -245,7 +300,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             style: GoogleFonts.rajdhani(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w700,
-                                              color: AppColors.amber,
+                                              color: _neuGreen,
                                             ),
                                           ),
                                         ),
@@ -254,7 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 14),
                               Expanded(
                                 child: _StatCard(
                                   label: 'Kosten',
@@ -263,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       .format(monthCost),
                                   unit: 'nur Arbeitskosten',
                                   icon: Icons.euro_outlined,
-                                  iconColor: AppColors.green,
+                                  iconColor: _neuAmber,
                                   onTap: () => Navigator.of(context).push(
                                     MaterialPageRoute(
                                         builder: (_) =>
@@ -273,83 +328,85 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
 
-                          // ── Verbrauchs-Chart ──────────────────────────────
-                          Row(
-                            children: [
-                              Text(
-                                'VERBRAUCH',
-                                style: GoogleFonts.rajdhani(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary,
-                                  letterSpacing: 2,
+                          const SizedBox(height: 28),
+
+                          // ── Chart ───────────────────────────────────────────
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4, bottom: 12),
+                            child: Row(
+                              children: [
+                                Text(
+                                  'VERBRAUCH',
+                                  style: GoogleFonts.rajdhani(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: _neuTextSec,
+                                    letterSpacing: 2,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 6),
-                              GestureDetector(
-                                onTap: () => showDialog(
-                                  context: context,
-                                  builder: (_) => AlertDialog(
-                                    backgroundColor: _surfaceWarm,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(16)),
-                                    title: Text(
-                                      'Chart-Infos',
-                                      style: GoogleFonts.rajdhani(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary,
-                                        letterSpacing: 1,
-                                      ),
-                                    ),
-                                    content: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        _ChartInfoRow(
-                                          color: AppColors.amber,
-                                          text:
-                                              'Tippe auf einen Datenpunkt – angezeigt wird die Verbrauchsdifferenz (m³) gegenüber dem Vortag.',
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: () => showDialog(
+                                    context: context,
+                                    builder: (_) => AlertDialog(
+                                      backgroundColor: _neuBase,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(20)),
+                                      title: Text(
+                                        'Chart-Infos',
+                                        style: GoogleFonts.rajdhani(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: _neuText,
+                                          letterSpacing: 1,
                                         ),
-                                        const SizedBox(height: 12),
-                                        _ChartInfoRow(
-                                          color: _tempLineColor,
-                                          dashed: true,
-                                          text:
-                                              'Die gestrichelte Linie zeigt die Tagesdurchschnittstemperatur deines Wohnorts. Da der heutige Durchschnitt noch nicht vollständig vorliegt, endet die Anzeige stets mit dem gestrigen Tag.',
+                                      ),
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          _ChartInfoRow(
+                                            color: _neuGreen,
+                                            text:
+                                                'Tippe auf einen Datenpunkt – angezeigt wird die Verbrauchsdifferenz (m³) gegenüber dem Vortag.',
+                                          ),
+                                          const SizedBox(height: 12),
+                                          _ChartInfoRow(
+                                            color: _tempLineColor,
+                                            dashed: true,
+                                            text:
+                                                'Die gestrichelte Linie zeigt die Tagesdurchschnittstemperatur deines Wohnorts. Da der heutige Durchschnitt noch nicht vollständig vorliegt, endet die Anzeige stets mit dem gestrigen Tag.',
+                                          ),
+                                        ],
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(context).pop(),
+                                          child: Text(
+                                            'OK',
+                                            style: GoogleFonts.rajdhani(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              color: _neuGreen,
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.of(context).pop(),
-                                        child: Text(
-                                          'OK',
-                                          style: GoogleFonts.rajdhani(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.amber,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                  ),
+                                  child: Icon(
+                                    Icons.info_outline_rounded,
+                                    size: 14,
+                                    color: _neuTextSec.withOpacity(0.6),
                                   ),
                                 ),
-                                child: Icon(
-                                  Icons.info_outline_rounded,
-                                  size: 14,
-                                  color: AppColors.textSecondary
-                                      .withOpacity(0.5),
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 8),
                           _ConsumptionChart(
                             key: ValueKey(_chartRefreshKey),
                             readings: readings,
@@ -360,17 +417,17 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 20),
                         ],
                       ),
                     ),
                   ),
                 ),
 
-                // ── Scan-Button fixiert am unteren Rand ───────────────────
+                // ── ABLESEN button ──────────────────────────────────────────
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
                   child: _ScanButton(onPressed: () async {
                     await Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ScanScreen()),
@@ -387,140 +444,72 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader() {
-    return SizedBox(
-      height: 76,
-      child: Stack(
-        clipBehavior: Clip.none,
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Row(
         children: [
-          // Atmospheric ambient glow behind the icons
-          Positioned(
-            top: -30,
-            right: -20,
-            child: _GlowOrb(size: 160, color: AppColors.amber, opacity: 0.07),
-          ),
-          Positioned(
-            top: 8,
-            right: 45,
-            child: _GlowOrb(
-                size: 65, color: const Color(0xFFFF8C42), opacity: 0.04),
-          ),
-          // Content row
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'HOMERGY',
-                        style: GoogleFonts.rajdhani(
-                          fontSize: 30,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.amber,
-                          letterSpacing: 6,
-                          height: 1.0,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'VERBRAUCHSMONITOR',
-                        style: GoogleFonts.spaceMono(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w400,
-                          color: AppColors.textSecondary.withOpacity(0.65),
-                          letterSpacing: 3,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  // Refresh button
-                  GestureDetector(
-                    onTap: _refresh,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: _surfaceWarm,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _borderWarm, width: 1),
-                      ),
-                      child: _isRefreshing
-                          ? const Padding(
-                              padding: EdgeInsets.all(10),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.amber,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.refresh_rounded,
-                              color: AppColors.amber,
-                              size: 20,
-                            ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Flame badge
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.amber.withOpacity(0.10),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.amber.withOpacity(0.25),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.amber.withOpacity(0.18),
-                          blurRadius: 14,
-                          spreadRadius: 0,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.local_fire_department,
-                      color: AppColors.amber,
-                      size: 22,
-                    ),
-                  ),
-                ],
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'HOMERGY',
+                style: GoogleFonts.rajdhani(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w700,
+                  color: _neuGreenDk,
+                  letterSpacing: 5,
+                  height: 1.0,
+                ),
               ),
+              const SizedBox(height: 2),
+              Text(
+                'VERBRAUCHSMONITOR',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w400,
+                  color: _neuTextSec,
+                  letterSpacing: 2.5,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          // Refresh — neumorphic circle
+          GestureDetector(
+            onTap: _refresh,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: _neuBase,
+                shape: BoxShape.circle,
+                boxShadow: _neu(5),
+              ),
+              child: _isRefreshing
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: _neuGreen),
+                    )
+                  : const Icon(Icons.refresh_rounded,
+                      color: _neuGreen, size: 20),
             ),
           ),
+          const SizedBox(width: 10),
+          // Flame badge — neumorphic circle
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: _neuBase,
+              shape: BoxShape.circle,
+              boxShadow: _neu(5),
+            ),
+            child: const Icon(Icons.local_fire_department,
+                color: _neuAmber, size: 22),
+          ),
         ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Ambient glow orb helper
-// ---------------------------------------------------------------------------
-
-class _GlowOrb extends StatelessWidget {
-  final double size;
-  final Color color;
-  final double opacity;
-  const _GlowOrb(
-      {required this.size, required this.color, this.opacity = 1.0});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [color.withOpacity(opacity), color.withOpacity(0)],
-        ),
       ),
     );
   }
@@ -538,7 +527,7 @@ class _DayStat {
 }
 
 class _SpotData {
-  final FlSpot spot; // y = average per period (total / periodsCovered)
+  final FlSpot spot;
   final int periodsCovered;
   final double totalConsumption;
   const _SpotData(this.spot,
@@ -572,7 +561,6 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
   _ChartPeriod _period = _ChartPeriod.week;
   int? _touchedSpotIndex;
 
-  // Weather
   double? _lat, _lon;
   Map<DateTime, double> _temperatures = {};
   _ChartPeriod? _lastWeatherPeriod;
@@ -630,8 +618,6 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
 
   String _dayKey(DateTime d) => '${d.year}-${d.month}-${d.day}';
 
-  // ── 7-Tage ────────────────────────────────────────────────────────────────
-
   List<_DayStat> _buildWeekStats() {
     final now = DateTime.now();
     final days =
@@ -663,8 +649,6 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
     }
     return stats;
   }
-
-  // ── Aktueller Monat ───────────────────────────────────────────────────────
 
   List<_SpotData> _buildMonthSpotData() {
     final now = DateTime.now();
@@ -709,8 +693,6 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
     return result;
   }
 
-  // ── Aktuelles Jahr ────────────────────────────────────────────────────────
-
   List<_SpotData> _buildYearSpotData() {
     final now = DateTime.now();
 
@@ -753,8 +735,6 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
     return result;
   }
 
-  // ── Temperature spots (raw °C, not normalized) ────────────────────────────
-
   List<FlSpot> _buildRawTempSpots(List<_DayStat> weekStats) {
     if (_temperatures.isEmpty) return [];
     final now = DateTime.now();
@@ -770,8 +750,7 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
       case _ChartPeriod.month:
         final spots = <FlSpot>[];
         for (int day = 1; day <= now.day; day++) {
-          final temp =
-              _temperatures[DateTime(now.year, now.month, day)];
+          final temp = _temperatures[DateTime(now.year, now.month, day)];
           if (temp != null) spots.add(FlSpot(day.toDouble(), temp));
         }
         return spots;
@@ -786,16 +765,13 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
             if (temp != null) monthTemps.add(temp);
           }
           if (monthTemps.isNotEmpty) {
-            final avg =
-                monthTemps.reduce((a, b) => a + b) / monthTemps.length;
+            final avg = monthTemps.reduce((a, b) => a + b) / monthTemps.length;
             spots.add(FlSpot(m.toDouble(), avg));
           }
         }
         return spots;
     }
   }
-
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -818,22 +794,22 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
             totalByX[i.toDouble()] = total;
           }
         }
-        minX = 0;
-        maxX = 6;
+        minX = -0.4;
+        maxX = 6.4;
       case _ChartPeriod.month:
         final monthData = _buildMonthSpotData();
         spots = monthData.map((d) => d.spot).toList();
         coverageByX = {for (final d in monthData) d.spot.x: d.periodsCovered};
         totalByX = {for (final d in monthData) d.spot.x: d.totalConsumption};
-        minX = 1;
-        maxX = DateTime(now.year, now.month + 1, 0).day.toDouble();
+        minX = 0.5;
+        maxX = DateTime(now.year, now.month + 1, 0).day.toDouble() + 0.5;
       case _ChartPeriod.year:
         final yearData = _buildYearSpotData();
         spots = yearData.map((d) => d.spot).toList();
         coverageByX = {for (final d in yearData) d.spot.x: d.periodsCovered};
         totalByX = {for (final d in yearData) d.spot.x: d.totalConsumption};
-        minX = 0;
-        maxX = 11;
+        minX = -0.4;
+        maxX = 11.4;
     }
 
     final hasData = spots.isNotEmpty;
@@ -842,7 +818,6 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
     final chartMaxY = rawMax < 0.001 ? 1.0 : rawMax * 1.35;
     final yInterval = chartMaxY / 3;
 
-    // ── Temperature spots ──────────────────────────────────────────────────
     final rawTempSpots = _buildRawTempSpots(weekStats);
     double tempMin = 0, tempMax = 20, tempRange = 20;
     List<FlSpot> tempSpots = [];
@@ -857,8 +832,6 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
       }).toList();
     }
     final hasTempData = tempSpots.isNotEmpty;
-
-    // Map X → actual °C for tooltip lookup
     final tempByX = {for (final s in rawTempSpots) s.x: s.y};
 
     final barData = LineChartBarData(
@@ -866,8 +839,8 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
       isCurved: true,
       curveSmoothness: 0.35,
       preventCurveOverShooting: true,
-      color: AppColors.amber,
-      barWidth: 2,
+      color: _neuGreen,
+      barWidth: 2.5,
       isStrokeCapRound: true,
       dotData: FlDotData(
         show: true,
@@ -875,9 +848,9 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
           final coverage = coverageByX[spot.x] ?? 1;
           return FlDotCirclePainter(
             radius: coverage > 1 ? 4.5 : 3.0,
-            color: AppColors.amber,
+            color: _neuGreen,
             strokeWidth: coverage > 1 ? 2.0 : 1.5,
-            strokeColor: _surfaceWarm,
+            strokeColor: _neuBase,
           );
         },
       ),
@@ -887,8 +860,8 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            AppColors.amber.withOpacity(0.25),
-            AppColors.amber.withOpacity(0.0),
+            _neuGreen.withOpacity(0.20),
+            _neuGreen.withOpacity(0.0),
           ],
         ),
       ),
@@ -919,7 +892,7 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
             style: GoogleFonts.rajdhani(
               fontSize: 11,
               fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
-              color: isToday ? AppColors.amber : AppColors.textSecondary,
+              color: isToday ? _neuGreenDk : _neuTextSec,
             ),
           );
         case _ChartPeriod.month:
@@ -928,8 +901,7 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
           if (day == 1 || day % 5 == 0 || day == lastDay) {
             label = Text(
               '$day',
-              style: GoogleFonts.rajdhani(
-                  fontSize: 10, color: AppColors.textSecondary),
+              style: GoogleFonts.rajdhani(fontSize: 10, color: _neuTextSec),
             );
           }
         case _ChartPeriod.year:
@@ -937,8 +909,7 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
           if (m >= 0 && m <= 11) {
             label = Text(
               _monthLabels[m],
-              style: GoogleFonts.rajdhani(
-                  fontSize: 10, color: AppColors.textSecondary),
+              style: GoogleFonts.rajdhani(fontSize: 10, color: _neuTextSec),
             );
           }
       }
@@ -947,16 +918,16 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
     }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 12, 12, 8),
+      padding: const EdgeInsets.fromLTRB(10, 14, 14, 10),
       decoration: BoxDecoration(
-        color: _surfaceWarm,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _borderWarm, width: 1),
+        color: _neuBase,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: _neu(8),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Tab-Switcher + Legende ──────────────────────────────────────
+          // Tab-Switcher + legend
           Row(
             children: [
               _PeriodTab(
@@ -978,7 +949,7 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
               ),
               const Spacer(),
               if (_temperatures.isNotEmpty) ...[
-                _ChartLegendDot(color: AppColors.amber, label: 'm³'),
+                _ChartLegendDot(color: _neuGreen, label: 'm³'),
                 const SizedBox(width: 10),
                 _ChartLegendDot(color: _tempLineColor, label: '°C'),
                 const SizedBox(width: 10),
@@ -986,16 +957,12 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
               if (widget.onExpand != null)
                 GestureDetector(
                   onTap: widget.onExpand,
-                  child: Icon(
-                    Icons.fullscreen_rounded,
-                    size: 20,
-                    color: AppColors.textSecondary.withOpacity(0.5),
-                  ),
+                  child: Icon(Icons.fullscreen_rounded,
+                      size: 20, color: _neuTextSec.withOpacity(0.5)),
                 ),
             ],
           ),
           const SizedBox(height: 12),
-          // ── Chart ───────────────────────────────────────────────────────
           SizedBox(
             height: widget.chartHeight,
             child: hasData
@@ -1010,7 +977,7 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
                       drawVerticalLine: false,
                       horizontalInterval: yInterval,
                       getDrawingHorizontalLine: (_) => FlLine(
-                        color: _borderWarm,
+                        color: _neuTextSec.withOpacity(0.15),
                         strokeWidth: 0.8,
                         dashArray: [4, 4],
                       ),
@@ -1038,15 +1005,14 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
                             if (value <= 0 || value > chartMaxY) {
                               return const SizedBox.shrink();
                             }
-                            final tC = tempMin + (value / chartMaxY) * tempRange;
+                            final tC =
+                                tempMin + (value / chartMaxY) * tempRange;
                             return Padding(
                               padding: const EdgeInsets.only(left: 4),
                               child: Text(
                                 '${tC.round()}°',
                                 style: GoogleFonts.spaceMono(
-                                  fontSize: 9,
-                                  color: _tempLineColor,
-                                ),
+                                    fontSize: 9, color: _tempLineColor),
                               ),
                             );
                           },
@@ -1071,9 +1037,7 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
                               child: Text(
                                 str,
                                 style: GoogleFonts.spaceMono(
-                                  fontSize: 9,
-                                  color: AppColors.textSecondary,
-                                ),
+                                    fontSize: 9, color: _neuTextSec),
                                 textAlign: TextAlign.right,
                               ),
                             );
@@ -1107,16 +1071,15 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
                         }
                       },
                       touchTooltipData: LineTouchTooltipData(
-                        getTooltipColor: (_) => _bgWarm,
-                        tooltipBorder:
-                            const BorderSide(color: _borderWarm),
-                        tooltipRoundedRadius: 8,
+                        getTooltipColor: (_) => _neuBase,
+                        tooltipBorder: BorderSide(
+                            color: _neuTextSec.withOpacity(0.2), width: 1),
+                        tooltipRoundedRadius: 10,
                         getTooltipItems: (touchedSpots) =>
                             touchedSpots.map((s) {
                           if (s.barIndex == 1) return null;
                           final coverage = coverageByX[s.x] ?? 1;
                           final total = totalByX[s.x] ?? s.y;
-                          // s.y is already the daily average
                           final avgStr = s.y < 0.1
                               ? s.y.toStringAsFixed(3)
                               : s.y.toStringAsFixed(2);
@@ -1125,19 +1088,20 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
                               : total.toStringAsFixed(2);
                           final xKey = tempByX.keys
                               .where((k) => (k - s.x).abs() < 0.6)
-                              .fold<double?>(null, (prev, k) =>
-                                  prev == null || (k - s.x).abs() < (prev - s.x).abs()
+                              .fold<double?>(
+                                  null,
+                                  (prev, k) => prev == null ||
+                                          (k - s.x).abs() <
+                                              (prev - s.x).abs()
                                       ? k
                                       : prev);
                           final tempC = xKey != null
                               ? tempByX[xKey]!.toStringAsFixed(1)
                               : null;
-                          final periodLabel = _period == _ChartPeriod.year
-                              ? 'Monate'
-                              : 'Tage';
-                          final avgUnit = _period == _ChartPeriod.year
-                              ? 'Mon.'
-                              : 'Tag';
+                          final periodLabel =
+                              _period == _ChartPeriod.year ? 'Monate' : 'Tage';
+                          final avgUnit =
+                              _period == _ChartPeriod.year ? 'Mon.' : 'Tag';
                           final mainLabel = coverage > 1
                               ? 'Ø $avgStr m³/$avgUnit'
                               : '$avgStr m³';
@@ -1146,7 +1110,7 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
                             GoogleFonts.spaceMono(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.amber,
+                              color: _neuGreenDk,
                             ),
                             children: [
                               if (coverage > 1)
@@ -1156,7 +1120,7 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
                                   style: GoogleFonts.rajdhani(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w500,
-                                    color: AppColors.textSecondary,
+                                    color: _neuTextSec,
                                   ),
                                 ),
                               if (tempC != null)
@@ -1178,9 +1142,7 @@ class _ConsumptionChartState extends State<_ConsumptionChart> {
                     child: Text(
                       'Zu wenig Daten',
                       style: GoogleFonts.rajdhani(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                      ),
+                          fontSize: 13, color: _neuTextSec),
                     ),
                   ),
           ),
@@ -1201,14 +1163,13 @@ class ChartFullscreenScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgWarm,
+      backgroundColor: _neuBase,
       appBar: AppBar(
-        backgroundColor: _bgWarm,
+        backgroundColor: _neuBase,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded,
-              color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_rounded, color: _neuText),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -1216,16 +1177,13 @@ class ChartFullscreenScreen extends StatelessWidget {
           style: GoogleFonts.rajdhani(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: AppColors.textSecondary,
+            color: _neuTextSec,
             letterSpacing: 3,
           ),
         ),
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // constraints.maxHeight = body height (AppBar already excluded).
-          // Subtract screen padding + internal chart overhead
-          // (container padding ~20 + tab row ~32 + gap 12 = ~64) + body padding 32
           final chartH =
               (constraints.maxHeight - 96).clamp(200.0, double.infinity);
           return Padding(
@@ -1256,24 +1214,20 @@ class _PeriodTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: selected ? AppColors.amber.withOpacity(0.12) : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: selected
-                ? AppColors.amber.withOpacity(0.35)
-                : Colors.transparent,
-            width: 1,
-          ),
+          color: selected ? _neuGreen : _neuBase,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: selected ? _neu(3) : null,
         ),
         child: Text(
           label,
           style: GoogleFonts.rajdhani(
             fontSize: 12,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            color: selected ? AppColors.amber : AppColors.textSecondary,
+            color: selected ? Colors.white : _neuTextSec,
             letterSpacing: 0.5,
           ),
         ),
@@ -1345,114 +1299,89 @@ class _StatCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: _surfaceWarm,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _borderWarm, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: iconColor.withOpacity(0.07),
-              blurRadius: 20,
-              spreadRadius: 0,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          color: _neuBase,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: _neu(6),
         ),
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top accent glow line
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(15)),
-                child: Container(
-                  height: 1.5,
+            Row(
+              children: [
+                // Icon in small neumorphic circle
+                Container(
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [
-                      Colors.transparent,
-                      iconColor.withOpacity(0.55),
-                      Colors.transparent,
-                    ]),
+                    color: _neuBase,
+                    shape: BoxShape.circle,
+                    boxShadow: _neu(3),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 15),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: GoogleFonts.rajdhani(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _neuTextSec,
+                      letterSpacing: 1,
+                    ),
                   ),
                 ),
+                if (onInfoTap != null)
+                  GestureDetector(
+                    onTap: onInfoTap,
+                    behavior: HitTestBehavior.opaque,
+                    child: Icon(
+                      Icons.info_outline_rounded,
+                      size: 16,
+                      color: _neuTextSec.withOpacity(0.5),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: GoogleFonts.spaceMono(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: _neuText,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            if (unit.isNotEmpty)
+              Text(
+                unit,
+                style: GoogleFonts.rajdhani(
+                  fontSize: 12,
+                  color: _neuTextSec,
+                ),
+              ),
+            if (subValue != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subValue!,
+                style: GoogleFonts.spaceMono(
+                  fontSize: 11,
+                  color: iconColor.withOpacity(0.75),
+                ),
+              ),
+            ],
+            if (onTap != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Row(
-                    children: [
-                      Icon(icon, color: iconColor, size: 16),
-                      const SizedBox(width: 6),
-                      Text(
-                        label,
-                        style: GoogleFonts.rajdhani(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      if (onInfoTap != null) ...[
-                        const Spacer(),
-                        GestureDetector(
-                          onTap: onInfoTap,
-                          behavior: HitTestBehavior.opaque,
-                          child: Icon(
-                            Icons.info_outline_rounded,
-                            size: 16,
-                            color: AppColors.textSecondary.withOpacity(0.5),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    value,
-                    style: GoogleFonts.spaceMono(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  if (unit.isNotEmpty)
-                    Text(
-                      unit,
-                      style: GoogleFonts.rajdhani(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  if (subValue != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      subValue!,
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 11,
-                        color: AppColors.amber.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                  if (onTap != null) ...[
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Icon(Icons.chevron_right_rounded,
-                            size: 14,
-                            color: AppColors.textSecondary.withOpacity(0.5)),
-                      ],
-                    ),
-                  ],
+                  Icon(Icons.chevron_right_rounded,
+                      size: 14, color: _neuTextSec.withOpacity(0.5)),
                 ],
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -1500,7 +1429,7 @@ class _ChartInfoRow extends StatelessWidget {
             text,
             style: GoogleFonts.rajdhani(
               fontSize: 13,
-              color: AppColors.textSecondary,
+              color: _neuTextSec,
               height: 1.5,
             ),
           ),
@@ -1516,7 +1445,6 @@ class _ChartInfoRow extends StatelessWidget {
 
 class _ScanButton extends StatelessWidget {
   final VoidCallback onPressed;
-
   const _ScanButton({required this.onPressed});
 
   @override
@@ -1526,38 +1454,33 @@ class _ScanButton extends StatelessWidget {
       child: Container(
         height: 60,
         decoration: BoxDecoration(
-          color: AppColors.amber,
-          borderRadius: BorderRadius.circular(16),
+          color: _neuGreen,
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: AppColors.amber.withOpacity(0.4),
-              blurRadius: 24,
-              spreadRadius: 2,
-              offset: const Offset(0, 8),
+              color: const Color(0xFFFFFFFF).withOpacity(0.45),
+              offset: const Offset(-6, -6),
+              blurRadius: 12,
             ),
             BoxShadow(
-              color: AppColors.amber.withOpacity(0.15),
-              blurRadius: 48,
-              spreadRadius: 0,
-              offset: const Offset(0, 4),
+              color: const Color(0xFF3A5E3D),
+              offset: const Offset(6, 6),
+              blurRadius: 12,
             ),
           ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.document_scanner_outlined,
-              color: Colors.black,
-              size: 22,
-            ),
+            const Icon(Icons.document_scanner_outlined,
+                color: Colors.white, size: 22),
             const SizedBox(width: 12),
             Text(
               'ABLESEN',
               style: GoogleFonts.spaceMono(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Colors.black,
+                color: Colors.white,
                 letterSpacing: 3,
               ),
             ),
