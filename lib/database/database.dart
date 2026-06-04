@@ -34,6 +34,12 @@ class AppSettings extends Table {
   IntColumn get meterIntDigits => integer().nullable()();
   IntColumn get electricityIntDigits => integer().nullable()();
   IntColumn get electricityDecDigits => integer().nullable()();
+  // Hausdaten (added v10)
+  TextColumn get houseType => text().nullable()();
+  IntColumn get squareMeters => integer().nullable()();
+  IntColumn get numberOfPersons => integer().nullable()();
+  BoolColumn get hasPv => boolean().nullable()();
+  BoolColumn get hasSolarThermal => boolean().nullable()();
 }
 
 // ---------------------------------------------------------------------------
@@ -74,6 +80,8 @@ class ElectricityContracts extends Table {
   RealColumn get pricePerKwh => real()();
   RealColumn get monthlyBasePrice => real()();
   IntColumn get validFrom => integer()(); // ms since epoch
+  IntColumn get contractEndDate => integer().nullable()(); // ms since epoch, added v10
+  RealColumn get monthlyAdvancePayment => real().nullable()(); // added v11
   BoolColumn get isSynced =>
       boolean().withDefault(const Constant(false))();
   TextColumn get remoteId => text().nullable()();
@@ -93,6 +101,8 @@ class PriceContracts extends Table {
   RealColumn get monthlyBasePrice => real()();
   /// Milliseconds since epoch.
   IntColumn get validFrom => integer()();
+  IntColumn get contractEndDate => integer().nullable()(); // ms since epoch, added v10
+  RealColumn get monthlyAdvancePayment => real().nullable()(); // added v11
   RealColumn get brennwert => real().withDefault(const Constant(0.0))();
   RealColumn get zustandszahl => real().withDefault(const Constant(0.0))();
   BoolColumn get isSynced =>
@@ -435,6 +445,28 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
           .write(AppSettingsCompanion(electricityDecDigits: Value(digits)));
     }
   }
+
+  Future<void> saveHouseData({
+    required String? houseType,
+    required int? squareMeters,
+    required int? numberOfPersons,
+    required bool? hasPv,
+    required bool? hasSolarThermal,
+  }) async {
+    final companion = AppSettingsCompanion(
+      houseType: Value(houseType),
+      squareMeters: Value(squareMeters),
+      numberOfPersons: Value(numberOfPersons),
+      hasPv: Value(hasPv),
+      hasSolarThermal: Value(hasSolarThermal),
+    );
+    final existing = await getSettings();
+    if (existing == null) {
+      await into(appSettings).insert(companion);
+    } else {
+      await (update(appSettings)..where((t) => t.id.equals(existing.id))).write(companion);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -496,7 +528,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -528,6 +560,19 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 9) {
         await migrator.addColumn(appSettings, appSettings.electricityDecDigits);
+      }
+      if (from < 10) {
+        await migrator.addColumn(appSettings, appSettings.houseType);
+        await migrator.addColumn(appSettings, appSettings.squareMeters);
+        await migrator.addColumn(appSettings, appSettings.numberOfPersons);
+        await migrator.addColumn(appSettings, appSettings.hasPv);
+        await migrator.addColumn(appSettings, appSettings.hasSolarThermal);
+        await migrator.addColumn(electricityContracts, electricityContracts.contractEndDate);
+        await migrator.addColumn(priceContracts, priceContracts.contractEndDate);
+      }
+      if (from < 11) {
+        await migrator.addColumn(electricityContracts, electricityContracts.monthlyAdvancePayment);
+        await migrator.addColumn(priceContracts, priceContracts.monthlyAdvancePayment);
       }
     },
   );
@@ -640,6 +685,21 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> saveElectricityDecDigits(int digits) =>
       settingsDao.saveElectricityDecDigits(digits);
+
+  Future<void> saveHouseData({
+    required String? houseType,
+    required int? squareMeters,
+    required int? numberOfPersons,
+    required bool? hasPv,
+    required bool? hasSolarThermal,
+  }) =>
+      settingsDao.saveHouseData(
+        houseType: houseType,
+        squareMeters: squareMeters,
+        numberOfPersons: numberOfPersons,
+        hasPv: hasPv,
+        hasSolarThermal: hasSolarThermal,
+      );
 
   // ── Weather cache pass-throughs ──────────────────────────────────────────
 

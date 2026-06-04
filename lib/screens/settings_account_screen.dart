@@ -95,7 +95,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textSecondary, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text('KONTO', style: GoogleFonts.rajdhani(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 4)),
+        title: Text('USERDATEN', style: GoogleFonts.rajdhani(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 4)),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

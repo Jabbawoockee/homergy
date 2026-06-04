@@ -7,10 +7,11 @@ import '../services/cost_service.dart';
 import '../services/sync_service.dart';
 import '../theme/colors.dart';
 
-enum _HistoryFilter { gas, electricity, both }
+enum HistoryFilter { gas, electricity, both }
 
 class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key});
+  final HistoryFilter initialFilter;
+  const HistoryScreen({super.key, this.initialFilter = HistoryFilter.gas});
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -23,11 +24,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
   double _brennwert = 0.0;
   double _zustandszahl = 0.0;
   double _elecPrice = 0.30;
-  _HistoryFilter _filter = _HistoryFilter.gas;
+  late HistoryFilter _filter;
 
   @override
   void initState() {
     super.initState();
+    _filter = widget.initialFilter;
     _loadPricing();
   }
 
@@ -86,20 +88,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
-                  Expanded(child: _FilterChip(label: '🔥  Gas', selected: _filter == _HistoryFilter.gas, onTap: () => setState(() => _filter = _HistoryFilter.gas))),
+                  Expanded(child: _FilterChip(label: '🔥  Gas', selected: _filter == HistoryFilter.gas, onTap: () => setState(() => _filter = HistoryFilter.gas))),
                   const SizedBox(width: 8),
-                  Expanded(child: _FilterChip(label: '⚡  Strom', selected: _filter == _HistoryFilter.electricity, onTap: () => setState(() => _filter = _HistoryFilter.electricity))),
+                  Expanded(child: _FilterChip(label: '⚡  Strom', selected: _filter == HistoryFilter.electricity, onTap: () => setState(() => _filter = HistoryFilter.electricity))),
                   const SizedBox(width: 8),
-                  Expanded(child: _FilterChip(label: 'Beides', selected: _filter == _HistoryFilter.both, onTap: () => setState(() => _filter = _HistoryFilter.both))),
+                  Expanded(child: _FilterChip(label: 'Beides', selected: _filter == HistoryFilter.both, onTap: () => setState(() => _filter = HistoryFilter.both))),
                 ],
               ),
             ),
             const SizedBox(height: 4),
 
             Expanded(
-              child: _filter == _HistoryFilter.gas
+              child: _filter == HistoryFilter.gas
                   ? _buildGasHistory()
-                  : _filter == _HistoryFilter.electricity
+                  : _filter == HistoryFilter.electricity
                       ? _buildElectricityHistory()
                       : _buildCombinedHistory(),
             ),

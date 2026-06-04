@@ -215,6 +215,8 @@ class SyncService {
             'price_per_kwh': c.pricePerKwh,
             'monthly_base_price': c.monthlyBasePrice,
             'valid_from': c.validFrom,
+            'contract_end_date': c.contractEndDate,
+            'monthly_advance_payment': c.monthlyAdvancePayment,
           }).select('id').single();
           await _db.markElectricityContractSynced(c.id, response['id'] as String);
           debugPrint('[Sync] Elec contract inserted: local=${c.id} remote=${response['id']}');
@@ -225,6 +227,8 @@ class SyncService {
             'price_per_kwh': c.pricePerKwh,
             'monthly_base_price': c.monthlyBasePrice,
             'valid_from': c.validFrom,
+            'contract_end_date': c.contractEndDate,
+            'monthly_advance_payment': c.monthlyAdvancePayment,
           }).eq('id', c.remoteId!);
           await _db.markElectricityContractSynced(c.id, c.remoteId!);
           debugPrint('[Sync] Elec contract updated: ${c.remoteId}');
@@ -253,6 +257,8 @@ class SyncService {
             monthlyBasePrice:
                 Value((row['monthly_base_price'] as num).toDouble()),
             validFrom: Value(row['valid_from'] as int),
+            contractEndDate: Value(row['contract_end_date'] as int?),
+            monthlyAdvancePayment: Value((row['monthly_advance_payment'] as num?)?.toDouble()),
             isSynced: const Value(true),
             remoteId: Value(remoteId),
           ));
@@ -324,6 +330,18 @@ class SyncService {
         debugPrint('[Sync] Settings electricityDecDigits pulled from remote');
       }
 
+      // Pull Hausdaten from remote if not set locally.
+      if (local?.houseType == null && remote?['house_type'] != null) {
+        await _db.saveHouseData(
+          houseType: remote!['house_type'] as String?,
+          squareMeters: remote['square_meters'] as int?,
+          numberOfPersons: remote['number_of_persons'] as int?,
+          hasPv: remote['has_pv'] as bool?,
+          hasSolarThermal: remote['has_solar_thermal'] as bool?,
+        );
+        debugPrint('[Sync] Settings Hausdaten pulled from remote');
+      }
+
       // Push merged local state to remote.
       final merged = await _db.getSettings();
       if (merged != null) {
@@ -336,6 +354,11 @@ class SyncService {
           'meter_int_digits': merged.meterIntDigits,
           'electricity_int_digits': merged.electricityIntDigits,
           'electricity_dec_digits': merged.electricityDecDigits,
+          'house_type': merged.houseType,
+          'square_meters': merged.squareMeters,
+          'number_of_persons': merged.numberOfPersons,
+          'has_pv': merged.hasPv,
+          'has_solar_thermal': merged.hasSolarThermal,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         }, onConflict: 'user_id');
         debugPrint('[Sync] Settings pushed');
@@ -361,6 +384,8 @@ class SyncService {
             'price_per_kwh': c.pricePerKwh,
             'monthly_base_price': c.monthlyBasePrice,
             'valid_from': c.validFrom,
+            'contract_end_date': c.contractEndDate,
+            'monthly_advance_payment': c.monthlyAdvancePayment,
             'brennwert': c.brennwert,
             'zustandszahl': c.zustandszahl,
           }).select('id').single();
@@ -374,6 +399,8 @@ class SyncService {
             'price_per_kwh': c.pricePerKwh,
             'monthly_base_price': c.monthlyBasePrice,
             'valid_from': c.validFrom,
+            'contract_end_date': c.contractEndDate,
+            'monthly_advance_payment': c.monthlyAdvancePayment,
             'brennwert': c.brennwert,
             'zustandszahl': c.zustandszahl,
           }).eq('id', c.remoteId!);
@@ -404,6 +431,8 @@ class SyncService {
             monthlyBasePrice:
                 Value((row['monthly_base_price'] as num).toDouble()),
             validFrom: Value(row['valid_from'] as int),
+            contractEndDate: Value(row['contract_end_date'] as int?),
+            monthlyAdvancePayment: Value((row['monthly_advance_payment'] as num?)?.toDouble()),
             brennwert: Value((row['brennwert'] as num? ?? 0).toDouble()),
             zustandszahl:
                 Value((row['zustandszahl'] as num? ?? 0).toDouble()),

@@ -18,6 +18,7 @@ class _GasSettingsScreenState extends State<GasSettingsScreen> {
   final _settingsService        = SettingsService();
   final _priceController        = TextEditingController();
   final _basePriceController    = TextEditingController();
+  final _advanceController      = TextEditingController();
   final _brennwertController    = TextEditingController();
   final _zustandszahlController = TextEditingController();
   final _providerController     = TextEditingController();
@@ -25,6 +26,7 @@ class _GasSettingsScreenState extends State<GasSettingsScreen> {
   PriceContract? _latestContract;
   bool _isNewContract = false;
   DateTime? _validFrom;
+  DateTime? _contractEndDate;
   int _meterIntDigits = 5;
   bool _isSaving = false;
 
@@ -38,6 +40,7 @@ class _GasSettingsScreenState extends State<GasSettingsScreen> {
   void dispose() {
     _priceController.dispose();
     _basePriceController.dispose();
+    _advanceController.dispose();
     _brennwertController.dispose();
     _zustandszahlController.dispose();
     _providerController.dispose();
@@ -57,6 +60,12 @@ class _GasSettingsScreenState extends State<GasSettingsScreen> {
         _zustandszahlController.text = latest.zustandszahl > 0 ? latest.zustandszahl.toStringAsFixed(4) : '';
         _providerController.text     = latest.displayName;
         _validFrom = DateTime.fromMillisecondsSinceEpoch(latest.validFrom);
+        _contractEndDate = latest.contractEndDate != null
+            ? DateTime.fromMillisecondsSinceEpoch(latest.contractEndDate!)
+            : null;
+        _advanceController.text = latest.monthlyAdvancePayment != null
+            ? latest.monthlyAdvancePayment!.toStringAsFixed(2)
+            : '';
       }
     }
   }
@@ -87,12 +96,17 @@ class _GasSettingsScreenState extends State<GasSettingsScreen> {
 
     setState(() => _isSaving = true);
     final count = await AppDatabase.instance.countContractsByDisplayName(providerName);
+    final advText   = _advanceController.text.trim().replaceAll(',', '.');
+    final advParsed = advText.isNotEmpty ? double.tryParse(advText) : null;
+
     await AppDatabase.instance.insertContract(PriceContractsCompanion(
       internalName: Value('${providerName}_${count + 1}'),
       displayName: Value(providerName),
       pricePerKwh: Value(kwhParsed),
       monthlyBasePrice: Value(baseParsed),
       validFrom: Value(_validFrom!.millisecondsSinceEpoch),
+      contractEndDate: Value(_contractEndDate?.millisecondsSinceEpoch),
+      monthlyAdvancePayment: Value(advParsed),
       brennwert: Value(bw),
       zustandszahl: Value(zz),
     ));
@@ -102,6 +116,22 @@ class _GasSettingsScreenState extends State<GasSettingsScreen> {
       setState(() { _isSaving = false; _isNewContract = false; });
       _showSnack('Gasvertrag gespeichert.');
     }
+  }
+
+  Future<void> _pickEndDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _contractEndDate ?? DateTime.now().add(const Duration(days: 365)),
+      firstDate: DateTime(2000), lastDate: DateTime(2100),
+      builder: (context, child) => Theme(
+        data: ThemeData.light().copyWith(
+          colorScheme: const ColorScheme.light(primary: AppColors.green, onPrimary: Colors.white, surface: AppColors.background, onSurface: AppColors.textPrimary),
+          dialogTheme: const DialogThemeData(backgroundColor: AppColors.background),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _contractEndDate = picked);
   }
 
   Future<void> _pickDate() async {
@@ -135,7 +165,7 @@ class _GasSettingsScreenState extends State<GasSettingsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.background, elevation: 0, surfaceTintColor: Colors.transparent,
         leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textSecondary, size: 20), onPressed: () => Navigator.of(context).pop()),
-        title: Text('GAS', style: GoogleFonts.rajdhani(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 4)),
+        title: Text('GAS-EIGENSCHAFTEN', style: GoogleFonts.rajdhani(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 4)),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -168,7 +198,7 @@ class _GasSettingsScreenState extends State<GasSettingsScreen> {
                     Text('Neuer Vertrag?', style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.5)),
                     const SizedBox(height: 8),
                     Row(children: [
-                      Expanded(child: SettingsToggleChip(label: 'Nein – aktualisieren', selected: !_isNewContract, onTap: () => setState(() => _isNewContract = false))),
+                      Expanded(child: SettingsToggleChip(label: 'Nein – nur Vertragsdaten anpassen', selected: !_isNewContract, onTap: () => setState(() => _isNewContract = false))),
                       const SizedBox(width: 8),
                       Expanded(child: SettingsToggleChip(label: 'Ja – neuer Anbieter', selected: _isNewContract, onTap: () { setState(() { _isNewContract = true; _providerController.clear(); }); })),
                     ]),
@@ -188,9 +218,35 @@ class _GasSettingsScreenState extends State<GasSettingsScreen> {
                   const SizedBox(height: 8),
                   SettingsPriceField(controller: _basePriceController, suffix: '€/Monat', hint: 'z.B. 8.00'),
                   const SizedBox(height: 20),
+                  const SettingsFieldLabel('Monatlicher Abschlag'),
+                  const SizedBox(height: 6),
+                  Text('Dein monatlicher Vorauszahlungsbetrag an den Anbieter',
+                      style: GoogleFonts.rajdhani(fontSize: 13,
+                          color: AppColors.textSecondary.withValues(alpha: 0.7))),
+                  const SizedBox(height: 8),
+                  SettingsPriceField(controller: _advanceController, suffix: '€/Monat', hint: 'z.B. 60.00'),
+                  const SizedBox(height: 20),
                   const SettingsFieldLabel('Diese Preise gelten seit:', required: true),
                   const SizedBox(height: 10),
                   SettingsDatePicker(date: _validFrom, onTap: _pickDate),
+                  const SizedBox(height: 20),
+                  const SettingsFieldLabel('Vertragsende'),
+                  const SizedBox(height: 6),
+                  Text('Optional – für spätere Kündigungserinnerung',
+                      style: GoogleFonts.rajdhani(fontSize: 13,
+                          color: AppColors.textSecondary.withValues(alpha: 0.7))),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(child: SettingsDatePicker(
+                        date: _contractEndDate, onTap: _pickEndDate)),
+                    if (_contractEndDate != null) ...[
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => setState(() => _contractEndDate = null),
+                        child: const Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ]),
                   const SizedBox(height: 24),
                   Divider(color: AppColors.border, height: 1),
                   const SizedBox(height: 20),

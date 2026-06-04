@@ -6,6 +6,7 @@ import '../services/cost_service.dart';
 import '../services/ocr_service.dart';
 import '../widgets/consumption_chart.dart';
 import 'cost_detail_screen.dart';
+import 'history_screen.dart';
 import 'scan_screen.dart';
 
 const _neuBase    = Color(0xFFEAEEE6);
@@ -190,6 +191,9 @@ class _GasDetailScreenState extends State<GasDetailScreen> {
                                 subValue: '≈ ${monthKwh.toStringAsFixed(1)} kWh',
                                 icon: Icons.local_fire_department_outlined,
                                 iconColor: _neuGreenDk,
+                                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (_) => const HistoryScreen(initialFilter: HistoryFilter.gas),
+                                )),
                                 onInfoTap: () => showDialog(
                                   context: context,
                                   builder: (_) => AlertDialog(

@@ -1,0 +1,437 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../database/database.dart';
+import '../services/sync_service.dart';
+import '../services/weather_service.dart';
+import '../theme/colors.dart';
+import 'settings_widgets.dart';
+
+const _houseTypes = [
+  'Wohnung',
+  'Reihenmittelhaus',
+  'Reihenendhaus',
+  'Doppelhaushälfte',
+  'Einfamilienhaus',
+];
+
+class HausdatenSettingsScreen extends StatefulWidget {
+  const HausdatenSettingsScreen({super.key});
+
+  @override
+  State<HausdatenSettingsScreen> createState() => _HausdatenSettingsScreenState();
+}
+
+class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
+  final _plzController  = TextEditingController();
+  final _cityController = TextEditingController();
+  final _sqmController  = TextEditingController();
+
+  bool _isSaving = false;
+  bool _coordsFound = false;
+
+  String? _houseType;
+  int?    _numberOfPersons;
+  bool?   _hasPv;
+  bool?   _hasSolarThermal;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _plzController.dispose();
+    _cityController.dispose();
+    _sqmController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    final s = await AppDatabase.instance.getSettings();
+    if (!mounted) return;
+    setState(() {
+      _coordsFound     = s?.locationLat != null;
+      _houseType       = s?.houseType;
+      _numberOfPersons = s?.numberOfPersons;
+      _hasPv           = s?.hasPv;
+      _hasSolarThermal = s?.hasSolarThermal;
+    });
+    if (s != null) {
+      _plzController.text  = s.locationPlz  ?? '';
+      _cityController.text = s.locationCity ?? '';
+      _sqmController.text  = s.squareMeters != null ? '${s.squareMeters}' : '';
+    }
+  }
+
+  Future<void> _save() async {
+    final plz  = _plzController.text.trim();
+    final city = _cityController.text.trim();
+    final sqmRaw = _sqmController.text.trim();
+    final sqm = sqmRaw.isNotEmpty ? int.tryParse(sqmRaw) : null;
+
+    setState(() => _isSaving = true);
+
+    // Save location (always, even if empty — allows clearing)
+    if (plz.isNotEmpty || city.isNotEmpty) {
+      await AppDatabase.instance.saveLocation(plz: plz, city: city);
+      final coords = await WeatherService().geocode(city, plz);
+      if (coords != null) {
+        final s = await AppDatabase.instance.getSettings();
+        if (s != null) {
+          await AppDatabase.instance.saveCoordinates(s.id, coords.lat, coords.lon);
+        }
+      }
+      setState(() => _coordsFound = true);
+    }
+
+    // Save house data
+    await AppDatabase.instance.saveHouseData(
+      houseType: _houseType,
+      squareMeters: sqm,
+      numberOfPersons: _numberOfPersons,
+      hasPv: _hasPv,
+      hasSolarThermal: _hasSolarThermal,
+    );
+
+    await _load();
+    SyncService().syncSettings();
+
+    if (mounted) {
+      setState(() => _isSaving = false);
+      _showSnack('Hausdaten gespeichert.');
+    }
+  }
+
+  void _showSnack(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      backgroundColor: isError ? AppColors.error : AppColors.green,
+      content: Text(msg,
+          style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+      duration: const Duration(seconds: 3),
+    ));
+  }
+
+  void _stepPersons(int delta) {
+    setState(() {
+      if (delta > 0) {
+        _numberOfPersons = (_numberOfPersons ?? 0) + 1;
+      } else {
+        if (_numberOfPersons == null || _numberOfPersons! <= 1) {
+          _numberOfPersons = null;
+        } else {
+          _numberOfPersons = _numberOfPersons! - 1;
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textSecondary, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text('HAUSDATEN',
+            style: GoogleFonts.rajdhani(
+                fontSize: 13, fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary, letterSpacing: 4)),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Standort ──────────────────────────────────────────────────
+              const SettingsSectionLabel('STANDORT & WETTERDATEN'),
+              const SizedBox(height: 12),
+              _Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  const Icon(Icons.thermostat_rounded, size: 16, color: AppColors.amber),
+                  const SizedBox(width: 8),
+                  Text('Wetterdaten-Standort',
+                      style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary, letterSpacing: 0.5)),
+                ]),
+                const SizedBox(height: 6),
+                Text('Wird für die Temperaturkorrelation im Verbrauchsgraph verwendet.',
+                    style: GoogleFonts.rajdhani(
+                        fontSize: 13, color: AppColors.textSecondary.withValues(alpha: 0.8), height: 1.4)),
+                if (_coordsFound) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                        color: AppColors.green.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(8)),
+                    child: Row(children: [
+                      const Icon(Icons.check_circle_outline, size: 14, color: AppColors.green),
+                      const SizedBox(width: 8),
+                      Text('Koordinaten gefunden',
+                          style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.green,
+                              fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Row(children: [
+                  Expanded(flex: 2, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('PLZ', style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    _InputField(controller: _plzController, hint: '80331', keyboardType: TextInputType.number),
+                  ])),
+                  const SizedBox(width: 12),
+                  Expanded(flex: 3, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Wohnort', style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    _InputField(controller: _cityController, hint: 'München'),
+                  ])),
+                ]),
+              ])),
+
+              const SizedBox(height: 24),
+
+              // ── Gebäude ───────────────────────────────────────────────────
+              const SettingsSectionLabel('GEBÄUDE'),
+              const SizedBox(height: 12),
+              _Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+                // Haustyp
+                Row(children: [
+                  const Icon(Icons.home_rounded, size: 16, color: AppColors.amber),
+                  const SizedBox(width: 8),
+                  Text('Haustyp',
+                      style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary, letterSpacing: 0.5)),
+                ]),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _houseTypes.map((type) => SettingsToggleChip(
+                    label: type,
+                    selected: _houseType == type,
+                    onTap: () => setState(() => _houseType = type),
+                  )).toList(),
+                ),
+
+                const SizedBox(height: 20),
+                const Divider(color: Color(0xFFCFD8C4), height: 1),
+                const SizedBox(height: 20),
+
+                // Wohnfläche
+                Row(children: [
+                  const Icon(Icons.square_foot_rounded, size: 16, color: AppColors.amber),
+                  const SizedBox(width: 8),
+                  Text('Wohnfläche',
+                      style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary, letterSpacing: 0.5)),
+                ]),
+                const SizedBox(height: 10),
+                _SqmField(controller: _sqmController),
+
+                const SizedBox(height: 20),
+                const Divider(color: Color(0xFFCFD8C4), height: 1),
+                const SizedBox(height: 20),
+
+                // Haushaltsgröße
+                Row(children: [
+                  const Icon(Icons.people_alt_rounded, size: 16, color: AppColors.amber),
+                  const SizedBox(width: 8),
+                  Text('Haushaltsgröße',
+                      style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary, letterSpacing: 0.5)),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(4)),
+                    child: Text('optional',
+                        style: GoogleFonts.rajdhani(fontSize: 11, color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+                  ),
+                ]),
+                const SizedBox(height: 10),
+                _PersonsStepper(value: _numberOfPersons, onStep: _stepPersons),
+
+                const SizedBox(height: 20),
+                const Divider(color: Color(0xFFCFD8C4), height: 1),
+                const SizedBox(height: 20),
+
+                // PV-Anlage
+                Row(children: [
+                  const Icon(Icons.solar_power_rounded, size: 16, color: AppColors.amber),
+                  const SizedBox(width: 8),
+                  Text('Photovoltaik (PV)',
+                      style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary, letterSpacing: 0.5)),
+                ]),
+                const SizedBox(height: 4),
+                Text('Zur Stromerzeugung installiert',
+                    style: GoogleFonts.rajdhani(fontSize: 13,
+                        color: AppColors.textSecondary.withValues(alpha: 0.8))),
+                const SizedBox(height: 10),
+                Row(children: [
+                  SettingsToggleChip(label: 'Ja', selected: _hasPv == true,
+                      onTap: () => setState(() => _hasPv = true)),
+                  const SizedBox(width: 8),
+                  SettingsToggleChip(label: 'Nein', selected: _hasPv == false,
+                      onTap: () => setState(() => _hasPv = false)),
+                ]),
+
+                const SizedBox(height: 20),
+                const Divider(color: Color(0xFFCFD8C4), height: 1),
+                const SizedBox(height: 20),
+
+                // Solaranlage Wärme
+                Row(children: [
+                  const Icon(Icons.wb_sunny_rounded, size: 16, color: AppColors.amber),
+                  const SizedBox(width: 8),
+                  Text('Solaranlage (Wärme)',
+                      style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary, letterSpacing: 0.5)),
+                ]),
+                const SizedBox(height: 4),
+                Text('Zur Wärmeerzeugung installiert',
+                    style: GoogleFonts.rajdhani(fontSize: 13,
+                        color: AppColors.textSecondary.withValues(alpha: 0.8))),
+                const SizedBox(height: 10),
+                Row(children: [
+                  SettingsToggleChip(label: 'Ja', selected: _hasSolarThermal == true,
+                      onTap: () => setState(() => _hasSolarThermal = true)),
+                  const SizedBox(width: 8),
+                  SettingsToggleChip(label: 'Nein', selected: _hasSolarThermal == false,
+                      onTap: () => setState(() => _hasSolarThermal = false)),
+                ]),
+              ])),
+
+              const SizedBox(height: 28),
+              SettingsSaveButton(label: 'HAUSDATEN SPEICHERN', isBusy: _isSaving, onTap: _save),
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+class _Card extends StatelessWidget {
+  final Widget child;
+  const _Card({required this.child});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.neu(7)),
+    child: child,
+  );
+}
+
+class _InputField extends StatelessWidget {
+  final TextEditingController controller;
+  final String hint;
+  final TextInputType keyboardType;
+  const _InputField({required this.controller, required this.hint,
+    this.keyboardType = TextInputType.text});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(color: const Color(0xFFDFE5DA), borderRadius: BorderRadius.circular(10)),
+    child: TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      style: GoogleFonts.rajdhani(fontSize: 16, color: AppColors.textPrimary),
+      cursorColor: AppColors.green,
+      decoration: InputDecoration(
+        border: InputBorder.none,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        hintText: hint,
+        hintStyle: GoogleFonts.rajdhani(fontSize: 14, color: AppColors.textSecondary),
+      ),
+    ),
+  );
+}
+
+class _SqmField extends StatelessWidget {
+  final TextEditingController controller;
+  const _SqmField({required this.controller});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(color: const Color(0xFFDFE5DA), borderRadius: BorderRadius.circular(10)),
+    child: TextField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      style: GoogleFonts.spaceMono(fontSize: 16, color: AppColors.textPrimary),
+      cursorColor: AppColors.green,
+      decoration: InputDecoration(
+        border: InputBorder.none,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        hintText: '85',
+        hintStyle: GoogleFonts.spaceMono(fontSize: 14, color: AppColors.textSecondary),
+        suffixText: 'm²',
+        suffixStyle: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600),
+      ),
+    ),
+  );
+}
+
+class _PersonsStepper extends StatelessWidget {
+  final int? value;
+  final void Function(int delta) onStep;
+  const _PersonsStepper({required this.value, required this.onStep});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(color: const Color(0xFFDFE5DA), borderRadius: BorderRadius.circular(10)),
+      child: Row(children: [
+        _StepBtn(icon: Icons.remove, onTap: value == null ? null : () => onStep(-1)),
+        Expanded(child: Center(
+          child: Text(
+            value == null ? '–' : '$value',
+            style: value == null
+                ? GoogleFonts.rajdhani(fontSize: 18, color: AppColors.textSecondary)
+                : GoogleFonts.spaceMono(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+          ),
+        )),
+        _StepBtn(icon: Icons.add, onTap: () => onStep(1)),
+      ]),
+    );
+  }
+}
+
+class _StepBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+  const _StepBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: SizedBox(
+      width: 52,
+      height: 50,
+      child: Icon(icon, size: 20,
+          color: onTap == null ? AppColors.textSecondary.withValues(alpha: 0.3) : AppColors.textSecondary),
+    ),
+  );
+}

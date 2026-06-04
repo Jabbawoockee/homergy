@@ -5,6 +5,7 @@ import '../database/database.dart';
 import '../services/ocr_service.dart';
 import '../widgets/consumption_chart.dart';
 import 'electricity_cost_detail_screen.dart';
+import 'history_screen.dart';
 import 'scan_screen.dart';
 
 const _neuBase    = Color(0xFFEAEEE6);
@@ -182,6 +183,9 @@ class _ElectricityDetailScreenState extends State<ElectricityDetailScreen> {
                                 unit: 'kWh',
                                 icon: Icons.bolt_outlined,
                                 iconColor: _neuBlueDk,
+                                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (_) => const HistoryScreen(initialFilter: HistoryFilter.electricity),
+                                )),
                               ),
                             ),
                             const SizedBox(width: 14),

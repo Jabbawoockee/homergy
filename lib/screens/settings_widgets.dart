@@ -54,7 +54,8 @@ class SettingsContractPreview extends StatelessWidget {
 class SettingsDatePicker extends StatelessWidget {
   final DateTime? date;
   final VoidCallback onTap;
-  const SettingsDatePicker({super.key, required this.date, required this.onTap});
+  final Color accentColor;
+  const SettingsDatePicker({super.key, required this.date, required this.onTap, this.accentColor = AppColors.green});
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +67,7 @@ class SettingsDatePicker extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(color: const Color(0xFFDFE5DA), borderRadius: BorderRadius.circular(10)),
         child: Row(children: [
-          Icon(Icons.calendar_today_rounded, size: 18, color: d == null ? AppColors.textSecondary : AppColors.green),
+          Icon(Icons.calendar_today_rounded, size: 18, color: d == null ? AppColors.textSecondary : accentColor),
           const SizedBox(width: 12),
           Text(
             d == null ? 'Datum auswählen' : '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}',
@@ -88,8 +89,9 @@ class SettingsDigitSelector extends StatelessWidget {
   final List<int> options;
   final String Function(int) formatHint;
   final void Function(int) onSelect;
+  final Color accentColor;
 
-  const SettingsDigitSelector({super.key, required this.icon, required this.iconColor, required this.description, required this.selected, required this.options, required this.formatHint, required this.onSelect});
+  const SettingsDigitSelector({super.key, required this.icon, required this.iconColor, required this.description, required this.selected, required this.options, required this.formatHint, required this.onSelect, this.accentColor = AppColors.green});
 
   @override
   Widget build(BuildContext context) {
@@ -112,10 +114,10 @@ class SettingsDigitSelector extends StatelessWidget {
                   duration: const Duration(milliseconds: 180),
                   height: 48,
                   decoration: BoxDecoration(
-                    color: selected == options[i] ? AppColors.green : AppColors.background,
+                    color: selected == options[i] ? accentColor : AppColors.background,
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: selected == options[i]
-                        ? [const BoxShadow(color: Color(0xFF3A5E3D), offset: Offset(0, 3), blurRadius: 6)]
+                        ? [BoxShadow(color: accentColor.withValues(alpha: 0.55), offset: const Offset(0, 3), blurRadius: 6)]
                         : AppColors.neu(4),
                   ),
                   child: Center(child: Text('${options[i]}', style: GoogleFonts.spaceMono(fontSize: 18, fontWeight: FontWeight.w700,
@@ -138,7 +140,8 @@ class SettingsToggleChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const SettingsToggleChip({super.key, required this.label, required this.selected, required this.onTap});
+  final Color accentColor;
+  const SettingsToggleChip({super.key, required this.label, required this.selected, required this.onTap, this.accentColor = AppColors.green});
 
   @override
   Widget build(BuildContext context) {
@@ -148,9 +151,11 @@ class SettingsToggleChip extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? AppColors.green : AppColors.background,
+          color: selected ? accentColor : AppColors.background,
           borderRadius: BorderRadius.circular(8),
-          boxShadow: selected ? [const BoxShadow(color: Color(0xFF3A5E3D), offset: Offset(0, 2), blurRadius: 5)] : AppColors.neu(3),
+          boxShadow: selected
+              ? [BoxShadow(color: accentColor.withValues(alpha: 0.55), offset: const Offset(0, 2), blurRadius: 5)]
+              : AppColors.neu(3),
         ),
         child: Text(label, textAlign: TextAlign.center,
             style: GoogleFonts.rajdhani(fontSize: 13, fontWeight: FontWeight.w600, color: selected ? Colors.white : AppColors.textSecondary)),
@@ -162,7 +167,8 @@ class SettingsToggleChip extends StatelessWidget {
 class SettingsPriceField extends StatelessWidget {
   final TextEditingController controller;
   final String suffix, hint;
-  const SettingsPriceField({super.key, required this.controller, required this.suffix, required this.hint});
+  final Color accentColor;
+  const SettingsPriceField({super.key, required this.controller, required this.suffix, required this.hint, this.accentColor = AppColors.green});
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +178,7 @@ class SettingsPriceField extends StatelessWidget {
         controller: controller,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         style: GoogleFonts.spaceMono(fontSize: 16, color: AppColors.textPrimary),
-        cursorColor: AppColors.green,
+        cursorColor: accentColor,
         decoration: InputDecoration(
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -188,7 +194,8 @@ class SettingsPriceField extends StatelessWidget {
 class SettingsTextField extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
-  const SettingsTextField({super.key, required this.controller, required this.hint});
+  final Color accentColor;
+  const SettingsTextField({super.key, required this.controller, required this.hint, this.accentColor = AppColors.green});
 
   @override
   Widget build(BuildContext context) {
@@ -197,7 +204,7 @@ class SettingsTextField extends StatelessWidget {
       child: TextField(
         controller: controller,
         style: GoogleFonts.rajdhani(fontSize: 16, color: AppColors.textPrimary),
-        cursorColor: AppColors.green,
+        cursorColor: accentColor,
         decoration: InputDecoration(
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -212,7 +219,8 @@ class SettingsSaveButton extends StatelessWidget {
   final String label;
   final bool isBusy;
   final VoidCallback onTap;
-  const SettingsSaveButton({super.key, required this.label, required this.isBusy, required this.onTap});
+  final Color accentColor;
+  const SettingsSaveButton({super.key, required this.label, required this.isBusy, required this.onTap, this.accentColor = AppColors.green});
 
   @override
   Widget build(BuildContext context) {
@@ -220,8 +228,11 @@ class SettingsSaveButton extends StatelessWidget {
       onTap: isBusy ? null : onTap,
       child: Container(
         height: 46,
-        decoration: BoxDecoration(color: AppColors.green, borderRadius: BorderRadius.circular(10),
-            boxShadow: const [BoxShadow(color: Color(0xFF3A5E3D), blurRadius: 8, offset: Offset(0, 3))]),
+        decoration: BoxDecoration(
+          color: accentColor,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [BoxShadow(color: accentColor.withValues(alpha: 0.55), blurRadius: 8, offset: const Offset(0, 3))],
+        ),
         child: Center(child: isBusy
             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
             : Text(label, style: GoogleFonts.spaceMono(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 1.5))),

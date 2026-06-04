@@ -1053,6 +1053,28 @@ class $PriceContractsTable extends PriceContracts
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _contractEndDateMeta = const VerificationMeta(
+    'contractEndDate',
+  );
+  @override
+  late final GeneratedColumn<int> contractEndDate = GeneratedColumn<int>(
+    'contract_end_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _monthlyAdvancePaymentMeta =
+      const VerificationMeta('monthlyAdvancePayment');
+  @override
+  late final GeneratedColumn<double> monthlyAdvancePayment =
+      GeneratedColumn<double>(
+        'monthly_advance_payment',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _brennwertMeta = const VerificationMeta(
     'brennwert',
   );
@@ -1111,6 +1133,8 @@ class $PriceContractsTable extends PriceContracts
     pricePerKwh,
     monthlyBasePrice,
     validFrom,
+    contractEndDate,
+    monthlyAdvancePayment,
     brennwert,
     zustandszahl,
     isSynced,
@@ -1183,6 +1207,24 @@ class $PriceContractsTable extends PriceContracts
     } else if (isInserting) {
       context.missing(_validFromMeta);
     }
+    if (data.containsKey('contract_end_date')) {
+      context.handle(
+        _contractEndDateMeta,
+        contractEndDate.isAcceptableOrUnknown(
+          data['contract_end_date']!,
+          _contractEndDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('monthly_advance_payment')) {
+      context.handle(
+        _monthlyAdvancePaymentMeta,
+        monthlyAdvancePayment.isAcceptableOrUnknown(
+          data['monthly_advance_payment']!,
+          _monthlyAdvancePaymentMeta,
+        ),
+      );
+    }
     if (data.containsKey('brennwert')) {
       context.handle(
         _brennwertMeta,
@@ -1243,6 +1285,14 @@ class $PriceContractsTable extends PriceContracts
         DriftSqlType.int,
         data['${effectivePrefix}valid_from'],
       )!,
+      contractEndDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}contract_end_date'],
+      ),
+      monthlyAdvancePayment: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monthly_advance_payment'],
+      ),
       brennwert: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}brennwert'],
@@ -1281,6 +1331,8 @@ class PriceContract extends DataClass implements Insertable<PriceContract> {
 
   /// Milliseconds since epoch.
   final int validFrom;
+  final int? contractEndDate;
+  final double? monthlyAdvancePayment;
   final double brennwert;
   final double zustandszahl;
   final bool isSynced;
@@ -1292,6 +1344,8 @@ class PriceContract extends DataClass implements Insertable<PriceContract> {
     required this.pricePerKwh,
     required this.monthlyBasePrice,
     required this.validFrom,
+    this.contractEndDate,
+    this.monthlyAdvancePayment,
     required this.brennwert,
     required this.zustandszahl,
     required this.isSynced,
@@ -1306,6 +1360,12 @@ class PriceContract extends DataClass implements Insertable<PriceContract> {
     map['price_per_kwh'] = Variable<double>(pricePerKwh);
     map['monthly_base_price'] = Variable<double>(monthlyBasePrice);
     map['valid_from'] = Variable<int>(validFrom);
+    if (!nullToAbsent || contractEndDate != null) {
+      map['contract_end_date'] = Variable<int>(contractEndDate);
+    }
+    if (!nullToAbsent || monthlyAdvancePayment != null) {
+      map['monthly_advance_payment'] = Variable<double>(monthlyAdvancePayment);
+    }
     map['brennwert'] = Variable<double>(brennwert);
     map['zustandszahl'] = Variable<double>(zustandszahl);
     map['is_synced'] = Variable<bool>(isSynced);
@@ -1323,6 +1383,12 @@ class PriceContract extends DataClass implements Insertable<PriceContract> {
       pricePerKwh: Value(pricePerKwh),
       monthlyBasePrice: Value(monthlyBasePrice),
       validFrom: Value(validFrom),
+      contractEndDate: contractEndDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contractEndDate),
+      monthlyAdvancePayment: monthlyAdvancePayment == null && nullToAbsent
+          ? const Value.absent()
+          : Value(monthlyAdvancePayment),
       brennwert: Value(brennwert),
       zustandszahl: Value(zustandszahl),
       isSynced: Value(isSynced),
@@ -1344,6 +1410,10 @@ class PriceContract extends DataClass implements Insertable<PriceContract> {
       pricePerKwh: serializer.fromJson<double>(json['pricePerKwh']),
       monthlyBasePrice: serializer.fromJson<double>(json['monthlyBasePrice']),
       validFrom: serializer.fromJson<int>(json['validFrom']),
+      contractEndDate: serializer.fromJson<int?>(json['contractEndDate']),
+      monthlyAdvancePayment: serializer.fromJson<double?>(
+        json['monthlyAdvancePayment'],
+      ),
       brennwert: serializer.fromJson<double>(json['brennwert']),
       zustandszahl: serializer.fromJson<double>(json['zustandszahl']),
       isSynced: serializer.fromJson<bool>(json['isSynced']),
@@ -1360,6 +1430,10 @@ class PriceContract extends DataClass implements Insertable<PriceContract> {
       'pricePerKwh': serializer.toJson<double>(pricePerKwh),
       'monthlyBasePrice': serializer.toJson<double>(monthlyBasePrice),
       'validFrom': serializer.toJson<int>(validFrom),
+      'contractEndDate': serializer.toJson<int?>(contractEndDate),
+      'monthlyAdvancePayment': serializer.toJson<double?>(
+        monthlyAdvancePayment,
+      ),
       'brennwert': serializer.toJson<double>(brennwert),
       'zustandszahl': serializer.toJson<double>(zustandszahl),
       'isSynced': serializer.toJson<bool>(isSynced),
@@ -1374,6 +1448,8 @@ class PriceContract extends DataClass implements Insertable<PriceContract> {
     double? pricePerKwh,
     double? monthlyBasePrice,
     int? validFrom,
+    Value<int?> contractEndDate = const Value.absent(),
+    Value<double?> monthlyAdvancePayment = const Value.absent(),
     double? brennwert,
     double? zustandszahl,
     bool? isSynced,
@@ -1385,6 +1461,12 @@ class PriceContract extends DataClass implements Insertable<PriceContract> {
     pricePerKwh: pricePerKwh ?? this.pricePerKwh,
     monthlyBasePrice: monthlyBasePrice ?? this.monthlyBasePrice,
     validFrom: validFrom ?? this.validFrom,
+    contractEndDate: contractEndDate.present
+        ? contractEndDate.value
+        : this.contractEndDate,
+    monthlyAdvancePayment: monthlyAdvancePayment.present
+        ? monthlyAdvancePayment.value
+        : this.monthlyAdvancePayment,
     brennwert: brennwert ?? this.brennwert,
     zustandszahl: zustandszahl ?? this.zustandszahl,
     isSynced: isSynced ?? this.isSynced,
@@ -1406,6 +1488,12 @@ class PriceContract extends DataClass implements Insertable<PriceContract> {
           ? data.monthlyBasePrice.value
           : this.monthlyBasePrice,
       validFrom: data.validFrom.present ? data.validFrom.value : this.validFrom,
+      contractEndDate: data.contractEndDate.present
+          ? data.contractEndDate.value
+          : this.contractEndDate,
+      monthlyAdvancePayment: data.monthlyAdvancePayment.present
+          ? data.monthlyAdvancePayment.value
+          : this.monthlyAdvancePayment,
       brennwert: data.brennwert.present ? data.brennwert.value : this.brennwert,
       zustandszahl: data.zustandszahl.present
           ? data.zustandszahl.value
@@ -1424,6 +1512,8 @@ class PriceContract extends DataClass implements Insertable<PriceContract> {
           ..write('pricePerKwh: $pricePerKwh, ')
           ..write('monthlyBasePrice: $monthlyBasePrice, ')
           ..write('validFrom: $validFrom, ')
+          ..write('contractEndDate: $contractEndDate, ')
+          ..write('monthlyAdvancePayment: $monthlyAdvancePayment, ')
           ..write('brennwert: $brennwert, ')
           ..write('zustandszahl: $zustandszahl, ')
           ..write('isSynced: $isSynced, ')
@@ -1440,6 +1530,8 @@ class PriceContract extends DataClass implements Insertable<PriceContract> {
     pricePerKwh,
     monthlyBasePrice,
     validFrom,
+    contractEndDate,
+    monthlyAdvancePayment,
     brennwert,
     zustandszahl,
     isSynced,
@@ -1455,6 +1547,8 @@ class PriceContract extends DataClass implements Insertable<PriceContract> {
           other.pricePerKwh == this.pricePerKwh &&
           other.monthlyBasePrice == this.monthlyBasePrice &&
           other.validFrom == this.validFrom &&
+          other.contractEndDate == this.contractEndDate &&
+          other.monthlyAdvancePayment == this.monthlyAdvancePayment &&
           other.brennwert == this.brennwert &&
           other.zustandszahl == this.zustandszahl &&
           other.isSynced == this.isSynced &&
@@ -1468,6 +1562,8 @@ class PriceContractsCompanion extends UpdateCompanion<PriceContract> {
   final Value<double> pricePerKwh;
   final Value<double> monthlyBasePrice;
   final Value<int> validFrom;
+  final Value<int?> contractEndDate;
+  final Value<double?> monthlyAdvancePayment;
   final Value<double> brennwert;
   final Value<double> zustandszahl;
   final Value<bool> isSynced;
@@ -1479,6 +1575,8 @@ class PriceContractsCompanion extends UpdateCompanion<PriceContract> {
     this.pricePerKwh = const Value.absent(),
     this.monthlyBasePrice = const Value.absent(),
     this.validFrom = const Value.absent(),
+    this.contractEndDate = const Value.absent(),
+    this.monthlyAdvancePayment = const Value.absent(),
     this.brennwert = const Value.absent(),
     this.zustandszahl = const Value.absent(),
     this.isSynced = const Value.absent(),
@@ -1491,6 +1589,8 @@ class PriceContractsCompanion extends UpdateCompanion<PriceContract> {
     required double pricePerKwh,
     required double monthlyBasePrice,
     required int validFrom,
+    this.contractEndDate = const Value.absent(),
+    this.monthlyAdvancePayment = const Value.absent(),
     this.brennwert = const Value.absent(),
     this.zustandszahl = const Value.absent(),
     this.isSynced = const Value.absent(),
@@ -1507,6 +1607,8 @@ class PriceContractsCompanion extends UpdateCompanion<PriceContract> {
     Expression<double>? pricePerKwh,
     Expression<double>? monthlyBasePrice,
     Expression<int>? validFrom,
+    Expression<int>? contractEndDate,
+    Expression<double>? monthlyAdvancePayment,
     Expression<double>? brennwert,
     Expression<double>? zustandszahl,
     Expression<bool>? isSynced,
@@ -1519,6 +1621,9 @@ class PriceContractsCompanion extends UpdateCompanion<PriceContract> {
       if (pricePerKwh != null) 'price_per_kwh': pricePerKwh,
       if (monthlyBasePrice != null) 'monthly_base_price': monthlyBasePrice,
       if (validFrom != null) 'valid_from': validFrom,
+      if (contractEndDate != null) 'contract_end_date': contractEndDate,
+      if (monthlyAdvancePayment != null)
+        'monthly_advance_payment': monthlyAdvancePayment,
       if (brennwert != null) 'brennwert': brennwert,
       if (zustandszahl != null) 'zustandszahl': zustandszahl,
       if (isSynced != null) 'is_synced': isSynced,
@@ -1533,6 +1638,8 @@ class PriceContractsCompanion extends UpdateCompanion<PriceContract> {
     Value<double>? pricePerKwh,
     Value<double>? monthlyBasePrice,
     Value<int>? validFrom,
+    Value<int?>? contractEndDate,
+    Value<double?>? monthlyAdvancePayment,
     Value<double>? brennwert,
     Value<double>? zustandszahl,
     Value<bool>? isSynced,
@@ -1545,6 +1652,9 @@ class PriceContractsCompanion extends UpdateCompanion<PriceContract> {
       pricePerKwh: pricePerKwh ?? this.pricePerKwh,
       monthlyBasePrice: monthlyBasePrice ?? this.monthlyBasePrice,
       validFrom: validFrom ?? this.validFrom,
+      contractEndDate: contractEndDate ?? this.contractEndDate,
+      monthlyAdvancePayment:
+          monthlyAdvancePayment ?? this.monthlyAdvancePayment,
       brennwert: brennwert ?? this.brennwert,
       zustandszahl: zustandszahl ?? this.zustandszahl,
       isSynced: isSynced ?? this.isSynced,
@@ -1573,6 +1683,14 @@ class PriceContractsCompanion extends UpdateCompanion<PriceContract> {
     if (validFrom.present) {
       map['valid_from'] = Variable<int>(validFrom.value);
     }
+    if (contractEndDate.present) {
+      map['contract_end_date'] = Variable<int>(contractEndDate.value);
+    }
+    if (monthlyAdvancePayment.present) {
+      map['monthly_advance_payment'] = Variable<double>(
+        monthlyAdvancePayment.value,
+      );
+    }
     if (brennwert.present) {
       map['brennwert'] = Variable<double>(brennwert.value);
     }
@@ -1597,6 +1715,8 @@ class PriceContractsCompanion extends UpdateCompanion<PriceContract> {
           ..write('pricePerKwh: $pricePerKwh, ')
           ..write('monthlyBasePrice: $monthlyBasePrice, ')
           ..write('validFrom: $validFrom, ')
+          ..write('contractEndDate: $contractEndDate, ')
+          ..write('monthlyAdvancePayment: $monthlyAdvancePayment, ')
           ..write('brennwert: $brennwert, ')
           ..write('zustandszahl: $zustandszahl, ')
           ..write('isSynced: $isSynced, ')
@@ -1680,6 +1800,28 @@ class $ElectricityContractsTable extends ElectricityContracts
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _contractEndDateMeta = const VerificationMeta(
+    'contractEndDate',
+  );
+  @override
+  late final GeneratedColumn<int> contractEndDate = GeneratedColumn<int>(
+    'contract_end_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _monthlyAdvancePaymentMeta =
+      const VerificationMeta('monthlyAdvancePayment');
+  @override
+  late final GeneratedColumn<double> monthlyAdvancePayment =
+      GeneratedColumn<double>(
+        'monthly_advance_payment',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _isSyncedMeta = const VerificationMeta(
     'isSynced',
   );
@@ -1714,6 +1856,8 @@ class $ElectricityContractsTable extends ElectricityContracts
     pricePerKwh,
     monthlyBasePrice,
     validFrom,
+    contractEndDate,
+    monthlyAdvancePayment,
     isSynced,
     remoteId,
   ];
@@ -1784,6 +1928,24 @@ class $ElectricityContractsTable extends ElectricityContracts
     } else if (isInserting) {
       context.missing(_validFromMeta);
     }
+    if (data.containsKey('contract_end_date')) {
+      context.handle(
+        _contractEndDateMeta,
+        contractEndDate.isAcceptableOrUnknown(
+          data['contract_end_date']!,
+          _contractEndDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('monthly_advance_payment')) {
+      context.handle(
+        _monthlyAdvancePaymentMeta,
+        monthlyAdvancePayment.isAcceptableOrUnknown(
+          data['monthly_advance_payment']!,
+          _monthlyAdvancePaymentMeta,
+        ),
+      );
+    }
     if (data.containsKey('is_synced')) {
       context.handle(
         _isSyncedMeta,
@@ -1829,6 +1991,14 @@ class $ElectricityContractsTable extends ElectricityContracts
         DriftSqlType.int,
         data['${effectivePrefix}valid_from'],
       )!,
+      contractEndDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}contract_end_date'],
+      ),
+      monthlyAdvancePayment: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monthly_advance_payment'],
+      ),
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
@@ -1854,6 +2024,8 @@ class ElectricityContract extends DataClass
   final double pricePerKwh;
   final double monthlyBasePrice;
   final int validFrom;
+  final int? contractEndDate;
+  final double? monthlyAdvancePayment;
   final bool isSynced;
   final String? remoteId;
   const ElectricityContract({
@@ -1863,6 +2035,8 @@ class ElectricityContract extends DataClass
     required this.pricePerKwh,
     required this.monthlyBasePrice,
     required this.validFrom,
+    this.contractEndDate,
+    this.monthlyAdvancePayment,
     required this.isSynced,
     this.remoteId,
   });
@@ -1875,6 +2049,12 @@ class ElectricityContract extends DataClass
     map['price_per_kwh'] = Variable<double>(pricePerKwh);
     map['monthly_base_price'] = Variable<double>(monthlyBasePrice);
     map['valid_from'] = Variable<int>(validFrom);
+    if (!nullToAbsent || contractEndDate != null) {
+      map['contract_end_date'] = Variable<int>(contractEndDate);
+    }
+    if (!nullToAbsent || monthlyAdvancePayment != null) {
+      map['monthly_advance_payment'] = Variable<double>(monthlyAdvancePayment);
+    }
     map['is_synced'] = Variable<bool>(isSynced);
     if (!nullToAbsent || remoteId != null) {
       map['remote_id'] = Variable<String>(remoteId);
@@ -1890,6 +2070,12 @@ class ElectricityContract extends DataClass
       pricePerKwh: Value(pricePerKwh),
       monthlyBasePrice: Value(monthlyBasePrice),
       validFrom: Value(validFrom),
+      contractEndDate: contractEndDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contractEndDate),
+      monthlyAdvancePayment: monthlyAdvancePayment == null && nullToAbsent
+          ? const Value.absent()
+          : Value(monthlyAdvancePayment),
       isSynced: Value(isSynced),
       remoteId: remoteId == null && nullToAbsent
           ? const Value.absent()
@@ -1909,6 +2095,10 @@ class ElectricityContract extends DataClass
       pricePerKwh: serializer.fromJson<double>(json['pricePerKwh']),
       monthlyBasePrice: serializer.fromJson<double>(json['monthlyBasePrice']),
       validFrom: serializer.fromJson<int>(json['validFrom']),
+      contractEndDate: serializer.fromJson<int?>(json['contractEndDate']),
+      monthlyAdvancePayment: serializer.fromJson<double?>(
+        json['monthlyAdvancePayment'],
+      ),
       isSynced: serializer.fromJson<bool>(json['isSynced']),
       remoteId: serializer.fromJson<String?>(json['remoteId']),
     );
@@ -1923,6 +2113,10 @@ class ElectricityContract extends DataClass
       'pricePerKwh': serializer.toJson<double>(pricePerKwh),
       'monthlyBasePrice': serializer.toJson<double>(monthlyBasePrice),
       'validFrom': serializer.toJson<int>(validFrom),
+      'contractEndDate': serializer.toJson<int?>(contractEndDate),
+      'monthlyAdvancePayment': serializer.toJson<double?>(
+        monthlyAdvancePayment,
+      ),
       'isSynced': serializer.toJson<bool>(isSynced),
       'remoteId': serializer.toJson<String?>(remoteId),
     };
@@ -1935,6 +2129,8 @@ class ElectricityContract extends DataClass
     double? pricePerKwh,
     double? monthlyBasePrice,
     int? validFrom,
+    Value<int?> contractEndDate = const Value.absent(),
+    Value<double?> monthlyAdvancePayment = const Value.absent(),
     bool? isSynced,
     Value<String?> remoteId = const Value.absent(),
   }) => ElectricityContract(
@@ -1944,6 +2140,12 @@ class ElectricityContract extends DataClass
     pricePerKwh: pricePerKwh ?? this.pricePerKwh,
     monthlyBasePrice: monthlyBasePrice ?? this.monthlyBasePrice,
     validFrom: validFrom ?? this.validFrom,
+    contractEndDate: contractEndDate.present
+        ? contractEndDate.value
+        : this.contractEndDate,
+    monthlyAdvancePayment: monthlyAdvancePayment.present
+        ? monthlyAdvancePayment.value
+        : this.monthlyAdvancePayment,
     isSynced: isSynced ?? this.isSynced,
     remoteId: remoteId.present ? remoteId.value : this.remoteId,
   );
@@ -1963,6 +2165,12 @@ class ElectricityContract extends DataClass
           ? data.monthlyBasePrice.value
           : this.monthlyBasePrice,
       validFrom: data.validFrom.present ? data.validFrom.value : this.validFrom,
+      contractEndDate: data.contractEndDate.present
+          ? data.contractEndDate.value
+          : this.contractEndDate,
+      monthlyAdvancePayment: data.monthlyAdvancePayment.present
+          ? data.monthlyAdvancePayment.value
+          : this.monthlyAdvancePayment,
       isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
       remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
     );
@@ -1977,6 +2185,8 @@ class ElectricityContract extends DataClass
           ..write('pricePerKwh: $pricePerKwh, ')
           ..write('monthlyBasePrice: $monthlyBasePrice, ')
           ..write('validFrom: $validFrom, ')
+          ..write('contractEndDate: $contractEndDate, ')
+          ..write('monthlyAdvancePayment: $monthlyAdvancePayment, ')
           ..write('isSynced: $isSynced, ')
           ..write('remoteId: $remoteId')
           ..write(')'))
@@ -1991,6 +2201,8 @@ class ElectricityContract extends DataClass
     pricePerKwh,
     monthlyBasePrice,
     validFrom,
+    contractEndDate,
+    monthlyAdvancePayment,
     isSynced,
     remoteId,
   );
@@ -2004,6 +2216,8 @@ class ElectricityContract extends DataClass
           other.pricePerKwh == this.pricePerKwh &&
           other.monthlyBasePrice == this.monthlyBasePrice &&
           other.validFrom == this.validFrom &&
+          other.contractEndDate == this.contractEndDate &&
+          other.monthlyAdvancePayment == this.monthlyAdvancePayment &&
           other.isSynced == this.isSynced &&
           other.remoteId == this.remoteId);
 }
@@ -2016,6 +2230,8 @@ class ElectricityContractsCompanion
   final Value<double> pricePerKwh;
   final Value<double> monthlyBasePrice;
   final Value<int> validFrom;
+  final Value<int?> contractEndDate;
+  final Value<double?> monthlyAdvancePayment;
   final Value<bool> isSynced;
   final Value<String?> remoteId;
   const ElectricityContractsCompanion({
@@ -2025,6 +2241,8 @@ class ElectricityContractsCompanion
     this.pricePerKwh = const Value.absent(),
     this.monthlyBasePrice = const Value.absent(),
     this.validFrom = const Value.absent(),
+    this.contractEndDate = const Value.absent(),
+    this.monthlyAdvancePayment = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.remoteId = const Value.absent(),
   });
@@ -2035,6 +2253,8 @@ class ElectricityContractsCompanion
     required double pricePerKwh,
     required double monthlyBasePrice,
     required int validFrom,
+    this.contractEndDate = const Value.absent(),
+    this.monthlyAdvancePayment = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.remoteId = const Value.absent(),
   }) : internalName = Value(internalName),
@@ -2049,6 +2269,8 @@ class ElectricityContractsCompanion
     Expression<double>? pricePerKwh,
     Expression<double>? monthlyBasePrice,
     Expression<int>? validFrom,
+    Expression<int>? contractEndDate,
+    Expression<double>? monthlyAdvancePayment,
     Expression<bool>? isSynced,
     Expression<String>? remoteId,
   }) {
@@ -2059,6 +2281,9 @@ class ElectricityContractsCompanion
       if (pricePerKwh != null) 'price_per_kwh': pricePerKwh,
       if (monthlyBasePrice != null) 'monthly_base_price': monthlyBasePrice,
       if (validFrom != null) 'valid_from': validFrom,
+      if (contractEndDate != null) 'contract_end_date': contractEndDate,
+      if (monthlyAdvancePayment != null)
+        'monthly_advance_payment': monthlyAdvancePayment,
       if (isSynced != null) 'is_synced': isSynced,
       if (remoteId != null) 'remote_id': remoteId,
     });
@@ -2071,6 +2296,8 @@ class ElectricityContractsCompanion
     Value<double>? pricePerKwh,
     Value<double>? monthlyBasePrice,
     Value<int>? validFrom,
+    Value<int?>? contractEndDate,
+    Value<double?>? monthlyAdvancePayment,
     Value<bool>? isSynced,
     Value<String?>? remoteId,
   }) {
@@ -2081,6 +2308,9 @@ class ElectricityContractsCompanion
       pricePerKwh: pricePerKwh ?? this.pricePerKwh,
       monthlyBasePrice: monthlyBasePrice ?? this.monthlyBasePrice,
       validFrom: validFrom ?? this.validFrom,
+      contractEndDate: contractEndDate ?? this.contractEndDate,
+      monthlyAdvancePayment:
+          monthlyAdvancePayment ?? this.monthlyAdvancePayment,
       isSynced: isSynced ?? this.isSynced,
       remoteId: remoteId ?? this.remoteId,
     );
@@ -2107,6 +2337,14 @@ class ElectricityContractsCompanion
     if (validFrom.present) {
       map['valid_from'] = Variable<int>(validFrom.value);
     }
+    if (contractEndDate.present) {
+      map['contract_end_date'] = Variable<int>(contractEndDate.value);
+    }
+    if (monthlyAdvancePayment.present) {
+      map['monthly_advance_payment'] = Variable<double>(
+        monthlyAdvancePayment.value,
+      );
+    }
     if (isSynced.present) {
       map['is_synced'] = Variable<bool>(isSynced.value);
     }
@@ -2125,6 +2363,8 @@ class ElectricityContractsCompanion
           ..write('pricePerKwh: $pricePerKwh, ')
           ..write('monthlyBasePrice: $monthlyBasePrice, ')
           ..write('validFrom: $validFrom, ')
+          ..write('contractEndDate: $contractEndDate, ')
+          ..write('monthlyAdvancePayment: $monthlyAdvancePayment, ')
           ..write('isSynced: $isSynced, ')
           ..write('remoteId: $remoteId')
           ..write(')'))
@@ -2226,6 +2466,65 @@ class $AppSettingsTable extends AppSettings
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _houseTypeMeta = const VerificationMeta(
+    'houseType',
+  );
+  @override
+  late final GeneratedColumn<String> houseType = GeneratedColumn<String>(
+    'house_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _squareMetersMeta = const VerificationMeta(
+    'squareMeters',
+  );
+  @override
+  late final GeneratedColumn<int> squareMeters = GeneratedColumn<int>(
+    'square_meters',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _numberOfPersonsMeta = const VerificationMeta(
+    'numberOfPersons',
+  );
+  @override
+  late final GeneratedColumn<int> numberOfPersons = GeneratedColumn<int>(
+    'number_of_persons',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hasPvMeta = const VerificationMeta('hasPv');
+  @override
+  late final GeneratedColumn<bool> hasPv = GeneratedColumn<bool>(
+    'has_pv',
+    aliasedName,
+    true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_pv" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _hasSolarThermalMeta = const VerificationMeta(
+    'hasSolarThermal',
+  );
+  @override
+  late final GeneratedColumn<bool> hasSolarThermal = GeneratedColumn<bool>(
+    'has_solar_thermal',
+    aliasedName,
+    true,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_solar_thermal" IN (0, 1))',
+    ),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2236,6 +2535,11 @@ class $AppSettingsTable extends AppSettings
     meterIntDigits,
     electricityIntDigits,
     electricityDecDigits,
+    houseType,
+    squareMeters,
+    numberOfPersons,
+    hasPv,
+    hasSolarThermal,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2315,6 +2619,45 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('house_type')) {
+      context.handle(
+        _houseTypeMeta,
+        houseType.isAcceptableOrUnknown(data['house_type']!, _houseTypeMeta),
+      );
+    }
+    if (data.containsKey('square_meters')) {
+      context.handle(
+        _squareMetersMeta,
+        squareMeters.isAcceptableOrUnknown(
+          data['square_meters']!,
+          _squareMetersMeta,
+        ),
+      );
+    }
+    if (data.containsKey('number_of_persons')) {
+      context.handle(
+        _numberOfPersonsMeta,
+        numberOfPersons.isAcceptableOrUnknown(
+          data['number_of_persons']!,
+          _numberOfPersonsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('has_pv')) {
+      context.handle(
+        _hasPvMeta,
+        hasPv.isAcceptableOrUnknown(data['has_pv']!, _hasPvMeta),
+      );
+    }
+    if (data.containsKey('has_solar_thermal')) {
+      context.handle(
+        _hasSolarThermalMeta,
+        hasSolarThermal.isAcceptableOrUnknown(
+          data['has_solar_thermal']!,
+          _hasSolarThermalMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2356,6 +2699,26 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.int,
         data['${effectivePrefix}electricity_dec_digits'],
       ),
+      houseType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}house_type'],
+      ),
+      squareMeters: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}square_meters'],
+      ),
+      numberOfPersons: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}number_of_persons'],
+      ),
+      hasPv: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_pv'],
+      ),
+      hasSolarThermal: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_solar_thermal'],
+      ),
     );
   }
 
@@ -2374,6 +2737,11 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final int? meterIntDigits;
   final int? electricityIntDigits;
   final int? electricityDecDigits;
+  final String? houseType;
+  final int? squareMeters;
+  final int? numberOfPersons;
+  final bool? hasPv;
+  final bool? hasSolarThermal;
   const AppSetting({
     required this.id,
     this.locationPlz,
@@ -2383,6 +2751,11 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     this.meterIntDigits,
     this.electricityIntDigits,
     this.electricityDecDigits,
+    this.houseType,
+    this.squareMeters,
+    this.numberOfPersons,
+    this.hasPv,
+    this.hasSolarThermal,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2408,6 +2781,21 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     }
     if (!nullToAbsent || electricityDecDigits != null) {
       map['electricity_dec_digits'] = Variable<int>(electricityDecDigits);
+    }
+    if (!nullToAbsent || houseType != null) {
+      map['house_type'] = Variable<String>(houseType);
+    }
+    if (!nullToAbsent || squareMeters != null) {
+      map['square_meters'] = Variable<int>(squareMeters);
+    }
+    if (!nullToAbsent || numberOfPersons != null) {
+      map['number_of_persons'] = Variable<int>(numberOfPersons);
+    }
+    if (!nullToAbsent || hasPv != null) {
+      map['has_pv'] = Variable<bool>(hasPv);
+    }
+    if (!nullToAbsent || hasSolarThermal != null) {
+      map['has_solar_thermal'] = Variable<bool>(hasSolarThermal);
     }
     return map;
   }
@@ -2436,6 +2824,21 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       electricityDecDigits: electricityDecDigits == null && nullToAbsent
           ? const Value.absent()
           : Value(electricityDecDigits),
+      houseType: houseType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(houseType),
+      squareMeters: squareMeters == null && nullToAbsent
+          ? const Value.absent()
+          : Value(squareMeters),
+      numberOfPersons: numberOfPersons == null && nullToAbsent
+          ? const Value.absent()
+          : Value(numberOfPersons),
+      hasPv: hasPv == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hasPv),
+      hasSolarThermal: hasSolarThermal == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hasSolarThermal),
     );
   }
 
@@ -2457,6 +2860,11 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       electricityDecDigits: serializer.fromJson<int?>(
         json['electricityDecDigits'],
       ),
+      houseType: serializer.fromJson<String?>(json['houseType']),
+      squareMeters: serializer.fromJson<int?>(json['squareMeters']),
+      numberOfPersons: serializer.fromJson<int?>(json['numberOfPersons']),
+      hasPv: serializer.fromJson<bool?>(json['hasPv']),
+      hasSolarThermal: serializer.fromJson<bool?>(json['hasSolarThermal']),
     );
   }
   @override
@@ -2471,6 +2879,11 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'meterIntDigits': serializer.toJson<int?>(meterIntDigits),
       'electricityIntDigits': serializer.toJson<int?>(electricityIntDigits),
       'electricityDecDigits': serializer.toJson<int?>(electricityDecDigits),
+      'houseType': serializer.toJson<String?>(houseType),
+      'squareMeters': serializer.toJson<int?>(squareMeters),
+      'numberOfPersons': serializer.toJson<int?>(numberOfPersons),
+      'hasPv': serializer.toJson<bool?>(hasPv),
+      'hasSolarThermal': serializer.toJson<bool?>(hasSolarThermal),
     };
   }
 
@@ -2483,6 +2896,11 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     Value<int?> meterIntDigits = const Value.absent(),
     Value<int?> electricityIntDigits = const Value.absent(),
     Value<int?> electricityDecDigits = const Value.absent(),
+    Value<String?> houseType = const Value.absent(),
+    Value<int?> squareMeters = const Value.absent(),
+    Value<int?> numberOfPersons = const Value.absent(),
+    Value<bool?> hasPv = const Value.absent(),
+    Value<bool?> hasSolarThermal = const Value.absent(),
   }) => AppSetting(
     id: id ?? this.id,
     locationPlz: locationPlz.present ? locationPlz.value : this.locationPlz,
@@ -2498,6 +2916,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     electricityDecDigits: electricityDecDigits.present
         ? electricityDecDigits.value
         : this.electricityDecDigits,
+    houseType: houseType.present ? houseType.value : this.houseType,
+    squareMeters: squareMeters.present ? squareMeters.value : this.squareMeters,
+    numberOfPersons: numberOfPersons.present
+        ? numberOfPersons.value
+        : this.numberOfPersons,
+    hasPv: hasPv.present ? hasPv.value : this.hasPv,
+    hasSolarThermal: hasSolarThermal.present
+        ? hasSolarThermal.value
+        : this.hasSolarThermal,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -2523,6 +2950,17 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       electricityDecDigits: data.electricityDecDigits.present
           ? data.electricityDecDigits.value
           : this.electricityDecDigits,
+      houseType: data.houseType.present ? data.houseType.value : this.houseType,
+      squareMeters: data.squareMeters.present
+          ? data.squareMeters.value
+          : this.squareMeters,
+      numberOfPersons: data.numberOfPersons.present
+          ? data.numberOfPersons.value
+          : this.numberOfPersons,
+      hasPv: data.hasPv.present ? data.hasPv.value : this.hasPv,
+      hasSolarThermal: data.hasSolarThermal.present
+          ? data.hasSolarThermal.value
+          : this.hasSolarThermal,
     );
   }
 
@@ -2536,7 +2974,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('locationLon: $locationLon, ')
           ..write('meterIntDigits: $meterIntDigits, ')
           ..write('electricityIntDigits: $electricityIntDigits, ')
-          ..write('electricityDecDigits: $electricityDecDigits')
+          ..write('electricityDecDigits: $electricityDecDigits, ')
+          ..write('houseType: $houseType, ')
+          ..write('squareMeters: $squareMeters, ')
+          ..write('numberOfPersons: $numberOfPersons, ')
+          ..write('hasPv: $hasPv, ')
+          ..write('hasSolarThermal: $hasSolarThermal')
           ..write(')'))
         .toString();
   }
@@ -2551,6 +2994,11 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     meterIntDigits,
     electricityIntDigits,
     electricityDecDigits,
+    houseType,
+    squareMeters,
+    numberOfPersons,
+    hasPv,
+    hasSolarThermal,
   );
   @override
   bool operator ==(Object other) =>
@@ -2563,7 +3011,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.locationLon == this.locationLon &&
           other.meterIntDigits == this.meterIntDigits &&
           other.electricityIntDigits == this.electricityIntDigits &&
-          other.electricityDecDigits == this.electricityDecDigits);
+          other.electricityDecDigits == this.electricityDecDigits &&
+          other.houseType == this.houseType &&
+          other.squareMeters == this.squareMeters &&
+          other.numberOfPersons == this.numberOfPersons &&
+          other.hasPv == this.hasPv &&
+          other.hasSolarThermal == this.hasSolarThermal);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -2575,6 +3028,11 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<int?> meterIntDigits;
   final Value<int?> electricityIntDigits;
   final Value<int?> electricityDecDigits;
+  final Value<String?> houseType;
+  final Value<int?> squareMeters;
+  final Value<int?> numberOfPersons;
+  final Value<bool?> hasPv;
+  final Value<bool?> hasSolarThermal;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.locationPlz = const Value.absent(),
@@ -2584,6 +3042,11 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.meterIntDigits = const Value.absent(),
     this.electricityIntDigits = const Value.absent(),
     this.electricityDecDigits = const Value.absent(),
+    this.houseType = const Value.absent(),
+    this.squareMeters = const Value.absent(),
+    this.numberOfPersons = const Value.absent(),
+    this.hasPv = const Value.absent(),
+    this.hasSolarThermal = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -2594,6 +3057,11 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.meterIntDigits = const Value.absent(),
     this.electricityIntDigits = const Value.absent(),
     this.electricityDecDigits = const Value.absent(),
+    this.houseType = const Value.absent(),
+    this.squareMeters = const Value.absent(),
+    this.numberOfPersons = const Value.absent(),
+    this.hasPv = const Value.absent(),
+    this.hasSolarThermal = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<int>? id,
@@ -2604,6 +3072,11 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<int>? meterIntDigits,
     Expression<int>? electricityIntDigits,
     Expression<int>? electricityDecDigits,
+    Expression<String>? houseType,
+    Expression<int>? squareMeters,
+    Expression<int>? numberOfPersons,
+    Expression<bool>? hasPv,
+    Expression<bool>? hasSolarThermal,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2616,6 +3089,11 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
         'electricity_int_digits': electricityIntDigits,
       if (electricityDecDigits != null)
         'electricity_dec_digits': electricityDecDigits,
+      if (houseType != null) 'house_type': houseType,
+      if (squareMeters != null) 'square_meters': squareMeters,
+      if (numberOfPersons != null) 'number_of_persons': numberOfPersons,
+      if (hasPv != null) 'has_pv': hasPv,
+      if (hasSolarThermal != null) 'has_solar_thermal': hasSolarThermal,
     });
   }
 
@@ -2628,6 +3106,11 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<int?>? meterIntDigits,
     Value<int?>? electricityIntDigits,
     Value<int?>? electricityDecDigits,
+    Value<String?>? houseType,
+    Value<int?>? squareMeters,
+    Value<int?>? numberOfPersons,
+    Value<bool?>? hasPv,
+    Value<bool?>? hasSolarThermal,
   }) {
     return AppSettingsCompanion(
       id: id ?? this.id,
@@ -2638,6 +3121,11 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       meterIntDigits: meterIntDigits ?? this.meterIntDigits,
       electricityIntDigits: electricityIntDigits ?? this.electricityIntDigits,
       electricityDecDigits: electricityDecDigits ?? this.electricityDecDigits,
+      houseType: houseType ?? this.houseType,
+      squareMeters: squareMeters ?? this.squareMeters,
+      numberOfPersons: numberOfPersons ?? this.numberOfPersons,
+      hasPv: hasPv ?? this.hasPv,
+      hasSolarThermal: hasSolarThermal ?? this.hasSolarThermal,
     );
   }
 
@@ -2668,6 +3156,21 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (electricityDecDigits.present) {
       map['electricity_dec_digits'] = Variable<int>(electricityDecDigits.value);
     }
+    if (houseType.present) {
+      map['house_type'] = Variable<String>(houseType.value);
+    }
+    if (squareMeters.present) {
+      map['square_meters'] = Variable<int>(squareMeters.value);
+    }
+    if (numberOfPersons.present) {
+      map['number_of_persons'] = Variable<int>(numberOfPersons.value);
+    }
+    if (hasPv.present) {
+      map['has_pv'] = Variable<bool>(hasPv.value);
+    }
+    if (hasSolarThermal.present) {
+      map['has_solar_thermal'] = Variable<bool>(hasSolarThermal.value);
+    }
     return map;
   }
 
@@ -2681,7 +3184,12 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('locationLon: $locationLon, ')
           ..write('meterIntDigits: $meterIntDigits, ')
           ..write('electricityIntDigits: $electricityIntDigits, ')
-          ..write('electricityDecDigits: $electricityDecDigits')
+          ..write('electricityDecDigits: $electricityDecDigits, ')
+          ..write('houseType: $houseType, ')
+          ..write('squareMeters: $squareMeters, ')
+          ..write('numberOfPersons: $numberOfPersons, ')
+          ..write('hasPv: $hasPv, ')
+          ..write('hasSolarThermal: $hasSolarThermal')
           ..write(')'))
         .toString();
   }
@@ -3548,6 +4056,8 @@ typedef $$PriceContractsTableCreateCompanionBuilder =
       required double pricePerKwh,
       required double monthlyBasePrice,
       required int validFrom,
+      Value<int?> contractEndDate,
+      Value<double?> monthlyAdvancePayment,
       Value<double> brennwert,
       Value<double> zustandszahl,
       Value<bool> isSynced,
@@ -3561,6 +4071,8 @@ typedef $$PriceContractsTableUpdateCompanionBuilder =
       Value<double> pricePerKwh,
       Value<double> monthlyBasePrice,
       Value<int> validFrom,
+      Value<int?> contractEndDate,
+      Value<double?> monthlyAdvancePayment,
       Value<double> brennwert,
       Value<double> zustandszahl,
       Value<bool> isSynced,
@@ -3603,6 +4115,16 @@ class $$PriceContractsTableFilterComposer
 
   ColumnFilters<int> get validFrom => $composableBuilder(
     column: $table.validFrom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get contractEndDate => $composableBuilder(
+    column: $table.contractEndDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get monthlyAdvancePayment => $composableBuilder(
+    column: $table.monthlyAdvancePayment,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3666,6 +4188,16 @@ class $$PriceContractsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get contractEndDate => $composableBuilder(
+    column: $table.contractEndDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get monthlyAdvancePayment => $composableBuilder(
+    column: $table.monthlyAdvancePayment,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get brennwert => $composableBuilder(
     column: $table.brennwert,
     builder: (column) => ColumnOrderings(column),
@@ -3722,6 +4254,16 @@ class $$PriceContractsTableAnnotationComposer
   GeneratedColumn<int> get validFrom =>
       $composableBuilder(column: $table.validFrom, builder: (column) => column);
 
+  GeneratedColumn<int> get contractEndDate => $composableBuilder(
+    column: $table.contractEndDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get monthlyAdvancePayment => $composableBuilder(
+    column: $table.monthlyAdvancePayment,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<double> get brennwert =>
       $composableBuilder(column: $table.brennwert, builder: (column) => column);
 
@@ -3776,6 +4318,8 @@ class $$PriceContractsTableTableManager
                 Value<double> pricePerKwh = const Value.absent(),
                 Value<double> monthlyBasePrice = const Value.absent(),
                 Value<int> validFrom = const Value.absent(),
+                Value<int?> contractEndDate = const Value.absent(),
+                Value<double?> monthlyAdvancePayment = const Value.absent(),
                 Value<double> brennwert = const Value.absent(),
                 Value<double> zustandszahl = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
@@ -3787,6 +4331,8 @@ class $$PriceContractsTableTableManager
                 pricePerKwh: pricePerKwh,
                 monthlyBasePrice: monthlyBasePrice,
                 validFrom: validFrom,
+                contractEndDate: contractEndDate,
+                monthlyAdvancePayment: monthlyAdvancePayment,
                 brennwert: brennwert,
                 zustandszahl: zustandszahl,
                 isSynced: isSynced,
@@ -3800,6 +4346,8 @@ class $$PriceContractsTableTableManager
                 required double pricePerKwh,
                 required double monthlyBasePrice,
                 required int validFrom,
+                Value<int?> contractEndDate = const Value.absent(),
+                Value<double?> monthlyAdvancePayment = const Value.absent(),
                 Value<double> brennwert = const Value.absent(),
                 Value<double> zustandszahl = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
@@ -3811,6 +4359,8 @@ class $$PriceContractsTableTableManager
                 pricePerKwh: pricePerKwh,
                 monthlyBasePrice: monthlyBasePrice,
                 validFrom: validFrom,
+                contractEndDate: contractEndDate,
+                monthlyAdvancePayment: monthlyAdvancePayment,
                 brennwert: brennwert,
                 zustandszahl: zustandszahl,
                 isSynced: isSynced,
@@ -3849,6 +4399,8 @@ typedef $$ElectricityContractsTableCreateCompanionBuilder =
       required double pricePerKwh,
       required double monthlyBasePrice,
       required int validFrom,
+      Value<int?> contractEndDate,
+      Value<double?> monthlyAdvancePayment,
       Value<bool> isSynced,
       Value<String?> remoteId,
     });
@@ -3860,6 +4412,8 @@ typedef $$ElectricityContractsTableUpdateCompanionBuilder =
       Value<double> pricePerKwh,
       Value<double> monthlyBasePrice,
       Value<int> validFrom,
+      Value<int?> contractEndDate,
+      Value<double?> monthlyAdvancePayment,
       Value<bool> isSynced,
       Value<String?> remoteId,
     });
@@ -3900,6 +4454,16 @@ class $$ElectricityContractsTableFilterComposer
 
   ColumnFilters<int> get validFrom => $composableBuilder(
     column: $table.validFrom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get contractEndDate => $composableBuilder(
+    column: $table.contractEndDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get monthlyAdvancePayment => $composableBuilder(
+    column: $table.monthlyAdvancePayment,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3953,6 +4517,16 @@ class $$ElectricityContractsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get contractEndDate => $composableBuilder(
+    column: $table.contractEndDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get monthlyAdvancePayment => $composableBuilder(
+    column: $table.monthlyAdvancePayment,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isSynced => $composableBuilder(
     column: $table.isSynced,
     builder: (column) => ColumnOrderings(column),
@@ -3998,6 +4572,16 @@ class $$ElectricityContractsTableAnnotationComposer
 
   GeneratedColumn<int> get validFrom =>
       $composableBuilder(column: $table.validFrom, builder: (column) => column);
+
+  GeneratedColumn<int> get contractEndDate => $composableBuilder(
+    column: $table.contractEndDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get monthlyAdvancePayment => $composableBuilder(
+    column: $table.monthlyAdvancePayment,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get isSynced =>
       $composableBuilder(column: $table.isSynced, builder: (column) => column);
@@ -4055,6 +4639,8 @@ class $$ElectricityContractsTableTableManager
                 Value<double> pricePerKwh = const Value.absent(),
                 Value<double> monthlyBasePrice = const Value.absent(),
                 Value<int> validFrom = const Value.absent(),
+                Value<int?> contractEndDate = const Value.absent(),
+                Value<double?> monthlyAdvancePayment = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<String?> remoteId = const Value.absent(),
               }) => ElectricityContractsCompanion(
@@ -4064,6 +4650,8 @@ class $$ElectricityContractsTableTableManager
                 pricePerKwh: pricePerKwh,
                 monthlyBasePrice: monthlyBasePrice,
                 validFrom: validFrom,
+                contractEndDate: contractEndDate,
+                monthlyAdvancePayment: monthlyAdvancePayment,
                 isSynced: isSynced,
                 remoteId: remoteId,
               ),
@@ -4075,6 +4663,8 @@ class $$ElectricityContractsTableTableManager
                 required double pricePerKwh,
                 required double monthlyBasePrice,
                 required int validFrom,
+                Value<int?> contractEndDate = const Value.absent(),
+                Value<double?> monthlyAdvancePayment = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<String?> remoteId = const Value.absent(),
               }) => ElectricityContractsCompanion.insert(
@@ -4084,6 +4674,8 @@ class $$ElectricityContractsTableTableManager
                 pricePerKwh: pricePerKwh,
                 monthlyBasePrice: monthlyBasePrice,
                 validFrom: validFrom,
+                contractEndDate: contractEndDate,
+                monthlyAdvancePayment: monthlyAdvancePayment,
                 isSynced: isSynced,
                 remoteId: remoteId,
               ),
@@ -4126,6 +4718,11 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<int?> meterIntDigits,
       Value<int?> electricityIntDigits,
       Value<int?> electricityDecDigits,
+      Value<String?> houseType,
+      Value<int?> squareMeters,
+      Value<int?> numberOfPersons,
+      Value<bool?> hasPv,
+      Value<bool?> hasSolarThermal,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -4137,6 +4734,11 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<int?> meterIntDigits,
       Value<int?> electricityIntDigits,
       Value<int?> electricityDecDigits,
+      Value<String?> houseType,
+      Value<int?> squareMeters,
+      Value<int?> numberOfPersons,
+      Value<bool?> hasPv,
+      Value<bool?> hasSolarThermal,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -4185,6 +4787,31 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<int> get electricityDecDigits => $composableBuilder(
     column: $table.electricityDecDigits,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get houseType => $composableBuilder(
+    column: $table.houseType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get squareMeters => $composableBuilder(
+    column: $table.squareMeters,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get numberOfPersons => $composableBuilder(
+    column: $table.numberOfPersons,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasPv => $composableBuilder(
+    column: $table.hasPv,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasSolarThermal => $composableBuilder(
+    column: $table.hasSolarThermal,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4237,6 +4864,31 @@ class $$AppSettingsTableOrderingComposer
     column: $table.electricityDecDigits,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get houseType => $composableBuilder(
+    column: $table.houseType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get squareMeters => $composableBuilder(
+    column: $table.squareMeters,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get numberOfPersons => $composableBuilder(
+    column: $table.numberOfPersons,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hasPv => $composableBuilder(
+    column: $table.hasPv,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hasSolarThermal => $composableBuilder(
+    column: $table.hasSolarThermal,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -4285,6 +4937,27 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.electricityDecDigits,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get houseType =>
+      $composableBuilder(column: $table.houseType, builder: (column) => column);
+
+  GeneratedColumn<int> get squareMeters => $composableBuilder(
+    column: $table.squareMeters,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get numberOfPersons => $composableBuilder(
+    column: $table.numberOfPersons,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get hasPv =>
+      $composableBuilder(column: $table.hasPv, builder: (column) => column);
+
+  GeneratedColumn<bool> get hasSolarThermal => $composableBuilder(
+    column: $table.hasSolarThermal,
+    builder: (column) => column,
+  );
 }
 
 class $$AppSettingsTableTableManager
@@ -4326,6 +4999,11 @@ class $$AppSettingsTableTableManager
                 Value<int?> meterIntDigits = const Value.absent(),
                 Value<int?> electricityIntDigits = const Value.absent(),
                 Value<int?> electricityDecDigits = const Value.absent(),
+                Value<String?> houseType = const Value.absent(),
+                Value<int?> squareMeters = const Value.absent(),
+                Value<int?> numberOfPersons = const Value.absent(),
+                Value<bool?> hasPv = const Value.absent(),
+                Value<bool?> hasSolarThermal = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
                 locationPlz: locationPlz,
@@ -4335,6 +5013,11 @@ class $$AppSettingsTableTableManager
                 meterIntDigits: meterIntDigits,
                 electricityIntDigits: electricityIntDigits,
                 electricityDecDigits: electricityDecDigits,
+                houseType: houseType,
+                squareMeters: squareMeters,
+                numberOfPersons: numberOfPersons,
+                hasPv: hasPv,
+                hasSolarThermal: hasSolarThermal,
               ),
           createCompanionCallback:
               ({
@@ -4346,6 +5029,11 @@ class $$AppSettingsTableTableManager
                 Value<int?> meterIntDigits = const Value.absent(),
                 Value<int?> electricityIntDigits = const Value.absent(),
                 Value<int?> electricityDecDigits = const Value.absent(),
+                Value<String?> houseType = const Value.absent(),
+                Value<int?> squareMeters = const Value.absent(),
+                Value<int?> numberOfPersons = const Value.absent(),
+                Value<bool?> hasPv = const Value.absent(),
+                Value<bool?> hasSolarThermal = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 id: id,
                 locationPlz: locationPlz,
@@ -4355,6 +5043,11 @@ class $$AppSettingsTableTableManager
                 meterIntDigits: meterIntDigits,
                 electricityIntDigits: electricityIntDigits,
                 electricityDecDigits: electricityDecDigits,
+                houseType: houseType,
+                squareMeters: squareMeters,
+                numberOfPersons: numberOfPersons,
+                hasPv: hasPv,
+                hasSolarThermal: hasSolarThermal,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
