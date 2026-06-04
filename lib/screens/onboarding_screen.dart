@@ -120,6 +120,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
 
     await _settingsService.setOnboardingDone();
+    // Push initial settings to Supabase so the account is visible in the DB.
+    SyncService().syncAll();
     if (mounted) Navigator.of(context).pushReplacementNamed('/main');
   }
 
