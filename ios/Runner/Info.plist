@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Die Kamera wird benötigt, um Fotos vom Zähler aufzunehmen.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Die Fotobibliothek wird benötigt, um vorhandene Zählerfotos auszuwählen.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Zählerfotos können in der Fotobibliothek gespeichert werden.</string>
 </dict>
 </plist>
