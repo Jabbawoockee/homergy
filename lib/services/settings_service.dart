@@ -50,11 +50,15 @@ class SettingsService {
   }
 
   Future<String> getTrackingMode() async {
+    final s = await AppDatabase.instance.getSettings();
+    if (s?.trackingMode != null) return s!.trackingMode!;
+    // Fallback: SharedPreferences (set during onboarding before DB write)
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('tracking_mode') ?? 'both';
   }
 
   Future<void> setTrackingMode(String mode) async {
+    await AppDatabase.instance.saveTrackingMode(mode);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('tracking_mode', mode);
   }

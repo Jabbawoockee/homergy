@@ -4,14 +4,19 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../database/database.dart';
 import '../services/cost_service.dart';
+import '../services/settings_service.dart';
 import '../services/sync_service.dart';
 import '../theme/colors.dart';
+import '../utils/meter_interpolator.dart';
 
 enum HistoryFilter { gas, electricity, both }
 
 class HistoryScreen extends StatefulWidget {
   final HistoryFilter initialFilter;
-  const HistoryScreen({super.key, this.initialFilter = HistoryFilter.gas});
+  const HistoryScreen({
+    super.key,
+    this.initialFilter = HistoryFilter.gas,
+  });
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -25,12 +30,27 @@ class _HistoryScreenState extends State<HistoryScreen> {
   double _zustandszahl = 0.0;
   double _elecPrice = 0.30;
   late HistoryFilter _filter;
+  bool _showFilterChips = true;
 
   @override
   void initState() {
     super.initState();
     _filter = widget.initialFilter;
     _loadPricing();
+    _loadFilterVisibility();
+  }
+
+  Future<void> _loadFilterVisibility() async {
+    final mode = await SettingsService().getTrackingMode();
+    if (mode == 'both') {
+      if (mounted) setState(() => _showFilterChips = true);
+      return;
+    }
+    // Single-mode: show chips only when historical data of the other type exists
+    final hasGas  = (await AppDatabase.instance.getLatestReading()) != null;
+    final hasElec = (await AppDatabase.instance.getLatestElectricityReading()) != null;
+    final show = mode == 'gas' ? hasElec : hasGas;
+    if (mounted) setState(() => _showFilterChips = show);
   }
 
   Future<void> _loadPricing() async {
@@ -59,15 +79,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Text(
-                'VERLAUF',
-                style: GoogleFonts.spaceMono(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.greenDark,
-                  letterSpacing: 5,
-                ),
-              ),
+              child: Navigator.canPop(context)
+                  ? Row(children: [
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: AppColors.textSecondary, size: 20),
+                      ),
+                      const SizedBox(width: 16),
+                      Text('VERLAUF',
+                          style: GoogleFonts.spaceMono(
+                              fontSize: 20, fontWeight: FontWeight.w700,
+                              color: AppColors.greenDark, letterSpacing: 3)),
+                    ])
+                  : Text('VERLAUF',
+                      style: GoogleFonts.spaceMono(
+                          fontSize: 22, fontWeight: FontWeight.w700,
+                          color: AppColors.greenDark, letterSpacing: 5)),
             ),
             const SizedBox(height: 4),
             Padding(
@@ -83,20 +111,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Filter bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Expanded(child: _FilterChip(label: '🔥  Gas', selected: _filter == HistoryFilter.gas, onTap: () => setState(() => _filter = HistoryFilter.gas))),
-                  const SizedBox(width: 8),
-                  Expanded(child: _FilterChip(label: '⚡  Strom', selected: _filter == HistoryFilter.electricity, onTap: () => setState(() => _filter = HistoryFilter.electricity))),
-                  const SizedBox(width: 8),
-                  Expanded(child: _FilterChip(label: 'Beides', selected: _filter == HistoryFilter.both, onTap: () => setState(() => _filter = HistoryFilter.both))),
-                ],
+            // Filter bar — hidden when tracking mode has no cross-type data
+            if (_showFilterChips) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Expanded(child: _FilterChip(label: '🔥  Gas', selected: _filter == HistoryFilter.gas, onTap: () => setState(() => _filter = HistoryFilter.gas))),
+                    const SizedBox(width: 8),
+                    Expanded(child: _FilterChip(label: '⚡  Strom', selected: _filter == HistoryFilter.electricity, onTap: () => setState(() => _filter = HistoryFilter.electricity))),
+                    const SizedBox(width: 8),
+                    Expanded(child: _FilterChip(label: 'Beides', selected: _filter == HistoryFilter.both, onTap: () => setState(() => _filter = HistoryFilter.both))),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
+              const SizedBox(height: 4),
+            ],
 
             Expanded(
               child: _filter == HistoryFilter.gas
@@ -360,21 +390,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final stats = <_MonthStat>[];
     for (int i = 5; i >= 0; i--) {
       final monthDate = DateTime(now.year, now.month - i, 1);
-      final monthStart = DateTime(monthDate.year, monthDate.month, 1);
-      final monthEnd = DateTime(monthDate.year, monthDate.month + 1, 0, 23, 59, 59);
-      final inMonth = readings.where((r) => !r.timestamp.isBefore(monthStart) && !r.timestamp.isAfter(monthEnd)).toList();
-      double consumption = 0;
-      if (inMonth.length >= 2) {
-        consumption = inMonth.first.value - inMonth.last.value;
-        if (consumption < 0) consumption = 0;
-      } else if (inMonth.length == 1) {
-        final before = readings.where((r) => r.timestamp.isBefore(monthStart)).toList();
-        if (before.isNotEmpty) {
-          consumption = inMonth.first.value - before.first.value;
-          if (consumption < 0) consumption = 0;
-        }
-      }
-      stats.add(_MonthStat(label: DateFormat('MMM', 'de_DE').format(monthDate), consumption: consumption));
+      final consumption = MeterInterpolator.monthConsumption(
+            readings, monthDate.year, monthDate.month) ?? 0.0;
+      stats.add(_MonthStat(
+          label: DateFormat('MMM', 'de_DE').format(monthDate),
+          consumption: consumption));
     }
     return stats;
   }

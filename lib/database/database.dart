@@ -40,6 +40,7 @@ class AppSettings extends Table {
   IntColumn get numberOfPersons => integer().nullable()();
   BoolColumn get hasPv => boolean().nullable()();
   BoolColumn get hasSolarThermal => boolean().nullable()();
+  TextColumn get trackingMode => text().nullable()(); // 'gas'|'electricity'|'both', added v12
 }
 
 // ---------------------------------------------------------------------------
@@ -467,6 +468,16 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
       await (update(appSettings)..where((t) => t.id.equals(existing.id))).write(companion);
     }
   }
+
+  Future<void> saveTrackingMode(String mode) async {
+    final existing = await getSettings();
+    if (existing == null) {
+      await into(appSettings).insert(AppSettingsCompanion(trackingMode: Value(mode)));
+    } else {
+      await (update(appSettings)..where((t) => t.id.equals(existing.id)))
+          .write(AppSettingsCompanion(trackingMode: Value(mode)));
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -528,7 +539,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -573,6 +584,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 11) {
         await migrator.addColumn(electricityContracts, electricityContracts.monthlyAdvancePayment);
         await migrator.addColumn(priceContracts, priceContracts.monthlyAdvancePayment);
+      }
+      if (from < 12) {
+        await migrator.addColumn(appSettings, appSettings.trackingMode);
       }
     },
   );
@@ -700,6 +714,8 @@ class AppDatabase extends _$AppDatabase {
         hasPv: hasPv,
         hasSolarThermal: hasSolarThermal,
       );
+
+  Future<void> saveTrackingMode(String mode) => settingsDao.saveTrackingMode(mode);
 
   // ── Weather cache pass-throughs ──────────────────────────────────────────
 

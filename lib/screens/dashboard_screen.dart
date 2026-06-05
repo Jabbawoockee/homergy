@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../database/database.dart';
 import '../services/cost_service.dart';
 import '../services/ocr_service.dart';
+import '../utils/meter_interpolator.dart';
 import '../widgets/consumption_chart.dart';
 import 'electricity_detail_screen.dart';
 import 'gas_detail_screen.dart';
@@ -58,24 +59,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  double _monthConsumption(List<({double value, DateTime timestamp})> readings) {
-    final now = DateTime.now();
-    final monthStart = DateTime(now.year, now.month, 1);
-    final monthEnd = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
-    final monthR = readings.where((r) => !r.timestamp.isBefore(monthStart) && !r.timestamp.isAfter(monthEnd)).toList();
-    if (monthR.length >= 2) {
-      final c = monthR.first.value - monthR.last.value;
-      return c < 0 ? 0 : c;
-    }
-    if (monthR.length == 1 && readings.length >= 2) {
-      final before = readings.where((r) => r.timestamp.isBefore(monthStart)).toList();
-      if (before.isNotEmpty) {
-        final c = monthR.first.value - before.first.value;
-        return c < 0 ? 0 : c;
-      }
-    }
-    return 0;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +96,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         final readings = snap.data ?? [];
                         final points = readings.map((r) => (value: r.value, timestamp: r.timestamp)).toList();
                         final last = readings.isNotEmpty ? readings.first : null;
-                        final monthC = _monthConsumption(points);
+                        final now = DateTime.now();
+                        final monthC = MeterInterpolator.monthConsumption(points, now.year, now.month) ?? 0.0;
                         final monthCost = _costService.calculateCost(monthC, pricePerKwh: _gasPrice, monthlyBasePrice: 0, brennwert: _brennwert, zustandszahl: _zustandszahl);
                         final sparkPoints = readings.map((r) => ReadingPoint(value: r.value, timestamp: r.timestamp)).toList();
 
@@ -148,7 +132,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         final readings = snap.data ?? [];
                         final points = readings.map((r) => (value: r.value, timestamp: r.timestamp)).toList();
                         final last = readings.isNotEmpty ? readings.first : null;
-                        final monthC = _monthConsumption(points);
+                        final now = DateTime.now();
+                        final monthC = MeterInterpolator.monthConsumption(points, now.year, now.month) ?? 0.0;
                         final monthCost = monthC * _elecPrice;
                         final sparkPoints = readings.map((r) => ReadingPoint(value: r.value, timestamp: r.timestamp)).toList();
 

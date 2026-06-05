@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../database/database.dart';
+import '../services/settings_service.dart';
 import '../services/sync_service.dart';
 import '../services/weather_service.dart';
 import '../theme/colors.dart';
@@ -33,6 +34,7 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
   int?    _numberOfPersons;
   bool?   _hasPv;
   bool?   _hasSolarThermal;
+  String  _trackingMode = 'both';
 
   @override
   void initState() {
@@ -51,12 +53,14 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
   Future<void> _load() async {
     final s = await AppDatabase.instance.getSettings();
     if (!mounted) return;
+    final mode = await SettingsService().getTrackingMode();
     setState(() {
       _coordsFound     = s?.locationLat != null;
       _houseType       = s?.houseType;
       _numberOfPersons = s?.numberOfPersons;
       _hasPv           = s?.hasPv;
       _hasSolarThermal = s?.hasSolarThermal;
+      _trackingMode    = mode;
     });
     if (s != null) {
       _plzController.text  = s.locationPlz  ?? '';
@@ -94,6 +98,8 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
       hasPv: _hasPv,
       hasSolarThermal: _hasSolarThermal,
     );
+
+    await SettingsService().setTrackingMode(_trackingMode);
 
     await _load();
     SyncService().syncSettings();
@@ -313,6 +319,47 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
                   SettingsToggleChip(label: 'Nein', selected: _hasSolarThermal == false,
                       onTap: () => setState(() => _hasSolarThermal = false)),
                 ]),
+              ])),
+
+              const SizedBox(height: 24),
+
+              // ── Tracking-Modus ────────────────────────────────────────────
+              const SettingsSectionLabel('TRACKING-MODUS'),
+              const SizedBox(height: 12),
+              _Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  const Icon(Icons.track_changes_rounded, size: 16, color: AppColors.amber),
+                  const SizedBox(width: 8),
+                  Text('Was möchtest du tracken?',
+                      style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary, letterSpacing: 0.5)),
+                ]),
+                const SizedBox(height: 4),
+                Text('Bestimmt, welcher Startbildschirm angezeigt wird.',
+                    style: GoogleFonts.rajdhani(fontSize: 13,
+                        color: AppColors.textSecondary.withValues(alpha: 0.8))),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    SettingsToggleChip(
+                      label: '🔥  Nur Gas',
+                      selected: _trackingMode == 'gas',
+                      onTap: () => setState(() => _trackingMode = 'gas'),
+                    ),
+                    SettingsToggleChip(
+                      label: '⚡  Nur Strom',
+                      selected: _trackingMode == 'electricity',
+                      onTap: () => setState(() => _trackingMode = 'electricity'),
+                    ),
+                    SettingsToggleChip(
+                      label: '🏠  Gas & Strom',
+                      selected: _trackingMode == 'both',
+                      onTap: () => setState(() => _trackingMode = 'both'),
+                    ),
+                  ],
+                ),
               ])),
 
               const SizedBox(height: 28),

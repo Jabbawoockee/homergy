@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../database/database.dart';
 import '../theme/colors.dart';
+import '../utils/meter_interpolator.dart';
 
 class ElectricityCostDetailScreen extends StatefulWidget {
   const ElectricityCostDetailScreen({super.key});
@@ -40,26 +41,13 @@ class _ElectricityCostDetailScreenState
     final readings = List<ElectricityReading>.from(rawReadings)
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-    final relevant =
-        readings.where((r) => !r.timestamp.isBefore(displayStart)).toList();
-    final beforeStart =
-        readings.where((r) => r.timestamp.isBefore(displayStart)).toList();
-    double? rollingAnchor =
-        beforeStart.isNotEmpty ? beforeStart.last.value : null;
-
-    if (relevant.isEmpty) {
+    if (readings.isEmpty) {
       return _CostData(months: [], hasContracts: true, providerName: providerName, displayStart: displayStart);
     }
 
-    final maxByYM = <String, double>{};
-    final minByYM = <String, double>{};
-    for (final r in relevant) {
-      final k = '${r.timestamp.year}-${r.timestamp.month}';
-      final exMax = maxByYM[k];
-      if (exMax == null || r.value > exMax) maxByYM[k] = r.value;
-      final exMin = minByYM[k];
-      if (exMin == null || r.value < exMin) minByYM[k] = r.value;
-    }
+    final pts = readings
+        .map((r) => (value: r.value, timestamp: r.timestamp))
+        .toList();
 
     final now = DateTime.now();
     final months = <_MonthData>[];
@@ -67,40 +55,30 @@ class _ElectricityCostDetailScreenState
     int month = displayStart.month;
 
     while (year < now.year || (year == now.year && month <= now.month)) {
-      final k = '$year-$month';
-      final monthMax = maxByYM[k];
+      final consumptionKwh =
+          MeterInterpolator.monthConsumption(pts, year, month);
 
-      if (monthMax != null) {
-        double? prevMax = rollingAnchor;
-        if (prevMax == null) {
-          final monthMin = minByYM[k];
-          if (monthMin != null && monthMin < monthMax) prevMax = monthMin;
-        }
+      if (consumptionKwh != null && consumptionKwh > 0) {
+        final lastDay = month < 12
+            ? DateTime(year, month + 1, 0)
+            : DateTime(year, 12, 31);
+        final contract = allContracts.lastWhere(
+          (c) => DateTime.fromMillisecondsSinceEpoch(c.validFrom)
+              .isBefore(lastDay),
+          orElse: () => latestContract,
+        );
 
-        if (prevMax != null) {
-          final lastDay = month < 12
-              ? DateTime(year, month + 1, 0)
-              : DateTime(year, 12, 31);
-          final contract = allContracts.lastWhere(
-            (c) => DateTime.fromMillisecondsSinceEpoch(c.validFrom)
-                .isBefore(lastDay),
-            orElse: () => latestContract,
-          );
+        final elecCost = consumptionKwh * contract.pricePerKwh;
 
-          final consumptionKwh = (monthMax - prevMax).clamp(0.0, double.infinity);
-          final elecCost = consumptionKwh * contract.pricePerKwh;
-
-          months.add(_MonthData(
-            year: year,
-            month: month,
-            consumptionKwh: consumptionKwh,
-            elecCost: elecCost,
-            basePrice: contract.monthlyBasePrice,
-            pricePerKwh: contract.pricePerKwh,
-            providerName: contract.displayName,
-          ));
-        }
-        rollingAnchor = monthMax;
+        months.add(_MonthData(
+          year: year,
+          month: month,
+          consumptionKwh: consumptionKwh,
+          elecCost: elecCost,
+          basePrice: contract.monthlyBasePrice,
+          pricePerKwh: contract.pricePerKwh,
+          providerName: contract.displayName,
+        ));
       }
 
       month++;

@@ -5,6 +5,8 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'database/database.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/electricity_detail_screen.dart';
+import 'screens/gas_detail_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/settings_screen.dart';
@@ -111,12 +113,50 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
+  String _trackingMode = 'both';
 
-  static const _screens = [
-    DashboardScreen(),
-    HistoryScreen(),
-    SettingsScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadTrackingMode();
+  }
+
+  Future<void> _loadTrackingMode() async {
+    final mode = await SettingsService().getTrackingMode();
+    if (mounted && mode != _trackingMode) {
+      setState(() => _trackingMode = mode);
+    }
+  }
+
+  List<Widget> get _screens {
+    switch (_trackingMode) {
+      case 'gas':
+        return [
+          const GasDetailScreen(),
+          HistoryScreen(key: ValueKey('hist_$_trackingMode'), initialFilter: HistoryFilter.gas),
+          const SettingsScreen(),
+        ];
+      case 'electricity':
+        return [
+          const ElectricityDetailScreen(),
+          HistoryScreen(key: ValueKey('hist_$_trackingMode'), initialFilter: HistoryFilter.electricity),
+          const SettingsScreen(),
+        ];
+      default:
+        return [
+          const DashboardScreen(),
+          HistoryScreen(key: ValueKey('hist_$_trackingMode')),
+          const SettingsScreen(),
+        ];
+    }
+  }
+
+  void _onNavTap(int index) async {
+    // Reload tracking mode when navigating to Start so changes from
+    // settings take effect immediately without restarting the app.
+    if (index == 0) await _loadTrackingMode();
+    setState(() => _currentIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -152,22 +192,26 @@ class _MainShellState extends State<MainShell> {
         child: Row(
           children: [
             _NavItem(
-              icon: Icons.speed_rounded,
+              icon: _trackingMode == 'gas'
+                  ? Icons.local_fire_department_rounded
+                  : _trackingMode == 'electricity'
+                      ? Icons.bolt_rounded
+                      : Icons.speed_rounded,
               label: 'Start',
               isActive: _currentIndex == 0,
-              onTap: () => setState(() => _currentIndex = 0),
+              onTap: () => _onNavTap(0),
             ),
             _NavItem(
               icon: Icons.bar_chart_rounded,
               label: 'Verlauf',
               isActive: _currentIndex == 1,
-              onTap: () => setState(() => _currentIndex = 1),
+              onTap: () => _onNavTap(1),
             ),
             _NavItem(
               icon: Icons.settings_outlined,
               label: 'Einstellungen',
               isActive: _currentIndex == 2,
-              onTap: () => setState(() => _currentIndex = 2),
+              onTap: () => _onNavTap(2),
             ),
           ],
         ),

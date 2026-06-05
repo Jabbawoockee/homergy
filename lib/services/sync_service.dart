@@ -342,6 +342,12 @@ class SyncService {
         debugPrint('[Sync] Settings Hausdaten pulled from remote');
       }
 
+      // Pull tracking mode from remote if not set locally.
+      if (local?.trackingMode == null && remote?['tracking_mode'] != null) {
+        await _db.saveTrackingMode(remote!['tracking_mode'] as String);
+        debugPrint('[Sync] Settings trackingMode pulled from remote');
+      }
+
       // Push merged local state to remote.
       final merged = await _db.getSettings();
       if (merged != null) {
@@ -359,6 +365,7 @@ class SyncService {
           'number_of_persons': merged.numberOfPersons,
           'has_pv': merged.hasPv,
           'has_solar_thermal': merged.hasSolarThermal,
+          'tracking_mode': merged.trackingMode,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         }, onConflict: 'user_id');
         debugPrint('[Sync] Settings pushed');

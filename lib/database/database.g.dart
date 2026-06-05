@@ -2525,6 +2525,17 @@ class $AppSettingsTable extends AppSettings
       'CHECK ("has_solar_thermal" IN (0, 1))',
     ),
   );
+  static const VerificationMeta _trackingModeMeta = const VerificationMeta(
+    'trackingMode',
+  );
+  @override
+  late final GeneratedColumn<String> trackingMode = GeneratedColumn<String>(
+    'tracking_mode',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2540,6 +2551,7 @@ class $AppSettingsTable extends AppSettings
     numberOfPersons,
     hasPv,
     hasSolarThermal,
+    trackingMode,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2658,6 +2670,15 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('tracking_mode')) {
+      context.handle(
+        _trackingModeMeta,
+        trackingMode.isAcceptableOrUnknown(
+          data['tracking_mode']!,
+          _trackingModeMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2719,6 +2740,10 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.bool,
         data['${effectivePrefix}has_solar_thermal'],
       ),
+      trackingMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tracking_mode'],
+      ),
     );
   }
 
@@ -2742,6 +2767,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final int? numberOfPersons;
   final bool? hasPv;
   final bool? hasSolarThermal;
+  final String? trackingMode;
   const AppSetting({
     required this.id,
     this.locationPlz,
@@ -2756,6 +2782,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     this.numberOfPersons,
     this.hasPv,
     this.hasSolarThermal,
+    this.trackingMode,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2796,6 +2823,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     }
     if (!nullToAbsent || hasSolarThermal != null) {
       map['has_solar_thermal'] = Variable<bool>(hasSolarThermal);
+    }
+    if (!nullToAbsent || trackingMode != null) {
+      map['tracking_mode'] = Variable<String>(trackingMode);
     }
     return map;
   }
@@ -2839,6 +2869,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       hasSolarThermal: hasSolarThermal == null && nullToAbsent
           ? const Value.absent()
           : Value(hasSolarThermal),
+      trackingMode: trackingMode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(trackingMode),
     );
   }
 
@@ -2865,6 +2898,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       numberOfPersons: serializer.fromJson<int?>(json['numberOfPersons']),
       hasPv: serializer.fromJson<bool?>(json['hasPv']),
       hasSolarThermal: serializer.fromJson<bool?>(json['hasSolarThermal']),
+      trackingMode: serializer.fromJson<String?>(json['trackingMode']),
     );
   }
   @override
@@ -2884,6 +2918,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'numberOfPersons': serializer.toJson<int?>(numberOfPersons),
       'hasPv': serializer.toJson<bool?>(hasPv),
       'hasSolarThermal': serializer.toJson<bool?>(hasSolarThermal),
+      'trackingMode': serializer.toJson<String?>(trackingMode),
     };
   }
 
@@ -2901,6 +2936,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     Value<int?> numberOfPersons = const Value.absent(),
     Value<bool?> hasPv = const Value.absent(),
     Value<bool?> hasSolarThermal = const Value.absent(),
+    Value<String?> trackingMode = const Value.absent(),
   }) => AppSetting(
     id: id ?? this.id,
     locationPlz: locationPlz.present ? locationPlz.value : this.locationPlz,
@@ -2925,6 +2961,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     hasSolarThermal: hasSolarThermal.present
         ? hasSolarThermal.value
         : this.hasSolarThermal,
+    trackingMode: trackingMode.present ? trackingMode.value : this.trackingMode,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -2961,6 +2998,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       hasSolarThermal: data.hasSolarThermal.present
           ? data.hasSolarThermal.value
           : this.hasSolarThermal,
+      trackingMode: data.trackingMode.present
+          ? data.trackingMode.value
+          : this.trackingMode,
     );
   }
 
@@ -2979,7 +3019,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('squareMeters: $squareMeters, ')
           ..write('numberOfPersons: $numberOfPersons, ')
           ..write('hasPv: $hasPv, ')
-          ..write('hasSolarThermal: $hasSolarThermal')
+          ..write('hasSolarThermal: $hasSolarThermal, ')
+          ..write('trackingMode: $trackingMode')
           ..write(')'))
         .toString();
   }
@@ -2999,6 +3040,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     numberOfPersons,
     hasPv,
     hasSolarThermal,
+    trackingMode,
   );
   @override
   bool operator ==(Object other) =>
@@ -3016,7 +3058,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.squareMeters == this.squareMeters &&
           other.numberOfPersons == this.numberOfPersons &&
           other.hasPv == this.hasPv &&
-          other.hasSolarThermal == this.hasSolarThermal);
+          other.hasSolarThermal == this.hasSolarThermal &&
+          other.trackingMode == this.trackingMode);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -3033,6 +3076,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<int?> numberOfPersons;
   final Value<bool?> hasPv;
   final Value<bool?> hasSolarThermal;
+  final Value<String?> trackingMode;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.locationPlz = const Value.absent(),
@@ -3047,6 +3091,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.numberOfPersons = const Value.absent(),
     this.hasPv = const Value.absent(),
     this.hasSolarThermal = const Value.absent(),
+    this.trackingMode = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -3062,6 +3107,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.numberOfPersons = const Value.absent(),
     this.hasPv = const Value.absent(),
     this.hasSolarThermal = const Value.absent(),
+    this.trackingMode = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<int>? id,
@@ -3077,6 +3123,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<int>? numberOfPersons,
     Expression<bool>? hasPv,
     Expression<bool>? hasSolarThermal,
+    Expression<String>? trackingMode,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3094,6 +3141,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (numberOfPersons != null) 'number_of_persons': numberOfPersons,
       if (hasPv != null) 'has_pv': hasPv,
       if (hasSolarThermal != null) 'has_solar_thermal': hasSolarThermal,
+      if (trackingMode != null) 'tracking_mode': trackingMode,
     });
   }
 
@@ -3111,6 +3159,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<int?>? numberOfPersons,
     Value<bool?>? hasPv,
     Value<bool?>? hasSolarThermal,
+    Value<String?>? trackingMode,
   }) {
     return AppSettingsCompanion(
       id: id ?? this.id,
@@ -3126,6 +3175,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       numberOfPersons: numberOfPersons ?? this.numberOfPersons,
       hasPv: hasPv ?? this.hasPv,
       hasSolarThermal: hasSolarThermal ?? this.hasSolarThermal,
+      trackingMode: trackingMode ?? this.trackingMode,
     );
   }
 
@@ -3171,6 +3221,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (hasSolarThermal.present) {
       map['has_solar_thermal'] = Variable<bool>(hasSolarThermal.value);
     }
+    if (trackingMode.present) {
+      map['tracking_mode'] = Variable<String>(trackingMode.value);
+    }
     return map;
   }
 
@@ -3189,7 +3242,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('squareMeters: $squareMeters, ')
           ..write('numberOfPersons: $numberOfPersons, ')
           ..write('hasPv: $hasPv, ')
-          ..write('hasSolarThermal: $hasSolarThermal')
+          ..write('hasSolarThermal: $hasSolarThermal, ')
+          ..write('trackingMode: $trackingMode')
           ..write(')'))
         .toString();
   }
@@ -4723,6 +4777,7 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<int?> numberOfPersons,
       Value<bool?> hasPv,
       Value<bool?> hasSolarThermal,
+      Value<String?> trackingMode,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -4739,6 +4794,7 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<int?> numberOfPersons,
       Value<bool?> hasPv,
       Value<bool?> hasSolarThermal,
+      Value<String?> trackingMode,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -4812,6 +4868,11 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<bool> get hasSolarThermal => $composableBuilder(
     column: $table.hasSolarThermal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get trackingMode => $composableBuilder(
+    column: $table.trackingMode,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4889,6 +4950,11 @@ class $$AppSettingsTableOrderingComposer
     column: $table.hasSolarThermal,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get trackingMode => $composableBuilder(
+    column: $table.trackingMode,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -4958,6 +5024,11 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.hasSolarThermal,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get trackingMode => $composableBuilder(
+    column: $table.trackingMode,
+    builder: (column) => column,
+  );
 }
 
 class $$AppSettingsTableTableManager
@@ -5004,6 +5075,7 @@ class $$AppSettingsTableTableManager
                 Value<int?> numberOfPersons = const Value.absent(),
                 Value<bool?> hasPv = const Value.absent(),
                 Value<bool?> hasSolarThermal = const Value.absent(),
+                Value<String?> trackingMode = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
                 locationPlz: locationPlz,
@@ -5018,6 +5090,7 @@ class $$AppSettingsTableTableManager
                 numberOfPersons: numberOfPersons,
                 hasPv: hasPv,
                 hasSolarThermal: hasSolarThermal,
+                trackingMode: trackingMode,
               ),
           createCompanionCallback:
               ({
@@ -5034,6 +5107,7 @@ class $$AppSettingsTableTableManager
                 Value<int?> numberOfPersons = const Value.absent(),
                 Value<bool?> hasPv = const Value.absent(),
                 Value<bool?> hasSolarThermal = const Value.absent(),
+                Value<String?> trackingMode = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 id: id,
                 locationPlz: locationPlz,
@@ -5048,6 +5122,7 @@ class $$AppSettingsTableTableManager
                 numberOfPersons: numberOfPersons,
                 hasPv: hasPv,
                 hasSolarThermal: hasSolarThermal,
+                trackingMode: trackingMode,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

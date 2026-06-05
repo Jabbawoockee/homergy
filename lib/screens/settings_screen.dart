@@ -49,11 +49,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _buildHausdatenLabel(AppSetting? s) {
     if (s == null) return 'Noch nicht konfiguriert';
     final parts = <String>[];
+    if (s.trackingMode != null) {
+      parts.add(switch (s.trackingMode) {
+        'gas'         => 'Nur Gas',
+        'electricity' => 'Nur Strom',
+        _             => 'Gas & Strom',
+      });
+    }
     if (s.houseType != null) parts.add(s.houseType!);
     if (s.squareMeters != null) parts.add('${s.squareMeters} m²');
-    if (s.locationCity?.isNotEmpty == true) {
-      parts.add('${s.locationPlz ?? ''} ${s.locationCity ?? ''}'.trim());
-    }
     return parts.isEmpty ? 'Noch nicht konfiguriert' : parts.join(' · ');
   }
 

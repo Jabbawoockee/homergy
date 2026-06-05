@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../database/database.dart';
 import '../services/ocr_service.dart';
 import '../widgets/consumption_chart.dart';
+import '../utils/meter_interpolator.dart';
 import 'electricity_cost_detail_screen.dart';
 import 'history_screen.dart';
 import 'scan_screen.dart';
@@ -95,10 +96,13 @@ class _ElectricityDetailScreenState extends State<ElectricityDetailScreen> {
         backgroundColor: _neuBase,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: _neuText),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: _neuText),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
+        automaticallyImplyLeading: false,
         title: Text('STROM', style: GoogleFonts.rajdhani(fontSize: 13, fontWeight: FontWeight.w700, color: _neuTextSec, letterSpacing: 4)),
         actions: [
           GestureDetector(
@@ -121,21 +125,12 @@ class _ElectricityDetailScreenState extends State<ElectricityDetailScreen> {
             final readings = snapshot.data ?? [];
             final lastReading = readings.isNotEmpty ? readings.first : null;
             final now = DateTime.now();
-            final monthStart = DateTime(now.year, now.month, 1);
-            final monthEnd = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
-            final monthReadings = readings.where((r) => !r.timestamp.isBefore(monthStart) && !r.timestamp.isAfter(monthEnd)).toList();
 
-            double monthConsumption = 0;
-            if (monthReadings.length >= 2) {
-              monthConsumption = monthReadings.first.value - monthReadings.last.value;
-              if (monthConsumption < 0) monthConsumption = 0;
-            } else if (monthReadings.length == 1 && readings.length >= 2) {
-              final before = readings.where((r) => r.timestamp.isBefore(monthStart)).toList();
-              if (before.isNotEmpty) {
-                monthConsumption = monthReadings.first.value - before.first.value;
-                if (monthConsumption < 0) monthConsumption = 0;
-              }
-            }
+            final pts = readings
+                .map((r) => (value: r.value, timestamp: r.timestamp))
+                .toList();
+            final monthConsumption =
+                MeterInterpolator.monthConsumption(pts, now.year, now.month) ?? 0.0;
 
             final monthCost = monthConsumption * _pricePerKwh;
             final readingPoints = readings.map((r) => ReadingPoint(value: r.value, timestamp: r.timestamp)).toList();

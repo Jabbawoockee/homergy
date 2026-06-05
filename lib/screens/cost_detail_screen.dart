@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../database/database.dart';
 import '../theme/colors.dart';
+import '../utils/meter_interpolator.dart';
 
 class CostDetailScreen extends StatefulWidget {
   const CostDetailScreen({super.key});
@@ -40,15 +41,7 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
     final readings = List<MeterReading>.from(rawReadings)
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-    final relevant =
-        readings.where((r) => !r.timestamp.isBefore(displayStart)).toList();
-
-    final beforeStart =
-        readings.where((r) => r.timestamp.isBefore(displayStart)).toList();
-    double? rollingAnchor =
-        beforeStart.isNotEmpty ? beforeStart.last.value : null;
-
-    if (relevant.isEmpty) {
+    if (readings.isEmpty) {
       return _CostDetailData(
         months: [],
         hasContracts: true,
@@ -57,15 +50,11 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
       );
     }
 
-    final maxByYM = <String, double>{};
-    final minByYM = <String, double>{};
-    for (final r in relevant) {
-      final k = '${r.timestamp.year}-${r.timestamp.month}';
-      final exMax = maxByYM[k];
-      if (exMax == null || r.value > exMax) maxByYM[k] = r.value;
-      final exMin = minByYM[k];
-      if (exMin == null || r.value < exMin) minByYM[k] = r.value;
-    }
+    // Use all readings (including before contract start) so interpolation
+    // can compute values at month boundaries that straddle the contract start.
+    final pts = readings
+        .map((r) => (value: r.value, timestamp: r.timestamp))
+        .toList();
 
     final now = DateTime.now();
     final months = <_MonthData>[];
@@ -74,51 +63,35 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
     int month = displayStart.month;
 
     while (year < now.year || (year == now.year && month <= now.month)) {
-      final k = '$year-$month';
-      final monthMax = maxByYM[k];
+      final consumptionM3 =
+          MeterInterpolator.monthConsumption(pts, year, month);
 
-      if (monthMax != null) {
-        double? prevMax = rollingAnchor;
+      if (consumptionM3 != null && consumptionM3 > 0) {
+        final lastDay = month < 12
+            ? DateTime(year, month + 1, 0)
+            : DateTime(year, 12, 31);
+        final contract =
+            await AppDatabase.instance.getContractForDate(lastDay) ??
+                latestContract;
 
-        if (prevMax == null) {
-          final monthMin = minByYM[k];
-          if (monthMin != null && monthMin < monthMax) {
-            prevMax = monthMin;
-          }
-        }
+        final factor = (contract.brennwert > 0 && contract.zustandszahl > 0)
+            ? contract.brennwert * contract.zustandszahl
+            : 10.55;
+        final consumptionKwh = consumptionM3 * factor;
+        final gasCost = consumptionKwh * contract.pricePerKwh;
 
-        if (prevMax != null) {
-          final lastDay = month < 12
-              ? DateTime(year, month + 1, 0)
-              : DateTime(year, 12, 31);
-          final contract =
-              await AppDatabase.instance.getContractForDate(lastDay) ??
-                  latestContract;
-
-          final factor =
-              (contract.brennwert > 0 && contract.zustandszahl > 0)
-                  ? contract.brennwert * contract.zustandszahl
-                  : 10.55;
-          final consumptionM3 =
-              (monthMax - prevMax).clamp(0.0, double.infinity);
-          final consumptionKwh = consumptionM3 * factor;
-          final gasCost = consumptionKwh * contract.pricePerKwh;
-
-          months.add(_MonthData(
-            year: year,
-            month: month,
-            consumptionM3: consumptionM3,
-            consumptionKwh: consumptionKwh,
-            gasCost: gasCost,
-            basePrice: contract.monthlyBasePrice,
-            pricePerKwh: contract.pricePerKwh,
-            providerName: contract.displayName,
-            factorIsEstimated:
-                !(contract.brennwert > 0 && contract.zustandszahl > 0),
-          ));
-        }
-
-        rollingAnchor = monthMax;
+        months.add(_MonthData(
+          year: year,
+          month: month,
+          consumptionM3: consumptionM3,
+          consumptionKwh: consumptionKwh,
+          gasCost: gasCost,
+          basePrice: contract.monthlyBasePrice,
+          pricePerKwh: contract.pricePerKwh,
+          providerName: contract.displayName,
+          factorIsEstimated:
+              !(contract.brennwert > 0 && contract.zustandszahl > 0),
+        ));
       }
 
       month++;
