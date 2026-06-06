@@ -4,66 +4,20 @@ import 'package:http/http.dart' as http;
 import '../database/database.dart';
 
 class WeatherService {
-  static const _geocodingBase =
-      'https://geocoding-api.open-meteo.com/v1/search';
   static const _archiveBase =
       'https://archive-api.open-meteo.com/v1/archive';
   static const _forecastBase =
       'https://api.open-meteo.com/v1/forecast';
 
-  /// Geocodes city + PLZ to lat/lon.
-  /// Tries Open-Meteo with city name first, then Nominatim with PLZ as fallback.
-  Future<({double lat, double lon})?> geocode(String city, String plz) async {
-    // 1. Open-Meteo — city name only (API doesn't support PLZ or countryCode)
-    if (city.isNotEmpty) {
-      final result = await _geocodeOpenMeteo(city);
-      if (result != null) return result;
-    }
-
-    // 2. Nominatim (OpenStreetMap) — PLZ fallback
-    if (plz.isNotEmpty) {
-      final result = await _geocodeNominatim(plz, city);
-      if (result != null) return result;
-    }
-
-    // 3. Last resort: try PLZ alone on Open-Meteo
-    if (plz.isNotEmpty && city.isEmpty) {
-      return _geocodeOpenMeteo(plz);
-    }
-
-    return null;
-  }
-
-  Future<({double lat, double lon})?> _geocodeOpenMeteo(String name) async {
+  /// Geocodes a German PLZ to lat/lon and resolved city name via Nominatim.
+  /// PLZ is unique in Germany — no city name input needed or used.
+  Future<({double lat, double lon, String city})?> geocodeByPlz(String plz) async {
+    if (plz.isEmpty) return null;
     try {
-      final uri = Uri.parse(
-        '$_geocodingBase?name=${Uri.encodeComponent(name)}'
-        '&count=1&language=de&format=json',
-      );
-      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
-      if (resp.statusCode != 200) return null;
-      final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      final results = data['results'] as List?;
-      if (results == null || results.isEmpty) return null;
-      final first = results.first as Map<String, dynamic>;
-      return (
-        lat: (first['latitude'] as num).toDouble(),
-        lon: (first['longitude'] as num).toDouble(),
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<({double lat, double lon})?> _geocodeNominatim(
-      String plz, String city) async {
-    try {
-      final cityParam =
-          city.isNotEmpty ? '&city=${Uri.encodeComponent(city)}' : '';
       final uri = Uri.parse(
         'https://nominatim.openstreetmap.org/search'
         '?format=json&postalcode=${Uri.encodeComponent(plz)}'
-        '$cityParam&countrycodes=de&limit=1',
+        '&countrycodes=de&limit=1&addressdetails=1',
       );
       final resp = await http.get(uri, headers: {
         'User-Agent': 'Homergy-GasTrack/1.0',
@@ -72,9 +26,16 @@ class WeatherService {
       final data = jsonDecode(resp.body) as List;
       if (data.isEmpty) return null;
       final first = data.first as Map<String, dynamic>;
+      final address = first['address'] as Map<String, dynamic>? ?? {};
+      final city = (address['city'] as String?) ??
+          (address['town'] as String?) ??
+          (address['municipality'] as String?) ??
+          (address['village'] as String?) ??
+          plz;
       return (
         lat: double.parse(first['lat'] as String),
         lon: double.parse(first['lon'] as String),
+        city: city,
       );
     } catch (_) {
       return null;

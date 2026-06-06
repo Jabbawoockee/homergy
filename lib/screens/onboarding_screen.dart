@@ -45,7 +45,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController       = PageController();
   final _emailController      = TextEditingController();
   final _plzController        = TextEditingController();
-  final _cityController       = TextEditingController();
   int _selectedDigits         = 5;
   int _selectedElecIntDigits  = 6;
   int _selectedElecDecDigits  = 1;
@@ -75,7 +74,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _pageController.dispose();
     _emailController.dispose();
     _plzController.dispose();
-    _cityController.dispose();
     super.dispose();
   }
 
@@ -240,11 +238,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
 
     if (!skipLocation) {
-      final plz  = _plzController.text.trim();
-      final city = _cityController.text.trim();
-      if (plz.isNotEmpty || city.isNotEmpty) {
-        await AppDatabase.instance.saveLocation(plz: plz, city: city);
-        _geocodeInBackground(city, plz);
+      final plz = _plzController.text.trim();
+      if (plz.isNotEmpty) {
+        await AppDatabase.instance.saveLocation(plz: plz, city: '');
+        _geocodeInBackground(plz);
       }
     }
 
@@ -253,11 +250,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (mounted) Navigator.of(context).pushReplacementNamed('/main');
   }
 
-  void _geocodeInBackground(String city, String plz) async {
-    final coords = await WeatherService().geocode(city, plz);
+  void _geocodeInBackground(String plz) async {
+    final coords = await WeatherService().geocodeByPlz(plz);
     if (coords != null) {
       final settings = await AppDatabase.instance.getSettings();
       if (settings != null) {
+        await AppDatabase.instance.saveLocation(plz: plz, city: coords.city);
         await AppDatabase.instance.saveCoordinates(settings.id, coords.lat, coords.lon);
       }
     }
@@ -550,10 +548,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 trackingMode: _trackingMode,
               ),
               // Page 4: Location
-              _LocationPage(
-                plzController: _plzController,
-                cityController: _cityController,
-              ),
+              _LocationPage(plzController: _plzController),
             ],
           ),
         ),
@@ -916,8 +911,8 @@ class _ElecMeterPage extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _LocationPage extends StatelessWidget {
-  final TextEditingController plzController, cityController;
-  const _LocationPage({required this.plzController, required this.cityController});
+  final TextEditingController plzController;
+  const _LocationPage({required this.plzController});
 
   @override
   Widget build(BuildContext context) {
@@ -941,7 +936,7 @@ class _LocationPage extends StatelessWidget {
               const Icon(Icons.thermostat_rounded, size: 18, color: AppColors.amber),
               const SizedBox(width: 10),
               Expanded(child: Text(
-                'Gib deine Postleitzahl und deinen Wohnort ein — dann können wir dir Temperaturdaten zur Korrelation mit deinem Verbrauch anzeigen.',
+                'Gib deine Postleitzahl ein — dann können wir dir Temperaturdaten zur Korrelation mit deinem Verbrauch anzeigen.',
                 style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
               )),
             ]),
@@ -950,10 +945,6 @@ class _LocationPage extends StatelessWidget {
           Text('Postleitzahl', style: GoogleFonts.rajdhani(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.3)),
           const SizedBox(height: 8),
           _OnboardingTextField(controller: plzController, hint: 'z.B. 80331', keyboardType: TextInputType.number),
-          const SizedBox(height: 16),
-          Text('Wohnort', style: GoogleFonts.rajdhani(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.3)),
-          const SizedBox(height: 8),
-          _OnboardingTextField(controller: cityController, hint: 'z.B. München', keyboardType: TextInputType.text),
           const SizedBox(height: 8),
           Text('Optional — kann jederzeit in den Einstellungen geändert werden.',
               style: GoogleFonts.rajdhani(fontSize: 12, color: AppColors.textSecondary)),

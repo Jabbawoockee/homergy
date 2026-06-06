@@ -22,6 +22,7 @@ class _ElectricitySettingsScreenState extends State<ElectricitySettingsScreen> {
   final _providerController  = TextEditingController();
 
   ElectricityContract? _latestContract;
+  List<ElectricityContract> _allContracts = [];
   bool _isNewContract = false;
   DateTime? _validFrom;
   DateTime? _contractEndDate;
@@ -52,7 +53,7 @@ class _ElectricitySettingsScreenState extends State<ElectricitySettingsScreen> {
     final intD      = await _settingsService.getElectricityIntDigits();
     final decD      = await _settingsService.getElectricityDecDigits();
     if (mounted) {
-      setState(() { _latestContract = latest; _intDigits = intD; _decDigits = decD; });
+      setState(() { _latestContract = latest; _allContracts = contracts; _intDigits = intD; _decDigits = decD; });
       if (latest != null) {
         _priceController.text     = latest.pricePerKwh.toStringAsFixed(4);
         _basePriceController.text = latest.monthlyBasePrice.toStringAsFixed(2);
@@ -66,6 +67,30 @@ class _ElectricitySettingsScreenState extends State<ElectricitySettingsScreen> {
             : '';
       }
     }
+  }
+
+  Future<void> _deleteContract(int id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.background,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Vertrag löschen?', style: GoogleFonts.rajdhani(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+        content: Text('Dieser Vertrag wird dauerhaft entfernt.', style: GoogleFonts.rajdhani(fontSize: 14, color: AppColors.textSecondary, height: 1.5)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text('Abbrechen', style: GoogleFonts.rajdhani(fontSize: 14, color: AppColors.textSecondary))),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text('Löschen', style: GoogleFonts.rajdhani(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.error))),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    final contract = _allContracts.firstWhere((c) => c.id == id);
+    if (contract.remoteId != null) {
+      await SyncService().deleteRemoteElectricityContract(contract.remoteId!);
+    }
+    await AppDatabase.instance.deleteElectricityContract(id);
+    await _load();
+    if (mounted) _showSnack('Vertrag gelöscht.');
   }
 
   Future<void> _saveIntDigits(int d) async {
@@ -95,19 +120,33 @@ class _ElectricitySettingsScreenState extends State<ElectricitySettingsScreen> {
     if (providerName.isEmpty) { _showSnack('Pflichtfeld: Lieferant', isError: true); return; }
 
     setState(() => _isSaving = true);
-    final count = await AppDatabase.instance.countElectricityContractsByDisplayName(providerName);
     final advText   = _advanceController.text.trim().replaceAll(',', '.');
     final advParsed = advText.isNotEmpty ? double.tryParse(advText) : null;
 
-    await AppDatabase.instance.insertElectricityContract(ElectricityContractsCompanion(
-      internalName: Value('${providerName}_${count + 1}'),
-      displayName: Value(providerName),
-      pricePerKwh: Value(kwhParsed),
-      monthlyBasePrice: Value(baseParsed),
-      validFrom: Value(_validFrom!.millisecondsSinceEpoch),
-      contractEndDate: Value(_contractEndDate?.millisecondsSinceEpoch),
-      monthlyAdvancePayment: Value(advParsed),
-    ));
+    if (creatingNew) {
+      final count = await AppDatabase.instance.countElectricityContractsByDisplayName(providerName);
+      await AppDatabase.instance.insertElectricityContract(ElectricityContractsCompanion(
+        internalName: Value('${providerName}_${count + 1}'),
+        displayName: Value(providerName),
+        pricePerKwh: Value(kwhParsed),
+        monthlyBasePrice: Value(baseParsed),
+        validFrom: Value(_validFrom!.millisecondsSinceEpoch),
+        contractEndDate: Value(_contractEndDate?.millisecondsSinceEpoch),
+        monthlyAdvancePayment: Value(advParsed),
+      ));
+    } else {
+      await AppDatabase.instance.updateElectricityContract(ElectricityContractsCompanion(
+        id: Value(_latestContract!.id),
+        internalName: Value(_latestContract!.internalName),
+        displayName: Value(providerName),
+        pricePerKwh: Value(kwhParsed),
+        monthlyBasePrice: Value(baseParsed),
+        validFrom: Value(_validFrom!.millisecondsSinceEpoch),
+        contractEndDate: Value(_contractEndDate?.millisecondsSinceEpoch),
+        monthlyAdvancePayment: Value(advParsed),
+        isSynced: const Value(false),
+      ));
+    }
     await _load();
     SyncService().syncAll();
     if (mounted) {
@@ -266,9 +305,101 @@ class _ElectricitySettingsScreenState extends State<ElectricitySettingsScreen> {
                 ]),
               ),
               const SizedBox(height: 24),
+
+              if (_allContracts.length > 1) ...[
+                const SettingsSectionLabel('VERTRAGSVERLAUF'),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(16), boxShadow: AppColors.neu(7)),
+                  child: Column(
+                    children: [
+                      for (int i = _allContracts.length - 1; i >= 0; i--) ...[
+                        _ContractHistoryRow(
+                          contract: _allContracts[i],
+                          isLatest: i == _allContracts.length - 1,
+                          canDelete: _allContracts.length > 1,
+                          onDelete: () => _deleteContract(_allContracts[i].id),
+                          accentColor: _blue,
+                        ),
+                        if (i > 0) Divider(color: AppColors.border, height: 1, indent: 16, endIndent: 16),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ContractHistoryRow extends StatelessWidget {
+  final ElectricityContract contract;
+  final bool isLatest;
+  final bool canDelete;
+  final VoidCallback onDelete;
+  final Color accentColor;
+
+  const _ContractHistoryRow({
+    required this.contract,
+    required this.isLatest,
+    required this.canDelete,
+    required this.onDelete,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final since = DateTime.fromMillisecondsSinceEpoch(contract.validFrom);
+    final dateStr = '${since.day.toString().padLeft(2, '0')}.${since.month.toString().padLeft(2, '0')}.${since.year}';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(Icons.bolt_rounded, size: 16, color: isLatest ? accentColor : AppColors.textSecondary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      contract.displayName,
+                      style: GoogleFonts.rajdhani(fontSize: 14, fontWeight: FontWeight.w700, color: isLatest ? AppColors.textPrimary : AppColors.textSecondary),
+                    ),
+                    if (isLatest) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: accentColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
+                        child: Text('aktiv', style: GoogleFonts.spaceMono(fontSize: 9, fontWeight: FontWeight.w700, color: accentColor)),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'seit $dateStr  ·  ${(contract.pricePerKwh * 100).toStringAsFixed(3)} ct/kWh',
+                  style: GoogleFonts.rajdhani(fontSize: 12, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          if (canDelete && !isLatest)
+            GestureDetector(
+              onTap: onDelete,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.error.withValues(alpha: 0.7)),
+              ),
+            ),
+        ],
       ),
     );
   }

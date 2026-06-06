@@ -24,8 +24,8 @@ class HausdatenSettingsScreen extends StatefulWidget {
 
 class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
   final _plzController  = TextEditingController();
-  final _cityController = TextEditingController();
   final _sqmController  = TextEditingController();
+  String? _resolvedCity;
 
   bool _isSaving = false;
   bool _coordsFound = false;
@@ -34,6 +34,8 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
   int?    _numberOfPersons;
   bool?   _hasPv;
   bool?   _hasSolarThermal;
+  int?    _constructionYear;
+  bool?   _isInsulated;
   String  _trackingMode = 'both';
 
   @override
@@ -45,7 +47,6 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
   @override
   void dispose() {
     _plzController.dispose();
-    _cityController.dispose();
     _sqmController.dispose();
     super.dispose();
   }
@@ -55,39 +56,41 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
     if (!mounted) return;
     final mode = await SettingsService().getTrackingMode();
     setState(() {
-      _coordsFound     = s?.locationLat != null;
-      _houseType       = s?.houseType;
-      _numberOfPersons = s?.numberOfPersons;
-      _hasPv           = s?.hasPv;
-      _hasSolarThermal = s?.hasSolarThermal;
-      _trackingMode    = mode;
+      _coordsFound      = s?.locationLat != null;
+      _houseType        = s?.houseType;
+      _numberOfPersons  = s?.numberOfPersons;
+      _hasPv            = s?.hasPv;
+      _hasSolarThermal  = s?.hasSolarThermal;
+      _constructionYear = s?.constructionYear;
+      _isInsulated      = s?.isInsulated;
+      _trackingMode     = mode;
     });
     if (s != null) {
-      _plzController.text  = s.locationPlz  ?? '';
-      _cityController.text = s.locationCity ?? '';
-      _sqmController.text  = s.squareMeters != null ? '${s.squareMeters}' : '';
+      _plzController.text = s.locationPlz ?? '';
+      _resolvedCity       = s.locationCity;
+      _sqmController.text = s.squareMeters != null ? '${s.squareMeters}' : '';
     }
   }
 
   Future<void> _save() async {
-    final plz  = _plzController.text.trim();
-    final city = _cityController.text.trim();
+    final plz    = _plzController.text.trim();
     final sqmRaw = _sqmController.text.trim();
     final sqm = sqmRaw.isNotEmpty ? int.tryParse(sqmRaw) : null;
 
     setState(() => _isSaving = true);
 
-    // Save location (always, even if empty — allows clearing)
-    if (plz.isNotEmpty || city.isNotEmpty) {
-      await AppDatabase.instance.saveLocation(plz: plz, city: city);
-      final coords = await WeatherService().geocode(city, plz);
+    // Geocode by PLZ only (unique in Germany) and save location
+    if (plz.isNotEmpty) {
+      final coords = await WeatherService().geocodeByPlz(plz);
+      final resolvedCity = coords?.city;
+      await AppDatabase.instance.saveLocation(plz: plz, city: resolvedCity ?? '');
       if (coords != null) {
         final s = await AppDatabase.instance.getSettings();
         if (s != null) {
           await AppDatabase.instance.saveCoordinates(s.id, coords.lat, coords.lon);
         }
+        if (mounted) setState(() { _resolvedCity = resolvedCity; _coordsFound = true; });
       }
-      setState(() => _coordsFound = true);
     }
 
     // Save house data
@@ -97,6 +100,8 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
       numberOfPersons: _numberOfPersons,
       hasPv: _hasPv,
       hasSolarThermal: _hasSolarThermal,
+      constructionYear: _constructionYear,
+      isInsulated: _isInsulated,
     );
 
     await SettingsService().setTrackingMode(_trackingMode);
@@ -157,6 +162,47 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Tracking-Modus ────────────────────────────────────────────
+              const SettingsSectionLabel('TRACKING-MODUS'),
+              const SizedBox(height: 12),
+              _Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  const Icon(Icons.track_changes_rounded, size: 16, color: AppColors.amber),
+                  const SizedBox(width: 8),
+                  Text('Was möchtest du tracken?',
+                      style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary, letterSpacing: 0.5)),
+                ]),
+                const SizedBox(height: 4),
+                Text('Bestimmt, welcher Startbildschirm angezeigt wird.',
+                    style: GoogleFonts.rajdhani(fontSize: 13,
+                        color: AppColors.textSecondary.withValues(alpha: 0.8))),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    SettingsToggleChip(
+                      label: '🔥  Nur Gas',
+                      selected: _trackingMode == 'gas',
+                      onTap: () => setState(() => _trackingMode = 'gas'),
+                    ),
+                    SettingsToggleChip(
+                      label: '⚡  Nur Strom',
+                      selected: _trackingMode == 'electricity',
+                      onTap: () => setState(() => _trackingMode = 'electricity'),
+                    ),
+                    SettingsToggleChip(
+                      label: '🏠  Gas & Strom',
+                      selected: _trackingMode == 'both',
+                      onTap: () => setState(() => _trackingMode = 'both'),
+                    ),
+                  ],
+                ),
+              ])),
+
+              const SizedBox(height: 24),
+
               // ── Standort ──────────────────────────────────────────────────
               const SettingsSectionLabel('STANDORT & WETTERDATEN'),
               const SizedBox(height: 12),
@@ -189,18 +235,18 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                Row(children: [
-                  Expanded(flex: 2, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('PLZ', style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    _InputField(controller: _plzController, hint: '80331', keyboardType: TextInputType.number),
-                  ])),
-                  const SizedBox(width: 12),
-                  Expanded(flex: 3, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Wohnort', style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    _InputField(controller: _cityController, hint: 'München'),
-                  ])),
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Postleitzahl', style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  _InputField(controller: _plzController, hint: '80331', keyboardType: TextInputType.number),
+                  if (_resolvedCity != null) ...[
+                    const SizedBox(height: 10),
+                    Row(children: [
+                      const Icon(Icons.location_on_rounded, size: 14, color: AppColors.green),
+                      const SizedBox(width: 6),
+                      Text(_resolvedCity!, style: GoogleFonts.rajdhani(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.green)),
+                    ]),
+                  ],
                 ]),
               ])),
 
@@ -228,6 +274,24 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
                     selected: _houseType == type,
                     onTap: () => setState(() => _houseType = type),
                   )).toList(),
+                ),
+
+                const SizedBox(height: 20),
+                const Divider(color: Color(0xFFCFD8C4), height: 1),
+                const SizedBox(height: 20),
+
+                // Baujahr
+                Row(children: [
+                  const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.amber),
+                  const SizedBox(width: 8),
+                  Text('Baujahr',
+                      style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary, letterSpacing: 0.5)),
+                ]),
+                const SizedBox(height: 10),
+                _YearField(
+                  value: _constructionYear,
+                  onChanged: (v) => setState(() => _constructionYear = v),
                 ),
 
                 const SizedBox(height: 20),
@@ -299,6 +363,31 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
                 const Divider(color: Color(0xFFCFD8C4), height: 1),
                 const SizedBox(height: 20),
 
+                // Haus gedämmt
+                Row(children: [
+                  const Icon(Icons.house_rounded, size: 16, color: AppColors.amber),
+                  const SizedBox(width: 8),
+                  Text('Haus gedämmt',
+                      style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary, letterSpacing: 0.5)),
+                ]),
+                const SizedBox(height: 4),
+                Text('Wärmedämmung vorhanden',
+                    style: GoogleFonts.rajdhani(fontSize: 13,
+                        color: AppColors.textSecondary.withValues(alpha: 0.8))),
+                const SizedBox(height: 10),
+                Row(children: [
+                  SettingsToggleChip(label: 'Ja', selected: _isInsulated == true,
+                      onTap: () => setState(() => _isInsulated = true)),
+                  const SizedBox(width: 8),
+                  SettingsToggleChip(label: 'Nein', selected: _isInsulated == false,
+                      onTap: () => setState(() => _isInsulated = false)),
+                ]),
+
+                const SizedBox(height: 20),
+                const Divider(color: Color(0xFFCFD8C4), height: 1),
+                const SizedBox(height: 20),
+
                 // Solaranlage Wärme
                 Row(children: [
                   const Icon(Icons.wb_sunny_rounded, size: 16, color: AppColors.amber),
@@ -319,47 +408,6 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
                   SettingsToggleChip(label: 'Nein', selected: _hasSolarThermal == false,
                       onTap: () => setState(() => _hasSolarThermal = false)),
                 ]),
-              ])),
-
-              const SizedBox(height: 24),
-
-              // ── Tracking-Modus ────────────────────────────────────────────
-              const SettingsSectionLabel('TRACKING-MODUS'),
-              const SizedBox(height: 12),
-              _Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  const Icon(Icons.track_changes_rounded, size: 16, color: AppColors.amber),
-                  const SizedBox(width: 8),
-                  Text('Was möchtest du tracken?',
-                      style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary, letterSpacing: 0.5)),
-                ]),
-                const SizedBox(height: 4),
-                Text('Bestimmt, welcher Startbildschirm angezeigt wird.',
-                    style: GoogleFonts.rajdhani(fontSize: 13,
-                        color: AppColors.textSecondary.withValues(alpha: 0.8))),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    SettingsToggleChip(
-                      label: '🔥  Nur Gas',
-                      selected: _trackingMode == 'gas',
-                      onTap: () => setState(() => _trackingMode = 'gas'),
-                    ),
-                    SettingsToggleChip(
-                      label: '⚡  Nur Strom',
-                      selected: _trackingMode == 'electricity',
-                      onTap: () => setState(() => _trackingMode = 'electricity'),
-                    ),
-                    SettingsToggleChip(
-                      label: '🏠  Gas & Strom',
-                      selected: _trackingMode == 'both',
-                      onTap: () => setState(() => _trackingMode = 'both'),
-                    ),
-                  ],
-                ),
               ])),
 
               const SizedBox(height: 28),
@@ -435,6 +483,49 @@ class _SqmField extends StatelessWidget {
         suffixText: 'm²',
         suffixStyle: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary,
             fontWeight: FontWeight.w600),
+      ),
+    ),
+  );
+}
+
+class _YearField extends StatefulWidget {
+  final int? value;
+  final void Function(int?) onChanged;
+  const _YearField({required this.value, required this.onChanged});
+
+  @override
+  State<_YearField> createState() => _YearFieldState();
+}
+
+class _YearFieldState extends State<_YearField> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.value != null ? '${widget.value}' : '');
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(color: const Color(0xFFDFE5DA), borderRadius: BorderRadius.circular(10)),
+    child: TextField(
+      controller: _ctrl,
+      keyboardType: TextInputType.number,
+      style: GoogleFonts.spaceMono(fontSize: 16, color: AppColors.textPrimary),
+      cursorColor: AppColors.green,
+      onChanged: (v) => widget.onChanged(int.tryParse(v)),
+      decoration: InputDecoration(
+        border: InputBorder.none,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        hintText: '1985',
+        hintStyle: GoogleFonts.spaceMono(fontSize: 14, color: AppColors.textSecondary),
       ),
     ),
   );

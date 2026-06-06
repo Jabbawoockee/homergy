@@ -14,11 +14,19 @@ class CostDetailScreen extends StatefulWidget {
 
 class _CostDetailScreenState extends State<CostDetailScreen> {
   late Future<_CostDetailData> _future;
+  final _pageController = PageController();
+  int _currentPage = 0;
 
   @override
   void initState() {
     super.initState();
     _future = _loadData();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<_CostDetailData> _loadData() async {
@@ -101,11 +109,14 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
       }
     }
 
+    final advancePayment = latestContract.monthlyAdvancePayment;
+
     return _CostDetailData(
       months: months.reversed.toList(),
       hasContracts: true,
       providerName: providerName,
       displayStart: displayStart,
+      advancePayment: advancePayment,
     );
   }
 
@@ -130,13 +141,19 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
                         color: AppColors.textSecondary, size: 20),
                   ),
                   const SizedBox(width: 16),
-                  Text(
-                    'KOSTENÜBERSICHT',
-                    style: GoogleFonts.spaceMono(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.greenDark,
-                      letterSpacing: 3,
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    transitionBuilder: (child, anim) =>
+                        FadeTransition(opacity: anim, child: child),
+                    child: Text(
+                      _currentPage == 0 ? 'KOSTENÜBERSICHT' : 'ABSCHLAGSVERGLEICH',
+                      key: ValueKey(_currentPage),
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.greenDark,
+                        letterSpacing: 3,
+                      ),
                     ),
                   ),
                 ],
@@ -157,12 +174,128 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
 
                   if (!data.hasContracts) return _noSettingsView();
                   if (data.months.isEmpty) return _emptyView(data);
-                  return _buildContent(data);
+
+                  final hasAdvance = (data.advancePayment ?? 0) > 0;
+                  if (!hasAdvance) return _buildContent(data);
+
+                  return Column(
+                    children: [
+                      _buildDots(),
+                      Expanded(
+                        child: PageView(
+                          controller: _pageController,
+                          onPageChanged: (i) =>
+                              setState(() => _currentPage = i),
+                          children: [
+                            _buildContent(data),
+                            _buildAbschlagPage(data),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
                 },
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDots() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(2, (i) {
+          final active = _currentPage == i;
+          return GestureDetector(
+            onTap: () => _pageController.animateToPage(
+              i,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            ),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: active ? 24 : 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: active ? AppColors.greenDark : AppColors.border,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildAbschlagPage(_CostDetailData data) {
+    final advance = data.advancePayment!;
+    final eurFmt = NumberFormat.currency(locale: 'de_DE', symbol: '€');
+    const monthNames = [
+      '', 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+      'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
+    ];
+
+    final deltas = data.months.map((m) => advance - m.total).toList();
+    final cumulativeBalance = deltas.fold(0.0, (s, d) => s + d);
+    final totalPaid = advance * data.months.length;
+    final totalCost = data.months.fold(0.0, (s, m) => s + m.total);
+    final monthsInSurplus = deltas.where((d) => d >= 0).length;
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SaldoCard(
+            balance: cumulativeBalance,
+            totalPaid: totalPaid,
+            totalCost: totalCost,
+            eurFmt: eurFmt,
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(child: Container(height: 1, color: AppColors.border)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  'MONATSÜBERSICHT',
+                  style: GoogleFonts.spaceMono(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textSecondary,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ),
+              Expanded(child: Container(height: 1, color: AppColors.border)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          for (int i = 0; i < data.months.length; i++) ...[
+            _AbschlagMonthCard(
+              month: data.months[i],
+              monthName: monthNames[data.months[i].month],
+              advance: advance,
+              delta: deltas[i],
+              eurFmt: eurFmt,
+            ),
+            const SizedBox(height: 8),
+          ],
+          const SizedBox(height: 8),
+          _SurplusBar(
+            monthsInSurplus: monthsInSurplus,
+            totalMonths: data.months.length,
+          ),
+          const SizedBox(height: 24),
+        ],
       ),
     );
   }
@@ -354,12 +487,14 @@ class _CostDetailData {
   final bool hasContracts;
   final String providerName;
   final DateTime? displayStart;
+  final double? advancePayment;
 
   const _CostDetailData({
     required this.months,
     required this.hasContracts,
     required this.providerName,
     required this.displayStart,
+    this.advancePayment,
   });
 }
 
@@ -390,7 +525,7 @@ class _MonthData {
 }
 
 // ---------------------------------------------------------------------------
-// Widgets
+// Widgets – Kostenübersicht
 // ---------------------------------------------------------------------------
 
 class _MonthCard extends StatefulWidget {
@@ -610,6 +745,305 @@ class _TotalRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Widgets – Abschlagsvergleich
+// ---------------------------------------------------------------------------
+
+class _SaldoCard extends StatelessWidget {
+  final double balance, totalPaid, totalCost;
+  final NumberFormat eurFmt;
+
+  const _SaldoCard({
+    required this.balance,
+    required this.totalPaid,
+    required this.totalCost,
+    required this.eurFmt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isPositive = balance >= 0;
+    final accentColor = isPositive ? AppColors.greenDark : AppColors.error;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accentColor.withOpacity(0.25), width: 1.5),
+        boxShadow: AppColors.neu(7),
+      ),
+      child: Column(
+        children: [
+          Text(
+            isPositive ? 'GUTHABEN' : 'NACHZAHLUNG',
+            style: GoogleFonts.spaceMono(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: accentColor,
+              letterSpacing: 2.5,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '${isPositive ? '+' : ''}${eurFmt.format(balance)}',
+            style: GoogleFonts.spaceMono(
+              fontSize: 34,
+              fontWeight: FontWeight.w700,
+              color: accentColor,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(height: 1, color: AppColors.border),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(
+                      'Abschläge',
+                      style: GoogleFonts.rajdhani(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      eurFmt.format(totalPaid),
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(width: 1, height: 36, color: AppColors.border),
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(
+                      'Istkosten',
+                      style: GoogleFonts.rajdhani(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      eurFmt.format(totalCost),
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AbschlagMonthCard extends StatelessWidget {
+  final _MonthData month;
+  final String monthName;
+  final double advance, delta;
+  final NumberFormat eurFmt;
+
+  const _AbschlagMonthCard({
+    required this.month,
+    required this.monthName,
+    required this.advance,
+    required this.delta,
+    required this.eurFmt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isPositive = delta >= 0;
+    final deltaColor = isPositive ? AppColors.greenDark : AppColors.error;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: AppColors.neu(5),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$monthName ${month.year}'.toUpperCase(),
+                  style: GoogleFonts.spaceMono(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.amber,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text(
+                      'Abschlag',
+                      style: GoogleFonts.rajdhani(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      eurFmt.format(advance),
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      'Istkosten',
+                      style: GoogleFonts.rajdhani(
+                        fontSize: 13,
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      eurFmt.format(month.total),
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 12,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Container(width: 1, height: 52, color: AppColors.border),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Icon(
+                isPositive
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
+                color: deltaColor,
+                size: 16,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${isPositive ? '+' : ''}${eurFmt.format(delta)}',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: deltaColor,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SurplusBar extends StatelessWidget {
+  final int monthsInSurplus, totalMonths;
+
+  const _SurplusBar({
+    required this.monthsInSurplus,
+    required this.totalMonths,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = totalMonths > 0 ? monthsInSurplus / totalMonths : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: AppColors.neu(5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Monate im Guthaben',
+                style: GoogleFonts.rajdhani(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              Text(
+                '$monthsInSurplus / $totalMonths',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: Stack(
+              children: [
+                Container(
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                FractionallySizedBox(
+                  widthFactor: ratio.clamp(0.0, 1.0),
+                  child: Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: AppColors.greenDark,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

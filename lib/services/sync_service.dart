@@ -59,6 +59,7 @@ class SyncService {
     final user = SupabaseService.currentUser;
     if (user == null) return;
     await _syncSettings(user.id);
+    await _prefetchWeather();
   }
 
   // ---------------------------------------------------------------------------
@@ -338,6 +339,8 @@ class SyncService {
           numberOfPersons: remote['number_of_persons'] as int?,
           hasPv: remote['has_pv'] as bool?,
           hasSolarThermal: remote['has_solar_thermal'] as bool?,
+          constructionYear: remote['construction_year'] as int?,
+          isInsulated: remote['is_insulated'] as bool?,
         );
         debugPrint('[Sync] Settings Hausdaten pulled from remote');
       }
@@ -365,6 +368,8 @@ class SyncService {
           'number_of_persons': merged.numberOfPersons,
           'has_pv': merged.hasPv,
           'has_solar_thermal': merged.hasSolarThermal,
+          'construction_year': merged.constructionYear,
+          'is_insulated': merged.isInsulated,
           'tracking_mode': merged.trackingMode,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         }, onConflict: 'user_id');

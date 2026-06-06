@@ -41,6 +41,8 @@ class AppSettings extends Table {
   BoolColumn get hasPv => boolean().nullable()();
   BoolColumn get hasSolarThermal => boolean().nullable()();
   TextColumn get trackingMode => text().nullable()(); // 'gas'|'electricity'|'both', added v12
+  IntColumn get constructionYear => integer().nullable()(); // added v13
+  BoolColumn get isInsulated => boolean().nullable()(); // added v13
 }
 
 // ---------------------------------------------------------------------------
@@ -453,6 +455,8 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
     required int? numberOfPersons,
     required bool? hasPv,
     required bool? hasSolarThermal,
+    required int? constructionYear,
+    required bool? isInsulated,
   }) async {
     final companion = AppSettingsCompanion(
       houseType: Value(houseType),
@@ -460,6 +464,8 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
       numberOfPersons: Value(numberOfPersons),
       hasPv: Value(hasPv),
       hasSolarThermal: Value(hasSolarThermal),
+      constructionYear: Value(constructionYear),
+      isInsulated: Value(isInsulated),
     );
     final existing = await getSettings();
     if (existing == null) {
@@ -539,7 +545,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -587,6 +593,10 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 12) {
         await migrator.addColumn(appSettings, appSettings.trackingMode);
+      }
+      if (from < 13) {
+        await migrator.addColumn(appSettings, appSettings.constructionYear);
+        await migrator.addColumn(appSettings, appSettings.isInsulated);
       }
     },
   );
@@ -706,6 +716,8 @@ class AppDatabase extends _$AppDatabase {
     required int? numberOfPersons,
     required bool? hasPv,
     required bool? hasSolarThermal,
+    required int? constructionYear,
+    required bool? isInsulated,
   }) =>
       settingsDao.saveHouseData(
         houseType: houseType,
@@ -713,6 +725,8 @@ class AppDatabase extends _$AppDatabase {
         numberOfPersons: numberOfPersons,
         hasPv: hasPv,
         hasSolarThermal: hasSolarThermal,
+        constructionYear: constructionYear,
+        isInsulated: isInsulated,
       );
 
   Future<void> saveTrackingMode(String mode) => settingsDao.saveTrackingMode(mode);
