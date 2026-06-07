@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -30,29 +31,24 @@ class ElectricityDetailScreen extends StatefulWidget {
 
 class _ElectricityDetailScreenState extends State<ElectricityDetailScreen> {
   double _pricePerKwh = 0.30;
-  int _chartRefreshKey = 0;
-  bool _isRefreshing = false;
+  StreamSubscription<ElectricityContract?>? _contractSub;
 
   @override
   void initState() {
     super.initState();
-    _loadPrice();
+    _contractSub = AppDatabase.instance.watchLatestElectricityContract().listen((contract) {
+      if (mounted && contract != null) {
+        setState(() {
+          _pricePerKwh = contract.pricePerKwh;
+        });
+      }
+    });
   }
 
-  Future<void> _loadPrice() async {
-    final contract = await AppDatabase.instance.getLatestElectricityContract();
-    if (mounted && contract != null) {
-      setState(() {
-        _pricePerKwh = contract.pricePerKwh;
-      });
-    }
-  }
-
-  Future<void> _refresh() async {
-    if (_isRefreshing) return;
-    setState(() => _isRefreshing = true);
-    await _loadPrice();
-    if (mounted) setState(() { _chartRefreshKey++; _isRefreshing = false; });
+  @override
+  void dispose() {
+    _contractSub?.cancel();
+    super.dispose();
   }
 
   Widget _buildMeterValue(double? value) {
@@ -104,19 +100,6 @@ class _ElectricityDetailScreenState extends State<ElectricityDetailScreen> {
             : null,
         automaticallyImplyLeading: false,
         title: Text('STROM', style: GoogleFonts.rajdhani(fontSize: 13, fontWeight: FontWeight.w700, color: _neuTextSec, letterSpacing: 4)),
-        actions: [
-          GestureDetector(
-            onTap: _refresh,
-            child: Container(
-              width: 36, height: 36,
-              margin: const EdgeInsets.only(right: 16),
-              decoration: BoxDecoration(color: _neuBase, shape: BoxShape.circle, boxShadow: _neu(4)),
-              child: _isRefreshing
-                  ? const Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2, color: _neuBlue))
-                  : const Icon(Icons.refresh_rounded, color: _neuBlue, size: 18),
-            ),
-          ),
-        ],
       ),
       body: SafeArea(
         child: StreamBuilder<List<ElectricityReading>>(
@@ -203,7 +186,6 @@ class _ElectricityDetailScreenState extends State<ElectricityDetailScreen> {
                           child: Text('VERBRAUCH', style: GoogleFonts.rajdhani(fontSize: 11, fontWeight: FontWeight.w600, color: _neuTextSec, letterSpacing: 2)),
                         ),
                         ConsumptionChart(
-                          key: ValueKey(_chartRefreshKey),
                           readings: readingPoints,
                           unit: 'kWh',
                           accentColor: _neuBlue,
@@ -223,10 +205,7 @@ class _ElectricityDetailScreenState extends State<ElectricityDetailScreen> {
                   child: _ScanButton(
                     color: _neuBlue,
                     shadowColor: const Color(0xFF2A4E6A),
-                    onPressed: () async {
-                      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ScanScreen(meterType: MeterType.electricity)));
-                      _loadPrice();
-                    },
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ScanScreen(meterType: MeterType.electricity))),
                   ),
                 ),
               ],

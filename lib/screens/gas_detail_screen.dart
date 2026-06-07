@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -34,31 +35,26 @@ class _GasDetailScreenState extends State<GasDetailScreen> {
   double _kwhPrice = 0.09;
   double _brennwert = 0.0;
   double _zustandszahl = 0.0;
-  int _chartRefreshKey = 0;
-  bool _isRefreshing = false;
+  StreamSubscription<PriceContract?>? _contractSub;
 
   @override
   void initState() {
     super.initState();
-    _loadPrice();
+    _contractSub = AppDatabase.instance.watchLatestContract().listen((contract) {
+      if (mounted && contract != null) {
+        setState(() {
+          _kwhPrice = contract.pricePerKwh;
+          _brennwert = contract.brennwert;
+          _zustandszahl = contract.zustandszahl;
+        });
+      }
+    });
   }
 
-  Future<void> _loadPrice() async {
-    final contract = await AppDatabase.instance.getLatestContract();
-    if (mounted && contract != null) {
-      setState(() {
-        _kwhPrice = contract.pricePerKwh;
-        _brennwert = contract.brennwert;
-        _zustandszahl = contract.zustandszahl;
-      });
-    }
-  }
-
-  Future<void> _refresh() async {
-    if (_isRefreshing) return;
-    setState(() => _isRefreshing = true);
-    await _loadPrice();
-    if (mounted) setState(() { _chartRefreshKey++; _isRefreshing = false; });
+  @override
+  void dispose() {
+    _contractSub?.cancel();
+    super.dispose();
   }
 
   Widget _buildMeterValue(double? value) {
@@ -110,19 +106,6 @@ class _GasDetailScreenState extends State<GasDetailScreen> {
             : null,
         automaticallyImplyLeading: false,
         title: Text('GAS', style: GoogleFonts.rajdhani(fontSize: 13, fontWeight: FontWeight.w700, color: _neuTextSec, letterSpacing: 4)),
-        actions: [
-          GestureDetector(
-            onTap: _refresh,
-            child: Container(
-              width: 36, height: 36,
-              margin: const EdgeInsets.only(right: 16),
-              decoration: BoxDecoration(color: _neuBase, shape: BoxShape.circle, boxShadow: _neu(4)),
-              child: _isRefreshing
-                  ? const Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2, color: _neuGreen))
-                  : const Icon(Icons.refresh_rounded, color: _neuGreen, size: 18),
-            ),
-          ),
-        ],
       ),
       body: SafeArea(
         child: StreamBuilder<List<MeterReading>>(
@@ -220,7 +203,6 @@ class _GasDetailScreenState extends State<GasDetailScreen> {
                           child: Text('VERBRAUCH', style: GoogleFonts.rajdhani(fontSize: 11, fontWeight: FontWeight.w600, color: _neuTextSec, letterSpacing: 2)),
                         ),
                         ConsumptionChart(
-                          key: ValueKey(_chartRefreshKey),
                           readings: readingPoints,
                           unit: 'm³',
                           accentColor: _neuGreen,
@@ -240,10 +222,7 @@ class _GasDetailScreenState extends State<GasDetailScreen> {
                   child: _ScanButton(
                     color: _neuGreen,
                     shadowColor: const Color(0xFF3A5E3D),
-                    onPressed: () async {
-                      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ScanScreen(meterType: MeterType.gas)));
-                      _loadPrice();
-                    },
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ScanScreen(meterType: MeterType.gas))),
                   ),
                 ),
               ],

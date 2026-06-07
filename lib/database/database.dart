@@ -218,6 +218,12 @@ class ContractsDao extends DatabaseAccessor<AppDatabase>
     return results.isNotEmpty ? results.first : null;
   }
 
+  Stream<PriceContract?> watchLatestContract() =>
+      (select(priceContracts)
+            ..orderBy([(t) => OrderingTerm.desc(t.validFrom)])
+            ..limit(1))
+          .watchSingleOrNull();
+
   /// Returns the contract that was active at [date]:
   /// the one with the latest validFrom that is <= date.
   Future<PriceContract?> getContractForDate(DateTime date) async {
@@ -344,6 +350,12 @@ class ElectricityContractsDao extends DatabaseAccessor<AppDatabase>
         .get();
     return results.isNotEmpty ? results.first : null;
   }
+
+  Stream<ElectricityContract?> watchLatestContract() =>
+      (select(electricityContracts)
+            ..orderBy([(t) => OrderingTerm.desc(t.validFrom)])
+            ..limit(1))
+          .watchSingleOrNull();
 
   Future<int> insertContract(ElectricityContractsCompanion entry) =>
       into(electricityContracts).insert(entry);
@@ -747,6 +759,9 @@ class AppDatabase extends _$AppDatabase {
   Future<ElectricityContract?> getLatestElectricityContract() =>
       electricityContractsDao.getLatestContract();
 
+  Stream<ElectricityContract?> watchLatestElectricityContract() =>
+      electricityContractsDao.watchLatestContract();
+
   Future<int> insertElectricityContract(ElectricityContractsCompanion entry) =>
       electricityContractsDao.insertContract(entry);
 
@@ -829,6 +844,9 @@ class AppDatabase extends _$AppDatabase {
 
   Future<PriceContract?> getLatestContract() =>
       contractsDao.getLatestContract();
+
+  Stream<PriceContract?> watchLatestContract() =>
+      contractsDao.watchLatestContract();
 
   Future<PriceContract?> getContractForDate(DateTime date) =>
       contractsDao.getContractForDate(date);
