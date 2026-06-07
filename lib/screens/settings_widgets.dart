@@ -84,6 +84,7 @@ class SettingsDatePicker extends StatelessWidget {
 class SettingsDigitSelector extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
+  final String title;
   final String description;
   final int selected;
   final List<int> options;
@@ -91,7 +92,7 @@ class SettingsDigitSelector extends StatelessWidget {
   final void Function(int) onSelect;
   final Color accentColor;
 
-  const SettingsDigitSelector({super.key, required this.icon, required this.iconColor, required this.description, required this.selected, required this.options, required this.formatHint, required this.onSelect, this.accentColor = AppColors.green});
+  const SettingsDigitSelector({super.key, required this.icon, required this.iconColor, required this.description, required this.selected, required this.options, required this.formatHint, required this.onSelect, this.accentColor = AppColors.green, this.title = 'Vorkomma-Stellen'});
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +103,7 @@ class SettingsDigitSelector extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [Icon(icon, size: 16, color: iconColor), const SizedBox(width: 8),
-            Text('Vorkomma-Stellen', style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.5))]),
+            Text(title, style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.5))]),
           const SizedBox(height: 6),
           Text(description, style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary.withValues(alpha: 0.8), height: 1.4)),
           const SizedBox(height: 16),

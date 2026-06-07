@@ -2,7 +2,6 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../database/database.dart';
-import '../services/settings_service.dart';
 import '../services/sync_service.dart';
 import '../theme/colors.dart';
 import '../widgets/advance_payment_dialog.dart';
@@ -16,7 +15,6 @@ class ElectricitySettingsScreen extends StatefulWidget {
 }
 
 class _ElectricitySettingsScreenState extends State<ElectricitySettingsScreen> {
-  final _settingsService     = SettingsService();
   final _priceController     = TextEditingController();
   final _basePriceController = TextEditingController();
   final _advanceController   = TextEditingController();
@@ -24,11 +22,9 @@ class _ElectricitySettingsScreenState extends State<ElectricitySettingsScreen> {
 
   ElectricityContract? _latestContract;
   List<ElectricityContract> _allContracts = [];
-  bool _isNewContract = false;
+  bool? _isNewContract;
   DateTime? _validFrom;
   DateTime? _contractEndDate;
-  int _intDigits = 6;
-  int _decDigits = 1;
   bool _isSaving = false;
 
   static const _blue = Color(0xFF5B8DB8);
@@ -51,23 +47,44 @@ class _ElectricitySettingsScreenState extends State<ElectricitySettingsScreen> {
   Future<void> _load() async {
     final contracts = await AppDatabase.instance.getAllElectricityContracts();
     final latest    = contracts.isNotEmpty ? contracts.last : null;
-    final intD      = await _settingsService.getElectricityIntDigits();
-    final decD      = await _settingsService.getElectricityDecDigits();
     if (mounted) {
-      setState(() { _latestContract = latest; _allContracts = contracts; _intDigits = intD; _decDigits = decD; });
-      if (latest != null) {
-        _priceController.text     = latest.pricePerKwh.toStringAsFixed(4);
-        _basePriceController.text = latest.monthlyBasePrice.toStringAsFixed(2);
-        _providerController.text  = latest.displayName;
-        _validFrom = DateTime.fromMillisecondsSinceEpoch(latest.validFrom);
-        _contractEndDate = latest.contractEndDate != null
-            ? DateTime.fromMillisecondsSinceEpoch(latest.contractEndDate!)
-            : null;
-        _advanceController.text = latest.monthlyAdvancePayment != null
-            ? latest.monthlyAdvancePayment!.toStringAsFixed(2)
-            : '';
-      }
+      setState(() { _latestContract = latest; _allContracts = contracts; });
     }
+  }
+
+  void _fillFromLatestContract() {
+    final c = _latestContract;
+    if (c == null) return;
+    _priceController.text     = c.pricePerKwh.toStringAsFixed(4);
+    _basePriceController.text = c.monthlyBasePrice.toStringAsFixed(2);
+    _providerController.text  = c.displayName;
+    _advanceController.text   = c.monthlyAdvancePayment != null ? c.monthlyAdvancePayment!.toStringAsFixed(2) : '';
+    _validFrom       = DateTime.fromMillisecondsSinceEpoch(c.validFrom);
+    _contractEndDate = c.contractEndDate != null ? DateTime.fromMillisecondsSinceEpoch(c.contractEndDate!) : null;
+  }
+
+  void _selectNein() {
+    if (_isNewContract == false) return;
+    final c = _latestContract;
+    if (c == null) return;
+    _priceController.text     = c.pricePerKwh.toStringAsFixed(4);
+    _basePriceController.text = c.monthlyBasePrice.toStringAsFixed(2);
+    _providerController.text  = c.displayName;
+    _advanceController.text   = c.monthlyAdvancePayment != null ? c.monthlyAdvancePayment!.toStringAsFixed(2) : '';
+    setState(() {
+      _isNewContract   = false;
+      _validFrom       = DateTime.fromMillisecondsSinceEpoch(c.validFrom);
+      _contractEndDate = c.contractEndDate != null ? DateTime.fromMillisecondsSinceEpoch(c.contractEndDate!) : null;
+    });
+  }
+
+  void _selectJa() {
+    if (_isNewContract == true) return;
+    _priceController.clear();
+    _basePriceController.clear();
+    _providerController.clear();
+    _advanceController.clear();
+    setState(() { _isNewContract = true; _validFrom = null; _contractEndDate = null; });
   }
 
   Future<void> _deleteContract(int id) async {
@@ -94,20 +111,6 @@ class _ElectricitySettingsScreenState extends State<ElectricitySettingsScreen> {
     if (mounted) _showSnack('Vertrag gelöscht.');
   }
 
-  Future<void> _saveIntDigits(int d) async {
-    setState(() => _intDigits = d);
-    await _settingsService.setElectricityIntDigits(d);
-    SyncService().syncSettings();
-    _showSnack('Stromzähler: $d Vorkomma-Stellen gespeichert');
-  }
-
-  Future<void> _saveDecDigits(int d) async {
-    setState(() => _decDigits = d);
-    await _settingsService.setElectricityDecDigits(d);
-    SyncService().syncSettings();
-    _showSnack('Stromzähler: $d Nachkomma-Stellen gespeichert');
-  }
-
   Future<void> _saveContract() async {
     final kwhText   = _priceController.text.trim().replaceAll(',', '.');
     final kwhParsed = double.tryParse(kwhText);
@@ -116,7 +119,7 @@ class _ElectricitySettingsScreenState extends State<ElectricitySettingsScreen> {
     final baseParsed = double.tryParse(baseText) ?? -1;
     if (baseText.isEmpty || baseParsed < 0) { _showSnack('Pflichtfeld: Grundpreis (0,00 wenn keiner)', isError: true); return; }
     if (_validFrom == null) { _showSnack('Pflichtfeld: Datum', isError: true); return; }
-    final bool creatingNew = _latestContract == null || _isNewContract;
+    final bool creatingNew = _latestContract == null || (_isNewContract == true);
     final providerName     = creatingNew ? _providerController.text.trim() : _latestContract!.displayName;
     if (providerName.isEmpty) { _showSnack('Pflichtfeld: Lieferant', isError: true); return; }
 
@@ -190,6 +193,7 @@ class _ElectricitySettingsScreenState extends State<ElectricitySettingsScreen> {
     await _load();
     SyncService().syncAll();
     if (mounted) {
+      _fillFromLatestContract();
       setState(() { _isSaving = false; _isNewContract = false; });
       _showSnack('Stromvertrag gespeichert.');
     }
@@ -251,30 +255,6 @@ class _ElectricitySettingsScreenState extends State<ElectricitySettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SettingsSectionLabel('ZÄHLERTYP'),
-              const SizedBox(height: 4),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text('OCR prüft genau ${_intDigits + _decDigits} Stellen auf dem Foto.',
-                    style: GoogleFonts.spaceMono(fontSize: 11, color: _blue)),
-              ),
-              SettingsDigitSelector(
-                icon: Icons.bolt_outlined, iconColor: _blue, accentColor: _blue,
-                description: 'Stellen VOR dem Komma',
-                selected: _intDigits, options: const [5, 6, 7],
-                formatHint: (d) => '${'0' * d},${'0' * _decDigits} kWh',
-                onSelect: _saveIntDigits,
-              ),
-              const SizedBox(height: 16),
-              SettingsDigitSelector(
-                icon: Icons.looks_one_outlined, iconColor: _blue, accentColor: _blue,
-                description: 'Stellen NACH dem Komma (rote Dezimaltrommel)',
-                selected: _decDigits, options: const [1, 2, 3],
-                formatHint: (d) => '${'0' * _intDigits},${'0' * d} kWh',
-                onSelect: _saveDecDigits,
-              ),
-              const SizedBox(height: 32),
-
               const SettingsSectionLabel('STROMPREIS'),
               const SizedBox(height: 12),
               Container(
@@ -282,66 +262,77 @@ class _ElectricitySettingsScreenState extends State<ElectricitySettingsScreen> {
                 decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(16), boxShadow: AppColors.neu(7)),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   if (_latestContract != null) ...[
-                    SettingsContractPreview(icon: Icons.bolt_rounded, color: _blue,
-                        name: _latestContract!.displayName, since: DateTime.fromMillisecondsSinceEpoch(_latestContract!.validFrom), price: _latestContract!.pricePerKwh),
-                    const SizedBox(height: 16),
-                    Text('Neuer Vertrag?', style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.5)),
-                    const SizedBox(height: 8),
                     Row(children: [
-                      Expanded(child: SettingsToggleChip(label: 'Nein – nur Vertragsdaten anpassen', selected: !_isNewContract, accentColor: _blue, onTap: () => setState(() => _isNewContract = false))),
+                      Expanded(child: SettingsToggleChip(label: 'Nein – Vertrag anpassen', selected: _isNewContract == false, accentColor: _blue, onTap: _selectNein)),
                       const SizedBox(width: 8),
-                      Expanded(child: SettingsToggleChip(label: 'Ja – neuer Anbieter', selected: _isNewContract, accentColor: _blue, onTap: () { setState(() { _isNewContract = true; _providerController.clear(); }); })),
+                      Expanded(child: SettingsToggleChip(label: 'Ja – Neuer Anbieter', selected: _isNewContract == true, accentColor: _blue, onTap: _selectJa)),
                     ]),
-                    const SizedBox(height: 20),
                   ],
-                  if (_latestContract == null || _isNewContract) ...[
-                    const SettingsFieldLabel('Lieferant', required: true),
-                    const SizedBox(height: 8),
-                    SettingsTextField(controller: _providerController, hint: 'z.B. Stadtwerke Musterstadt', accentColor: _blue),
-                    const SizedBox(height: 20),
-                  ],
-                  const SettingsFieldLabel('Preis pro kWh', required: true),
-                  const SizedBox(height: 8),
-                  SettingsPriceField(controller: _priceController, suffix: '€/kWh', hint: 'z.B. 0.2890', accentColor: _blue),
-                  const SizedBox(height: 20),
-                  const SettingsFieldLabel('Monatlicher Grundpreis', required: true),
-                  const SizedBox(height: 8),
-                  SettingsPriceField(controller: _basePriceController, suffix: '€/Monat', hint: 'z.B. 12.00', accentColor: _blue),
-                  const SizedBox(height: 20),
-                  const SettingsFieldLabel('Monatlicher Abschlag'),
-                  const SizedBox(height: 6),
-                  Text('Dein monatlicher Vorauszahlungsbetrag an den Anbieter',
-                      style: GoogleFonts.rajdhani(fontSize: 13,
-                          color: AppColors.textSecondary.withValues(alpha: 0.7))),
-                  const SizedBox(height: 8),
-                  SettingsPriceField(controller: _advanceController, suffix: '€/Monat', hint: 'z.B. 80.00', accentColor: _blue),
-                  const SizedBox(height: 20),
-                  const SettingsFieldLabel('Diese Preise gelten seit:', required: true),
-                  const SizedBox(height: 10),
-                  SettingsDatePicker(date: _validFrom, onTap: _pickDate, accentColor: _blue),
-                  const SizedBox(height: 20),
-                  const SettingsFieldLabel('Vertragsende'),
-                  const SizedBox(height: 6),
-                  Text('Optional – für spätere Kündigungserinnerung',
-                      style: GoogleFonts.rajdhani(fontSize: 13,
-                          color: AppColors.textSecondary.withValues(alpha: 0.7))),
-                  const SizedBox(height: 10),
-                  Row(children: [
-                    Expanded(child: SettingsDatePicker(
-                        date: _contractEndDate, onTap: _pickEndDate, accentColor: _blue)),
-                    if (_contractEndDate != null) ...[
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () => setState(() => _contractEndDate = null),
-                        child: const Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
-                      ),
-                    ],
-                  ]),
-                  const SizedBox(height: 20),
-                  SettingsSaveButton(label: 'VERTRAG SPEICHERN', isBusy: _isSaving, onTap: _saveContract, accentColor: _blue),
-                  const SizedBox(height: 12),
-                  Text('Den Preis pro kWh findest du auf deiner Jahresabrechnung oder beim Versorger unter "Arbeitspreis".',
-                      style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary.withValues(alpha: 0.7), height: 1.5)),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
+                    child: (_latestContract == null || _isNewContract != null)
+                        ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            if (_latestContract != null) ...[
+                              const SizedBox(height: 20),
+                              Divider(color: AppColors.border, height: 1),
+                              const SizedBox(height: 16),
+                            ],
+                            if (_isNewContract == false) ...[
+                              SettingsContractPreview(icon: Icons.bolt_rounded, color: _blue,
+                                  name: _latestContract!.displayName, since: DateTime.fromMillisecondsSinceEpoch(_latestContract!.validFrom), price: _latestContract!.pricePerKwh),
+                              const SizedBox(height: 20),
+                            ],
+                            if (_latestContract == null || _isNewContract == true) ...[
+                              const SettingsFieldLabel('Lieferant', required: true),
+                              const SizedBox(height: 8),
+                              SettingsTextField(controller: _providerController, hint: 'z.B. Stadtwerke Musterstadt', accentColor: _blue),
+                              const SizedBox(height: 20),
+                            ],
+                            const SettingsFieldLabel('Preis pro kWh', required: true),
+                            const SizedBox(height: 8),
+                            SettingsPriceField(controller: _priceController, suffix: '€/kWh', hint: 'z.B. 0.2890', accentColor: _blue),
+                            const SizedBox(height: 20),
+                            const SettingsFieldLabel('Monatlicher Grundpreis', required: true),
+                            const SizedBox(height: 8),
+                            SettingsPriceField(controller: _basePriceController, suffix: '€/Monat', hint: 'z.B. 12.00', accentColor: _blue),
+                            const SizedBox(height: 20),
+                            const SettingsFieldLabel('Monatlicher Abschlag'),
+                            const SizedBox(height: 6),
+                            Text('Dein monatlicher Vorauszahlungsbetrag an den Anbieter',
+                                style: GoogleFonts.rajdhani(fontSize: 13,
+                                    color: AppColors.textSecondary.withValues(alpha: 0.7))),
+                            const SizedBox(height: 8),
+                            SettingsPriceField(controller: _advanceController, suffix: '€/Monat', hint: 'z.B. 80.00', accentColor: _blue),
+                            const SizedBox(height: 20),
+                            const SettingsFieldLabel('Diese Preise gelten seit:', required: true),
+                            const SizedBox(height: 10),
+                            SettingsDatePicker(date: _validFrom, onTap: _pickDate, accentColor: _blue),
+                            const SizedBox(height: 20),
+                            const SettingsFieldLabel('Vertragsende'),
+                            const SizedBox(height: 6),
+                            Text('Optional – für spätere Kündigungserinnerung',
+                                style: GoogleFonts.rajdhani(fontSize: 13,
+                                    color: AppColors.textSecondary.withValues(alpha: 0.7))),
+                            const SizedBox(height: 10),
+                            Row(children: [
+                              Expanded(child: SettingsDatePicker(date: _contractEndDate, onTap: _pickEndDate, accentColor: _blue)),
+                              if (_contractEndDate != null) ...[
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  onTap: () => setState(() => _contractEndDate = null),
+                                  child: const Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
+                                ),
+                              ],
+                            ]),
+                            const SizedBox(height: 20),
+                            SettingsSaveButton(label: 'VERTRAG SPEICHERN', isBusy: _isSaving, onTap: _saveContract, accentColor: _blue),
+                            const SizedBox(height: 12),
+                            Text('Den Preis pro kWh findest du auf deiner Jahresabrechnung oder beim Versorger unter "Arbeitspreis".',
+                                style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary.withValues(alpha: 0.7), height: 1.5)),
+                          ])
+                        : const SizedBox.shrink(),
+                  ),
                 ]),
               ),
               const SizedBox(height: 24),
