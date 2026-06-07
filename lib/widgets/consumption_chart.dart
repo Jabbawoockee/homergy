@@ -140,28 +140,72 @@ class _ConsumptionChartState extends State<ConsumptionChart> {
     final now = DateTime.now();
     final days =
         List.generate(7, (i) => DateTime(now.year, now.month, now.day - 6 + i));
+    final windowStart = days.first;
     final maxByDay = <String, double>{};
     for (final r in widget.readings) {
       final k = _dayKey(DateTime(r.timestamp.year, r.timestamp.month, r.timestamp.day));
       final ex = maxByDay[k];
       if (ex == null || r.value > ex) maxByDay[k] = r.value;
     }
+    // Most recent reading before the window — used as anchor when no in-window predecessor exists.
+    // widget.readings is sorted newest-first, so the first match is the most recent pre-window entry.
+    double? preAnchorValue;
+    DateTime? preAnchorDate;
+    for (final r in widget.readings) {
+      final rDay = DateTime(r.timestamp.year, r.timestamp.month, r.timestamp.day);
+      if (rDay.isBefore(windowStart)) {
+        preAnchorValue = maxByDay[_dayKey(rDay)];
+        preAnchorDate = rDay;
+        break;
+      }
+    }
     final stats = <_DayStat>[];
     for (int i = 0; i < days.length; i++) {
       final todayMax = maxByDay[_dayKey(days[i])];
-      double? consumption;
-      int daysCovered = 1;
+
+      // Find nearest reading before days[i] (in-window first, then pre-window anchor)
+      double? prevValue;
+      DateTime? prevDate;
+      for (int j = i - 1; j >= 0; j--) {
+        final v = maxByDay[_dayKey(days[j])];
+        if (v != null) { prevValue = v; prevDate = days[j]; break; }
+      }
+      if (prevValue == null && preAnchorValue != null) {
+        prevValue = preAnchorValue;
+        prevDate = preAnchorDate;
+      }
+
+      // Find next reading after days[i] within the window
+      double? nextValue;
+      DateTime? nextDate;
+      for (int j = i + 1; j < days.length; j++) {
+        final v = maxByDay[_dayKey(days[j])];
+        if (v != null) { nextValue = v; nextDate = days[j]; break; }
+      }
+
       if (todayMax != null) {
-        for (int j = i - 1; j >= 0; j--) {
-          final prevMax = maxByDay[_dayKey(days[j])];
-          if (prevMax != null) {
-            consumption = (todayMax - prevMax).clamp(0.0, double.infinity);
-            daysCovered = i - j;
-            break;
+        // Actual reading: delta from previous
+        if (prevValue != null) {
+          final span = days[i].difference(prevDate!).inDays.clamp(1, 999);
+          final delta = (todayMax - prevValue).clamp(0.0, double.infinity);
+          stats.add(_DayStat(date: days[i], consumption: delta, daysCovered: span));
+        } else {
+          stats.add(_DayStat(date: days[i], consumption: null));
+        }
+      } else {
+        // No reading: interpolate daily average between surrounding readings
+        if (prevValue != null && nextValue != null) {
+          final span = nextDate!.difference(prevDate!).inDays;
+          if (span > 0) {
+            final delta = (nextValue - prevValue).clamp(0.0, double.infinity);
+            stats.add(_DayStat(date: days[i], consumption: delta, daysCovered: span, interpolated: true));
+          } else {
+            stats.add(_DayStat(date: days[i], consumption: null));
           }
+        } else {
+          stats.add(_DayStat(date: days[i], consumption: null));
         }
       }
-      stats.add(_DayStat(date: days[i], consumption: consumption, daysCovered: daysCovered));
     }
     return stats;
   }
@@ -169,6 +213,8 @@ class _ConsumptionChartState extends State<ConsumptionChart> {
   List<_SpotData> _buildMonthSpotData() {
     final now = DateTime.now();
     final monthStart = DateTime(now.year, now.month, 1);
+    final lastDayOfMonth = DateTime(now.year, now.month + 1, 0).day;
+
     final maxByDay = <int, double>{};
     for (final r in widget.readings) {
       if (r.timestamp.year == now.year && r.timestamp.month == now.month) {
@@ -177,24 +223,51 @@ class _ConsumptionChartState extends State<ConsumptionChart> {
         if (ex == null || r.value > ex) maxByDay[d] = r.value;
       }
     }
-    final beforeMonth =
-        widget.readings.where((r) => r.timestamp.isBefore(monthStart)).toList();
-    final anchorValue = beforeMonth.isNotEmpty ? beforeMonth.first.value : null;
+
+    // Pre-month anchor (readings sorted newest-first)
+    double? prevValue = widget.readings
+        .where((r) => r.timestamp.isBefore(monthStart))
+        .map((r) => r.value)
+        .firstOrNull;
+    int prevDay = 0; // "day 0" = day before month start
+
+    // Fixed 5-day blocks: 1–5, 6–10, 11–15, 16–20, 21–25, 26–lastDay
+    final blockStarts = [1, 6, 11, 16, 21, 26];
     final result = <_SpotData>[];
-    for (int day = 1; day <= now.day; day++) {
-      final dayMax = maxByDay[day];
-      if (dayMax == null) continue;
-      int prevDay = 0;
-      double? prevMax;
-      for (int pd = day - 1; pd >= 1; pd--) {
-        if (maxByDay[pd] != null) { prevMax = maxByDay[pd]; prevDay = pd; break; }
+
+    for (final blockStart in blockStarts) {
+      if (blockStart > now.day) break;
+      final blockEnd = blockStart == 26 ? lastDayOfMonth : blockStart + 4;
+      final effectiveEnd = blockEnd.clamp(blockStart, now.day);
+
+      // Latest reading in this block
+      int? latestDay;
+      double? latestValue;
+      for (int d = effectiveEnd; d >= blockStart; d--) {
+        if (maxByDay[d] != null) { latestDay = d; latestValue = maxByDay[d]; break; }
       }
-      prevMax ??= anchorValue;
-      if (prevMax == null) continue;
-      final total = (dayMax - prevMax).clamp(0.0, double.infinity);
-      final days = day - prevDay;
-      result.add(_SpotData(FlSpot(day.toDouble(), total / days), periodsCovered: days, totalConsumption: total));
+
+      if (latestDay == null || latestValue == null) continue;
+
+      if (prevValue == null) {
+        // No anchor yet — use this block as anchor for the next
+        prevValue = latestValue;
+        prevDay = latestDay;
+        continue;
+      }
+
+      final daysCovered = (latestDay - prevDay).clamp(1, 999);
+      final delta = (latestValue - prevValue).clamp(0.0, double.infinity);
+      result.add(_SpotData(
+        FlSpot(blockEnd.toDouble(), delta / daysCovered),
+        periodsCovered: daysCovered,
+        totalConsumption: delta,
+      ));
+
+      prevValue = latestValue;
+      prevDay = latestDay;
     }
+
     return result;
   }
 
@@ -273,6 +346,7 @@ class _ConsumptionChartState extends State<ConsumptionChart> {
     List<FlSpot> spots = [];
     Map<double, int> coverageByX = {};
     Map<double, double> totalByX = {};
+    Set<double> interpolatedX = {};
     double minX = 0, maxX = 6;
 
     switch (_period) {
@@ -285,6 +359,7 @@ class _ConsumptionChartState extends State<ConsumptionChart> {
             spots.add(FlSpot(i.toDouble(), total / days));
             coverageByX[i.toDouble()] = days;
             totalByX[i.toDouble()] = total;
+            if (weekStats[i].interpolated) interpolatedX.add(i.toDouble());
           }
         }
         minX = -0.4;
@@ -337,12 +412,13 @@ class _ConsumptionChartState extends State<ConsumptionChart> {
       dotData: FlDotData(
         show: true,
         getDotPainter: (spot, percent, bar, index) {
+          final isInterpolated = interpolatedX.contains(spot.x);
           final coverage = coverageByX[spot.x] ?? 1;
           return FlDotCirclePainter(
-            radius: coverage > 1 ? 4.5 : 3.0,
-            color: widget.accentColor,
-            strokeWidth: coverage > 1 ? 2.0 : 1.5,
-            strokeColor: _neuBase,
+            radius: isInterpolated ? 2.0 : (coverage > 1 ? 4.5 : 3.0),
+            color: isInterpolated ? _neuBase : widget.accentColor,
+            strokeWidth: isInterpolated ? 1.2 : (coverage > 1 ? 2.0 : 1.5),
+            strokeColor: widget.accentColor,
           );
         },
       ),
@@ -375,6 +451,7 @@ class _ConsumptionChartState extends State<ConsumptionChart> {
         case ChartPeriod.week:
           final i = value.round();
           if (i < 0 || i >= weekStats.length) break;
+          if ((value - i).abs() > 0.01) break; // skip fractional edge values (-0.4, 6.4)
           final isToday = i == 6;
           label = Text(
             _weekdayLabels[weekStats[i].date.weekday - 1],
@@ -386,12 +463,14 @@ class _ConsumptionChartState extends State<ConsumptionChart> {
           );
         case ChartPeriod.month:
           final day = value.round();
-          final lastDay = maxX.round();
+          if ((value - day).abs() > 0.01) break; // skip fractional edge values (0.5, 30.5 …)
+          final lastDay = DateTime(now.year, now.month + 1, 0).day;
           if (day == 1 || day % 5 == 0 || day == lastDay) {
             label = Text('$day', style: GoogleFonts.rajdhani(fontSize: 10, color: _neuTextSec));
           }
         case ChartPeriod.year:
           final m = value.round();
+          if ((value - m).abs() > 0.01) break; // skip fractional edge values (-0.4, 11.4 …)
           if (m >= 0 && m <= 11) {
             label = Text(_monthLabels[m], style: GoogleFonts.rajdhani(fontSize: 10, color: _neuTextSec));
           }
@@ -495,13 +574,16 @@ class _ConsumptionChartState extends State<ConsumptionChart> {
                           if (s.barIndex == 1) return null;
                           final coverage = coverageByX[s.x] ?? 1;
                           final total = totalByX[s.x] ?? s.y;
+                          final isInterpolated = interpolatedX.contains(s.x);
                           final avgStr = s.y < 0.1 ? s.y.toStringAsFixed(3) : s.y.toStringAsFixed(2);
                           final totalStr = total < 0.1 ? total.toStringAsFixed(3) : total.toStringAsFixed(2);
                           final xKey = tempByX.keys.where((k) => (k - s.x).abs() < 0.6).fold<double?>(null, (prev, k) => prev == null || (k - s.x).abs() < (prev - s.x).abs() ? k : prev);
                           final tempC = xKey != null ? tempByX[xKey]!.toStringAsFixed(1) : null;
                           final periodLabel = _period == ChartPeriod.year ? 'Monate' : 'Tage';
                           final avgUnit = _period == ChartPeriod.year ? 'Mon.' : 'Tag';
-                          final mainLabel = coverage > 1 ? 'Ø $avgStr ${widget.unit}/$avgUnit' : '$avgStr ${widget.unit}';
+                          final mainLabel = isInterpolated
+                              ? '≈ $avgStr ${widget.unit}/$avgUnit'
+                              : coverage > 1 ? 'Ø $avgStr ${widget.unit}/$avgUnit' : '$avgStr ${widget.unit}';
                           return LineTooltipItem(
                             mainLabel,
                             GoogleFonts.spaceMono(fontSize: 12, fontWeight: FontWeight.w700, color: widget.accentDark),
@@ -677,7 +759,8 @@ class _DayStat {
   final DateTime date;
   final double? consumption;
   final int daysCovered;
-  const _DayStat({required this.date, this.consumption, this.daysCovered = 1});
+  final bool interpolated;
+  const _DayStat({required this.date, this.consumption, this.daysCovered = 1, this.interpolated = false});
 }
 
 class _SpotData {
