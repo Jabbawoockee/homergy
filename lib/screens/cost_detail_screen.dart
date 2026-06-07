@@ -88,6 +88,9 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
         final consumptionKwh = consumptionM3 * factor;
         final gasCost = consumptionKwh * contract.pricePerKwh;
 
+        final dayTwo = DateTime(year, month, 2);
+        final isIncomplete = !pts.any((r) => r.timestamp.isBefore(dayTwo));
+
         months.add(_MonthData(
           year: year,
           month: month,
@@ -99,6 +102,7 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
           providerName: contract.displayName,
           factorIsEstimated:
               !(contract.brennwert > 0 && contract.zustandszahl > 0),
+          isIncomplete: isIncomplete,
         ));
       }
 
@@ -306,11 +310,17 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
       'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
     ];
 
-    final deltas = data.months.map((m) => advance - m.total).toList();
+    final deltas = data.months
+        .map((m) => m.isIncomplete ? 0.0 : advance - m.total)
+        .toList();
     final cumulativeBalance = deltas.fold(0.0, (s, d) => s + d);
-    final totalPaid = advance * data.months.length;
-    final totalCost = data.months.fold(0.0, (s, m) => s + m.total);
-    final monthsInSurplus = deltas.where((d) => d >= 0).length;
+    final completeMonths = data.months.where((m) => !m.isIncomplete).toList();
+    final totalPaid = advance * completeMonths.length;
+    final totalCost = completeMonths.fold(0.0, (s, m) => s + m.total);
+    final monthsInSurplus = [
+      for (int i = 0; i < data.months.length; i++)
+        if (!data.months[i].isIncomplete && deltas[i] >= 0) true,
+    ].length;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -358,7 +368,7 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
           const SizedBox(height: 8),
           _SurplusBar(
             monthsInSurplus: monthsInSurplus,
-            totalMonths: data.months.length,
+            totalMonths: completeMonths.length,
           ),
           const SizedBox(height: 24),
         ],
@@ -576,6 +586,7 @@ class _MonthData {
   final double pricePerKwh;
   final String providerName;
   final bool factorIsEstimated;
+  final bool isIncomplete;
 
   double get total => gasCost + basePrice;
 
@@ -589,6 +600,7 @@ class _MonthData {
     required this.pricePerKwh,
     required this.providerName,
     required this.factorIsEstimated,
+    this.isIncomplete = false,
   });
 }
 
@@ -963,14 +975,32 @@ class _AbschlagMonthCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '$monthName ${month.year}'.toUpperCase(),
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.amber,
-                        letterSpacing: 1.5,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          '$monthName ${month.year}'.toUpperCase(),
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.amber,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        if (month.isIncomplete) ...[
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () => showDialog(
+                              context: context,
+                              builder: (_) => const _IncompleteMonthDialog(),
+                            ),
+                            child: const Icon(
+                              Icons.warning_amber_rounded,
+                              size: 13,
+                              color: AppColors.amber,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -1000,7 +1030,9 @@ class _AbschlagMonthCard extends StatelessWidget {
                           'Istkosten',
                           style: GoogleFonts.rajdhani(
                             fontSize: 13,
-                            color: AppColors.textPrimary,
+                            color: month.isIncomplete
+                                ? AppColors.textSecondary
+                                : AppColors.textPrimary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -1009,7 +1041,9 @@ class _AbschlagMonthCard extends StatelessWidget {
                           eurFmt.format(month.total),
                           style: GoogleFonts.spaceMono(
                             fontSize: 12,
-                            color: AppColors.textPrimary,
+                            color: month.isIncomplete
+                                ? AppColors.textSecondary
+                                : AppColors.textPrimary,
                           ),
                         ),
                       ],
@@ -1020,27 +1054,37 @@ class _AbschlagMonthCard extends StatelessWidget {
               const SizedBox(width: 16),
               Container(width: 1, height: 52, color: AppColors.border),
               const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Icon(
-                    isPositive
-                        ? Icons.arrow_upward_rounded
-                        : Icons.arrow_downward_rounded,
-                    color: deltaColor,
-                    size: 16,
+              if (month.isIncomplete)
+                Text(
+                  '±0',
+                  style: GoogleFonts.spaceMono(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textSecondary,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${isPositive ? '+' : ''}${eurFmt.format(delta)}',
-                    style: GoogleFonts.spaceMono(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Icon(
+                      isPositive
+                          ? Icons.arrow_upward_rounded
+                          : Icons.arrow_downward_rounded,
                       color: deltaColor,
+                      size: 16,
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${isPositive ? '+' : ''}${eurFmt.format(delta)}',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: deltaColor,
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
           if (projection != null) ...[
@@ -1131,6 +1175,64 @@ class _SurplusBar extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Erster Monat – Warnung
+// ---------------------------------------------------------------------------
+
+class _IncompleteMonthDialog extends StatelessWidget {
+  const _IncompleteMonthDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.background,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded,
+              color: AppColors.amber, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            'ERSTER MONAT',
+            style: GoogleFonts.spaceMono(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.amber,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        'Dieser Monat ist nicht repräsentativ und wird mit ±0 gewertet.\n\n'
+        'Da keine Messung vom 1. des Monats vorliegt, kann der Verbrauch '
+        'für den gesamten Monat nicht zuverlässig berechnet werden.\n\n'
+        'Erst wenn ein Monat vollständig – von Anfang bis Ende – mit '
+        'Messwerten abgedeckt ist, fließt er in den Abschlagsvergleich ein.',
+        style: GoogleFonts.rajdhani(
+          fontSize: 14,
+          color: AppColors.textPrimary,
+          height: 1.5,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            'OK',
+            style: GoogleFonts.rajdhani(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.greenDark,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
