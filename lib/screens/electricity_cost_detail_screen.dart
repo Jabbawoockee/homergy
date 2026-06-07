@@ -57,6 +57,10 @@ class _ElectricityCostDetailScreenState
         .map((r) => (value: r.value, timestamp: r.timestamp))
         .toList();
 
+    // Load full advance payment history once (sorted by validFrom asc)
+    final advanceChanges =
+        await AppDatabase.instance.getAllAdvancePaymentChanges('electricity');
+
     final now = DateTime.now();
     final months = <_MonthData>[];
     int year = displayStart.year;
@@ -81,6 +85,19 @@ class _ElectricityCostDetailScreenState
         final dayTwo = DateTime(year, month, 2);
         final isIncomplete = !pts.any((r) => r.timestamp.isBefore(dayTwo));
 
+        // Find which advance payment was active at end of this month
+        final endMs = lastDay.millisecondsSinceEpoch;
+        AdvancePaymentChange? bestChange;
+        for (final c in advanceChanges) {
+          if (c.validFrom <= endMs) {
+            bestChange = c;
+          } else {
+            break;
+          }
+        }
+        final advancePayment =
+            bestChange?.amount ?? contract.monthlyAdvancePayment;
+
         months.add(_MonthData(
           year: year,
           month: month,
@@ -90,14 +107,13 @@ class _ElectricityCostDetailScreenState
           pricePerKwh: contract.pricePerKwh,
           providerName: contract.displayName,
           isIncomplete: isIncomplete,
+          advancePayment: advancePayment,
         ));
       }
 
       month++;
       if (month > 12) { month = 1; year++; }
     }
-
-    final advancePayment = latestContract.monthlyAdvancePayment;
 
     // Projection for the current (incomplete) month
     _Projection? projection;
@@ -161,7 +177,6 @@ class _ElectricityCostDetailScreenState
       hasContracts: true,
       providerName: providerName,
       displayStart: displayStart,
-      advancePayment: advancePayment,
       projection: projection,
     );
   }
@@ -217,7 +232,8 @@ class _ElectricityCostDetailScreenState
                   if (!data.hasContracts) return _noSettingsView();
                   if (data.months.isEmpty) return _emptyView(data);
 
-                  final hasAdvance = (data.advancePayment ?? 0) > 0;
+                  final hasAdvance =
+                      data.months.any((m) => (m.advancePayment ?? 0) > 0);
                   if (!hasAdvance) return _buildContent(data);
 
                   return Column(
@@ -276,23 +292,35 @@ class _ElectricityCostDetailScreenState
   }
 
   Widget _buildAbschlagPage(_CostData data) {
-    final advance = data.advancePayment!;
     final eurFmt = NumberFormat.currency(locale: 'de_DE', symbol: '€');
     const monthNames = [
       '', 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
       'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
     ];
 
-    final deltas = data.months
-        .map((m) => m.isIncomplete ? 0.0 : advance - m.total)
-        .toList();
+    // Per-month delta: advance - actualCost (0 if incomplete or no advance)
+    final deltas = data.months.map((m) {
+      final adv = m.advancePayment ?? 0.0;
+      if (m.isIncomplete || adv <= 0) return 0.0;
+      return adv - m.total;
+    }).toList();
+
     final cumulativeBalance = deltas.fold(0.0, (s, d) => s + d);
-    final completeMonths = data.months.where((m) => !m.isIncomplete).toList();
-    final totalPaid = advance * completeMonths.length;
-    final totalCost = completeMonths.fold(0.0, (s, m) => s + m.total);
+
+    // Only count complete months that had an advance payment
+    final completeWithAdv = data.months
+        .where((m) => !m.isIncomplete && (m.advancePayment ?? 0) > 0)
+        .toList();
+    final totalPaid =
+        completeWithAdv.fold(0.0, (s, m) => s + (m.advancePayment ?? 0));
+    final totalCost = completeWithAdv.fold(0.0, (s, m) => s + m.total);
+
     final monthsInSurplus = [
       for (int i = 0; i < data.months.length; i++)
-        if (!data.months[i].isIncomplete && deltas[i] >= 0) true,
+        if (!data.months[i].isIncomplete &&
+            (data.months[i].advancePayment ?? 0) > 0 &&
+            deltas[i] >= 0)
+          true,
     ].length;
 
     return SingleChildScrollView(
@@ -331,7 +359,7 @@ class _ElectricityCostDetailScreenState
             _AbschlagMonthCard(
               month: data.months[i],
               monthName: monthNames[data.months[i].month],
-              advance: advance,
+              advance: data.months[i].advancePayment,
               delta: deltas[i],
               eurFmt: eurFmt,
               projection: i == 0 ? data.projection : null,
@@ -341,7 +369,7 @@ class _ElectricityCostDetailScreenState
           const SizedBox(height: 8),
           _SurplusBar(
             monthsInSurplus: monthsInSurplus,
-            totalMonths: completeMonths.length,
+            totalMonths: completeWithAdv.length,
           ),
           const SizedBox(height: 24),
         ],
@@ -464,7 +492,6 @@ class _CostData {
   final bool hasContracts;
   final String providerName;
   final DateTime? displayStart;
-  final double? advancePayment;
   final _Projection? projection;
 
   const _CostData({
@@ -472,7 +499,6 @@ class _CostData {
     required this.hasContracts,
     required this.providerName,
     required this.displayStart,
-    this.advancePayment,
     this.projection,
   });
 }
@@ -482,6 +508,7 @@ class _MonthData {
   final double consumptionKwh, elecCost, basePrice, pricePerKwh;
   final String providerName;
   final bool isIncomplete;
+  final double? advancePayment;
   double get total => elecCost + basePrice;
   const _MonthData({
     required this.year,
@@ -492,6 +519,7 @@ class _MonthData {
     required this.pricePerKwh,
     required this.providerName,
     this.isIncomplete = false,
+    this.advancePayment,
   });
 }
 
@@ -721,7 +749,8 @@ class _SaldoCard extends StatelessWidget {
 class _AbschlagMonthCard extends StatelessWidget {
   final _MonthData month;
   final String monthName;
-  final double advance, delta;
+  final double? advance;
+  final double delta;
   final NumberFormat eurFmt;
   final _Projection? projection;
 
@@ -796,7 +825,9 @@ class _AbschlagMonthCard extends StatelessWidget {
                         ),
                         const Spacer(),
                         Text(
-                          eurFmt.format(advance),
+                          (advance != null && advance! > 0)
+                              ? eurFmt.format(advance)
+                              : '–',
                           style: GoogleFonts.spaceMono(
                             fontSize: 12,
                             color: AppColors.textSecondary,
@@ -868,13 +899,13 @@ class _AbschlagMonthCard extends StatelessWidget {
                 ),
             ],
           ),
-          if (projection != null) ...[
+          if (projection != null && (advance ?? 0) > 0) ...[
             const SizedBox(height: 10),
             Container(height: 1, color: AppColors.border),
             const SizedBox(height: 10),
             _ProjectionRow(
               projection: projection!,
-              advance: advance,
+              advance: advance!,
               eurFmt: eurFmt,
               monthName: monthName,
               month: month,

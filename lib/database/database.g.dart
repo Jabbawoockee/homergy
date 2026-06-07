@@ -76,6 +76,23 @@ class SettingsDaoManager {
       $$AppSettingsTableTableManager(_db.attachedDatabase, _db.appSettings);
 }
 
+mixin _$AdvancePaymentChangesDaoMixin on DatabaseAccessor<AppDatabase> {
+  $AdvancePaymentChangesTable get advancePaymentChanges =>
+      attachedDatabase.advancePaymentChanges;
+  AdvancePaymentChangesDaoManager get managers =>
+      AdvancePaymentChangesDaoManager(this);
+}
+
+class AdvancePaymentChangesDaoManager {
+  final _$AdvancePaymentChangesDaoMixin _db;
+  AdvancePaymentChangesDaoManager(this._db);
+  $$AdvancePaymentChangesTableTableManager get advancePaymentChanges =>
+      $$AdvancePaymentChangesTableTableManager(
+        _db.attachedDatabase,
+        _db.advancePaymentChanges,
+      );
+}
+
 mixin _$WeatherDaoMixin on DatabaseAccessor<AppDatabase> {
   $WeatherCachesTable get weatherCaches => attachedDatabase.weatherCaches;
   WeatherDaoManager get managers => WeatherDaoManager(this);
@@ -3702,6 +3719,413 @@ class WeatherCachesCompanion extends UpdateCompanion<WeatherCache> {
   }
 }
 
+class $AdvancePaymentChangesTable extends AdvancePaymentChanges
+    with TableInfo<$AdvancePaymentChangesTable, AdvancePaymentChange> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AdvancePaymentChangesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _contractTypeMeta = const VerificationMeta(
+    'contractType',
+  );
+  @override
+  late final GeneratedColumn<String> contractType = GeneratedColumn<String>(
+    'contract_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _validFromMeta = const VerificationMeta(
+    'validFrom',
+  );
+  @override
+  late final GeneratedColumn<int> validFrom = GeneratedColumn<int>(
+    'valid_from',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isSyncedMeta = const VerificationMeta(
+    'isSynced',
+  );
+  @override
+  late final GeneratedColumn<bool> isSynced = GeneratedColumn<bool>(
+    'is_synced',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_synced" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _remoteIdMeta = const VerificationMeta(
+    'remoteId',
+  );
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+    'remote_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    contractType,
+    amount,
+    validFrom,
+    isSynced,
+    remoteId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'advance_payment_changes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AdvancePaymentChange> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('contract_type')) {
+      context.handle(
+        _contractTypeMeta,
+        contractType.isAcceptableOrUnknown(
+          data['contract_type']!,
+          _contractTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contractTypeMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('valid_from')) {
+      context.handle(
+        _validFromMeta,
+        validFrom.isAcceptableOrUnknown(data['valid_from']!, _validFromMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_validFromMeta);
+    }
+    if (data.containsKey('is_synced')) {
+      context.handle(
+        _isSyncedMeta,
+        isSynced.isAcceptableOrUnknown(data['is_synced']!, _isSyncedMeta),
+      );
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(
+        _remoteIdMeta,
+        remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AdvancePaymentChange map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AdvancePaymentChange(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      contractType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}contract_type'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount'],
+      )!,
+      validFrom: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}valid_from'],
+      )!,
+      isSynced: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_synced'],
+      )!,
+      remoteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_id'],
+      ),
+    );
+  }
+
+  @override
+  $AdvancePaymentChangesTable createAlias(String alias) {
+    return $AdvancePaymentChangesTable(attachedDatabase, alias);
+  }
+}
+
+class AdvancePaymentChange extends DataClass
+    implements Insertable<AdvancePaymentChange> {
+  final int id;
+  final String contractType;
+  final double amount;
+  final int validFrom;
+  final bool isSynced;
+  final String? remoteId;
+  const AdvancePaymentChange({
+    required this.id,
+    required this.contractType,
+    required this.amount,
+    required this.validFrom,
+    required this.isSynced,
+    this.remoteId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['contract_type'] = Variable<String>(contractType);
+    map['amount'] = Variable<double>(amount);
+    map['valid_from'] = Variable<int>(validFrom);
+    map['is_synced'] = Variable<bool>(isSynced);
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
+    return map;
+  }
+
+  AdvancePaymentChangesCompanion toCompanion(bool nullToAbsent) {
+    return AdvancePaymentChangesCompanion(
+      id: Value(id),
+      contractType: Value(contractType),
+      amount: Value(amount),
+      validFrom: Value(validFrom),
+      isSynced: Value(isSynced),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+    );
+  }
+
+  factory AdvancePaymentChange.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AdvancePaymentChange(
+      id: serializer.fromJson<int>(json['id']),
+      contractType: serializer.fromJson<String>(json['contractType']),
+      amount: serializer.fromJson<double>(json['amount']),
+      validFrom: serializer.fromJson<int>(json['validFrom']),
+      isSynced: serializer.fromJson<bool>(json['isSynced']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'contractType': serializer.toJson<String>(contractType),
+      'amount': serializer.toJson<double>(amount),
+      'validFrom': serializer.toJson<int>(validFrom),
+      'isSynced': serializer.toJson<bool>(isSynced),
+      'remoteId': serializer.toJson<String?>(remoteId),
+    };
+  }
+
+  AdvancePaymentChange copyWith({
+    int? id,
+    String? contractType,
+    double? amount,
+    int? validFrom,
+    bool? isSynced,
+    Value<String?> remoteId = const Value.absent(),
+  }) => AdvancePaymentChange(
+    id: id ?? this.id,
+    contractType: contractType ?? this.contractType,
+    amount: amount ?? this.amount,
+    validFrom: validFrom ?? this.validFrom,
+    isSynced: isSynced ?? this.isSynced,
+    remoteId: remoteId.present ? remoteId.value : this.remoteId,
+  );
+  AdvancePaymentChange copyWithCompanion(AdvancePaymentChangesCompanion data) {
+    return AdvancePaymentChange(
+      id: data.id.present ? data.id.value : this.id,
+      contractType: data.contractType.present
+          ? data.contractType.value
+          : this.contractType,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      validFrom: data.validFrom.present ? data.validFrom.value : this.validFrom,
+      isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AdvancePaymentChange(')
+          ..write('id: $id, ')
+          ..write('contractType: $contractType, ')
+          ..write('amount: $amount, ')
+          ..write('validFrom: $validFrom, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('remoteId: $remoteId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, contractType, amount, validFrom, isSynced, remoteId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AdvancePaymentChange &&
+          other.id == this.id &&
+          other.contractType == this.contractType &&
+          other.amount == this.amount &&
+          other.validFrom == this.validFrom &&
+          other.isSynced == this.isSynced &&
+          other.remoteId == this.remoteId);
+}
+
+class AdvancePaymentChangesCompanion
+    extends UpdateCompanion<AdvancePaymentChange> {
+  final Value<int> id;
+  final Value<String> contractType;
+  final Value<double> amount;
+  final Value<int> validFrom;
+  final Value<bool> isSynced;
+  final Value<String?> remoteId;
+  const AdvancePaymentChangesCompanion({
+    this.id = const Value.absent(),
+    this.contractType = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.validFrom = const Value.absent(),
+    this.isSynced = const Value.absent(),
+    this.remoteId = const Value.absent(),
+  });
+  AdvancePaymentChangesCompanion.insert({
+    this.id = const Value.absent(),
+    required String contractType,
+    required double amount,
+    required int validFrom,
+    this.isSynced = const Value.absent(),
+    this.remoteId = const Value.absent(),
+  }) : contractType = Value(contractType),
+       amount = Value(amount),
+       validFrom = Value(validFrom);
+  static Insertable<AdvancePaymentChange> custom({
+    Expression<int>? id,
+    Expression<String>? contractType,
+    Expression<double>? amount,
+    Expression<int>? validFrom,
+    Expression<bool>? isSynced,
+    Expression<String>? remoteId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (contractType != null) 'contract_type': contractType,
+      if (amount != null) 'amount': amount,
+      if (validFrom != null) 'valid_from': validFrom,
+      if (isSynced != null) 'is_synced': isSynced,
+      if (remoteId != null) 'remote_id': remoteId,
+    });
+  }
+
+  AdvancePaymentChangesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? contractType,
+    Value<double>? amount,
+    Value<int>? validFrom,
+    Value<bool>? isSynced,
+    Value<String?>? remoteId,
+  }) {
+    return AdvancePaymentChangesCompanion(
+      id: id ?? this.id,
+      contractType: contractType ?? this.contractType,
+      amount: amount ?? this.amount,
+      validFrom: validFrom ?? this.validFrom,
+      isSynced: isSynced ?? this.isSynced,
+      remoteId: remoteId ?? this.remoteId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (contractType.present) {
+      map['contract_type'] = Variable<String>(contractType.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (validFrom.present) {
+      map['valid_from'] = Variable<int>(validFrom.value);
+    }
+    if (isSynced.present) {
+      map['is_synced'] = Variable<bool>(isSynced.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AdvancePaymentChangesCompanion(')
+          ..write('id: $id, ')
+          ..write('contractType: $contractType, ')
+          ..write('amount: $amount, ')
+          ..write('validFrom: $validFrom, ')
+          ..write('isSynced: $isSynced, ')
+          ..write('remoteId: $remoteId')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3713,6 +4137,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $ElectricityContractsTable(this);
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   late final $WeatherCachesTable weatherCaches = $WeatherCachesTable(this);
+  late final $AdvancePaymentChangesTable advancePaymentChanges =
+      $AdvancePaymentChangesTable(this);
   late final ReadingsDao readingsDao = ReadingsDao(this as AppDatabase);
   late final ElectricityReadingsDao electricityReadingsDao =
       ElectricityReadingsDao(this as AppDatabase);
@@ -3721,6 +4147,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       ElectricityContractsDao(this as AppDatabase);
   late final SettingsDao settingsDao = SettingsDao(this as AppDatabase);
   late final WeatherDao weatherDao = WeatherDao(this as AppDatabase);
+  late final AdvancePaymentChangesDao advancePaymentChangesDao =
+      AdvancePaymentChangesDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3732,6 +4160,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     electricityContracts,
     appSettings,
     weatherCaches,
+    advancePaymentChanges,
   ];
 }
 
@@ -5498,6 +5927,240 @@ typedef $$WeatherCachesTableProcessedTableManager =
       WeatherCache,
       PrefetchHooks Function()
     >;
+typedef $$AdvancePaymentChangesTableCreateCompanionBuilder =
+    AdvancePaymentChangesCompanion Function({
+      Value<int> id,
+      required String contractType,
+      required double amount,
+      required int validFrom,
+      Value<bool> isSynced,
+      Value<String?> remoteId,
+    });
+typedef $$AdvancePaymentChangesTableUpdateCompanionBuilder =
+    AdvancePaymentChangesCompanion Function({
+      Value<int> id,
+      Value<String> contractType,
+      Value<double> amount,
+      Value<int> validFrom,
+      Value<bool> isSynced,
+      Value<String?> remoteId,
+    });
+
+class $$AdvancePaymentChangesTableFilterComposer
+    extends Composer<_$AppDatabase, $AdvancePaymentChangesTable> {
+  $$AdvancePaymentChangesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contractType => $composableBuilder(
+    column: $table.contractType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get validFrom => $composableBuilder(
+    column: $table.validFrom,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AdvancePaymentChangesTableOrderingComposer
+    extends Composer<_$AppDatabase, $AdvancePaymentChangesTable> {
+  $$AdvancePaymentChangesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contractType => $composableBuilder(
+    column: $table.contractType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get validFrom => $composableBuilder(
+    column: $table.validFrom,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSynced => $composableBuilder(
+    column: $table.isSynced,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AdvancePaymentChangesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AdvancePaymentChangesTable> {
+  $$AdvancePaymentChangesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get contractType => $composableBuilder(
+    column: $table.contractType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<int> get validFrom =>
+      $composableBuilder(column: $table.validFrom, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSynced =>
+      $composableBuilder(column: $table.isSynced, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+}
+
+class $$AdvancePaymentChangesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AdvancePaymentChangesTable,
+          AdvancePaymentChange,
+          $$AdvancePaymentChangesTableFilterComposer,
+          $$AdvancePaymentChangesTableOrderingComposer,
+          $$AdvancePaymentChangesTableAnnotationComposer,
+          $$AdvancePaymentChangesTableCreateCompanionBuilder,
+          $$AdvancePaymentChangesTableUpdateCompanionBuilder,
+          (
+            AdvancePaymentChange,
+            BaseReferences<
+              _$AppDatabase,
+              $AdvancePaymentChangesTable,
+              AdvancePaymentChange
+            >,
+          ),
+          AdvancePaymentChange,
+          PrefetchHooks Function()
+        > {
+  $$AdvancePaymentChangesTableTableManager(
+    _$AppDatabase db,
+    $AdvancePaymentChangesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AdvancePaymentChangesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$AdvancePaymentChangesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$AdvancePaymentChangesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> contractType = const Value.absent(),
+                Value<double> amount = const Value.absent(),
+                Value<int> validFrom = const Value.absent(),
+                Value<bool> isSynced = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+              }) => AdvancePaymentChangesCompanion(
+                id: id,
+                contractType: contractType,
+                amount: amount,
+                validFrom: validFrom,
+                isSynced: isSynced,
+                remoteId: remoteId,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String contractType,
+                required double amount,
+                required int validFrom,
+                Value<bool> isSynced = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+              }) => AdvancePaymentChangesCompanion.insert(
+                id: id,
+                contractType: contractType,
+                amount: amount,
+                validFrom: validFrom,
+                isSynced: isSynced,
+                remoteId: remoteId,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AdvancePaymentChangesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AdvancePaymentChangesTable,
+      AdvancePaymentChange,
+      $$AdvancePaymentChangesTableFilterComposer,
+      $$AdvancePaymentChangesTableOrderingComposer,
+      $$AdvancePaymentChangesTableAnnotationComposer,
+      $$AdvancePaymentChangesTableCreateCompanionBuilder,
+      $$AdvancePaymentChangesTableUpdateCompanionBuilder,
+      (
+        AdvancePaymentChange,
+        BaseReferences<
+          _$AppDatabase,
+          $AdvancePaymentChangesTable,
+          AdvancePaymentChange
+        >,
+      ),
+      AdvancePaymentChange,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5514,4 +6177,6 @@ class $AppDatabaseManager {
       $$AppSettingsTableTableManager(_db, _db.appSettings);
   $$WeatherCachesTableTableManager get weatherCaches =>
       $$WeatherCachesTableTableManager(_db, _db.weatherCaches);
+  $$AdvancePaymentChangesTableTableManager get advancePaymentChanges =>
+      $$AdvancePaymentChangesTableTableManager(_db, _db.advancePaymentChanges);
 }

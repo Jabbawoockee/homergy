@@ -18,6 +18,7 @@ class SyncService {
   static const _contractsTable          = 'price_contracts';
   static const _elecReadingsTable       = 'electricity_readings';
   static const _elecContractsTable      = 'electricity_contracts';
+  static const _advanceChangesTable     = 'advance_payment_changes';
 
   /// Push unsynced local records to Supabase, then pull missing remote records.
   Future<void> syncAll() async {
@@ -32,6 +33,8 @@ class SyncService {
     await _pullMissingContracts(user.id);
     await _pushPendingElectricityContracts(user.id);
     await _pullMissingElectricityContracts(user.id);
+    await _pushPendingAdvancePaymentChanges(user.id);
+    await _pullMissingAdvancePaymentChanges(user.id);
     await _prefetchWeather();
   }
 
@@ -466,6 +469,62 @@ class SyncService {
       debugPrint('[Sync] Contract deleted remote: $remoteId');
     } catch (e) {
       debugPrint('[Sync] Contract remote delete failed: $e');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Advance payment changes
+  // ---------------------------------------------------------------------------
+
+  Future<void> _pushPendingAdvancePaymentChanges(String userId) async {
+    try {
+      final unsynced = await _db.getUnsyncedAdvancePaymentChanges();
+      for (final c in unsynced) {
+        if (c.remoteId == null) {
+          final response = await _client.from(_advanceChangesTable).insert({
+            'user_id': userId,
+            'contract_type': c.contractType,
+            'amount': c.amount,
+            'valid_from': c.validFrom,
+          }).select('id').single();
+          await _db.markAdvancePaymentChangeSynced(c.id, response['id'] as String);
+          debugPrint('[Sync] AdvanceChange inserted: local=${c.id} remote=${response['id']}');
+        } else {
+          await _client.from(_advanceChangesTable).update({
+            'amount': c.amount,
+            'valid_from': c.validFrom,
+          }).eq('id', c.remoteId!);
+          await _db.markAdvancePaymentChangeSynced(c.id, c.remoteId!);
+          debugPrint('[Sync] AdvanceChange updated: ${c.remoteId}');
+        }
+      }
+    } catch (e) {
+      debugPrint('[Sync] AdvancePaymentChanges push failed: $e');
+    }
+  }
+
+  Future<void> _pullMissingAdvancePaymentChanges(String userId) async {
+    try {
+      final knownIds = await _db.getAllRemoteAdvancePaymentChangeIds();
+      final List<dynamic> remote = await _client
+          .from(_advanceChangesTable)
+          .select('id, contract_type, amount, valid_from')
+          .eq('user_id', userId);
+      for (final row in remote) {
+        final remoteId = row['id'] as String;
+        if (!knownIds.contains(remoteId)) {
+          await _db.insertAdvancePaymentChange(AdvancePaymentChangesCompanion(
+            contractType: Value(row['contract_type'] as String),
+            amount: Value((row['amount'] as num).toDouble()),
+            validFrom: Value(row['valid_from'] as int),
+            isSynced: const Value(true),
+            remoteId: Value(remoteId),
+          ));
+          debugPrint('[Sync] AdvanceChange pulled: $remoteId');
+        }
+      }
+    } catch (e) {
+      debugPrint('[Sync] AdvancePaymentChanges pull failed: $e');
     }
   }
 }

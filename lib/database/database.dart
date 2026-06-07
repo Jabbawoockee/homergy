@@ -94,6 +94,18 @@ class ElectricityContracts extends Table {
 // Price contracts table
 // ---------------------------------------------------------------------------
 
+/// Tracks changes to the monthly advance payment (Abschlag) over time.
+/// One entry per change: the latest entry with validFrom <= monthEnd defines
+/// the advance payment for that month.
+class AdvancePaymentChanges extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get contractType => text()(); // 'gas' | 'electricity'
+  RealColumn get amount => real()();
+  IntColumn get validFrom => integer()(); // ms since epoch
+  BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
+  TextColumn get remoteId => text().nullable()();
+}
+
 class PriceContracts extends Table {
   IntColumn get id => integer().autoIncrement()();
   /// Internal unique name, e.g. "Stadtwerke_1". Never shown to the user.
@@ -487,6 +499,60 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
 }
 
 // ---------------------------------------------------------------------------
+// DAO — Advance Payment Changes
+// ---------------------------------------------------------------------------
+
+@DriftAccessor(tables: [AdvancePaymentChanges])
+class AdvancePaymentChangesDao extends DatabaseAccessor<AppDatabase>
+    with _$AdvancePaymentChangesDaoMixin {
+  AdvancePaymentChangesDao(super.db);
+
+  Future<int> insertChange(AdvancePaymentChangesCompanion entry) =>
+      into(advancePaymentChanges).insert(entry);
+
+  /// All changes for a contract type, ordered ascending by validFrom.
+  Future<List<AdvancePaymentChange>> getAllForType(String contractType) =>
+      (select(advancePaymentChanges)
+            ..where((t) => t.contractType.equals(contractType))
+            ..orderBy([(t) => OrderingTerm.asc(t.validFrom)]))
+          .get();
+
+  /// The change that was active at [date]: latest entry with validFrom <= date.
+  Future<AdvancePaymentChange?> getForDate(
+      String contractType, DateTime date) async {
+    final ms = date.millisecondsSinceEpoch;
+    final results = await (select(advancePaymentChanges)
+          ..where((t) =>
+              t.contractType.equals(contractType) &
+              t.validFrom.isSmallerOrEqualValue(ms))
+          ..orderBy([(t) => OrderingTerm.desc(t.validFrom)])
+          ..limit(1))
+        .get();
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<List<AdvancePaymentChange>> getUnsynced() =>
+      (select(advancePaymentChanges)
+            ..where((t) => t.isSynced.equals(false)))
+          .get();
+
+  Future<void> markSynced(int localId, String remoteId) =>
+      (update(advancePaymentChanges)
+            ..where((t) => t.id.equals(localId)))
+          .write(AdvancePaymentChangesCompanion(
+            isSynced: const Value(true),
+            remoteId: Value(remoteId),
+          ));
+
+  Future<Set<String>> getAllRemoteIds() async {
+    final rows = await (select(advancePaymentChanges)
+          ..where((t) => t.remoteId.isNotNull()))
+        .get();
+    return rows.map((r) => r.remoteId!).toSet();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // DAO — Weather Cache
 // ---------------------------------------------------------------------------
 
@@ -526,6 +592,7 @@ class WeatherDao extends DatabaseAccessor<AppDatabase>
     ElectricityContracts,
     AppSettings,
     WeatherCaches,
+    AdvancePaymentChanges,
   ],
   daos: [
     ReadingsDao,
@@ -534,6 +601,7 @@ class WeatherDao extends DatabaseAccessor<AppDatabase>
     ElectricityContractsDao,
     SettingsDao,
     WeatherDao,
+    AdvancePaymentChangesDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -545,7 +613,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -597,6 +665,20 @@ class AppDatabase extends _$AppDatabase {
       if (from < 13) {
         await migrator.addColumn(appSettings, appSettings.constructionYear);
         await migrator.addColumn(appSettings, appSettings.isInsulated);
+      }
+      if (from < 14) {
+        await migrator.createTable(advancePaymentChanges);
+        // Migrate existing advance payment data from contracts into history table
+        await customStatement('''
+          INSERT INTO advance_payment_changes (contract_type, amount, valid_from, is_synced)
+          SELECT 'gas', monthly_advance_payment, valid_from, 0
+          FROM price_contracts WHERE monthly_advance_payment IS NOT NULL
+        ''');
+        await customStatement('''
+          INSERT INTO advance_payment_changes (contract_type, amount, valid_from, is_synced)
+          SELECT 'electricity', monthly_advance_payment, valid_from, 0
+          FROM electricity_contracts WHERE monthly_advance_payment IS NOT NULL
+        ''');
       }
     },
   );
@@ -772,6 +854,36 @@ class AppDatabase extends _$AppDatabase {
   Future<Set<String>> getAllRemoteContractIds() =>
       contractsDao.getAllRemoteContractIds();
 
+  // ── Advance payment changes pass-throughs ────────────────────────────────
+
+  Future<int> insertAdvancePaymentChange(AdvancePaymentChangesCompanion entry) =>
+      advancePaymentChangesDao.insertChange(entry);
+
+  /// All changes for a contract type, ordered by validFrom ascending.
+  Future<List<AdvancePaymentChange>> getAllAdvancePaymentChanges(String type) =>
+      advancePaymentChangesDao.getAllForType(type);
+
+  /// The advance payment amount active at [date], or null if none recorded.
+  Future<double?> getAdvanceAmountForDate(String type, DateTime date) async {
+    final change = await advancePaymentChangesDao.getForDate(type, date);
+    return change?.amount;
+  }
+
+  /// The most recent advance payment change for a contract type.
+  Future<AdvancePaymentChange?> getLatestAdvancePaymentChange(String type) async {
+    final all = await advancePaymentChangesDao.getAllForType(type);
+    return all.isNotEmpty ? all.last : null;
+  }
+
+  Future<List<AdvancePaymentChange>> getUnsyncedAdvancePaymentChanges() =>
+      advancePaymentChangesDao.getUnsynced();
+
+  Future<void> markAdvancePaymentChangeSynced(int localId, String remoteId) =>
+      advancePaymentChangesDao.markSynced(localId, remoteId);
+
+  Future<Set<String>> getAllRemoteAdvancePaymentChangeIds() =>
+      advancePaymentChangesDao.getAllRemoteIds();
+
   /// Wipes all user data from local DB (called on sign-out).
   Future<void> clearAllUserData() async {
     await delete(meterReadings).go();
@@ -780,6 +892,7 @@ class AppDatabase extends _$AppDatabase {
     await delete(electricityContracts).go();
     await delete(appSettings).go();
     await delete(weatherCaches).go();
+    await delete(advancePaymentChanges).go();
   }
 }
 

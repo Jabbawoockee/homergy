@@ -5,6 +5,7 @@ import '../database/database.dart';
 import '../services/settings_service.dart';
 import '../services/sync_service.dart';
 import '../theme/colors.dart';
+import '../widgets/advance_payment_dialog.dart';
 import 'settings_widgets.dart';
 
 class GasSettingsScreen extends StatefulWidget {
@@ -136,7 +137,38 @@ class _GasSettingsScreenState extends State<GasSettingsScreen> {
         brennwert: Value(bw),
         zustandszahl: Value(zz),
       ));
+      // Auto-create advance payment history entry for new contract
+      if (advParsed != null) {
+        await AppDatabase.instance.insertAdvancePaymentChange(AdvancePaymentChangesCompanion(
+          contractType: const Value('gas'),
+          amount: Value(advParsed),
+          validFrom: Value(_validFrom!.millisecondsSinceEpoch),
+        ));
+      }
     } else {
+      final oldAdv = _latestContract!.monthlyAdvancePayment;
+      final advChanged = advParsed != oldAdv;
+
+      // If advance payment changed, ask from when it applies
+      DateTime? advValidFrom;
+      double? finalAdv = advParsed;
+      if (advChanged && advParsed != null) {
+        if (!mounted) return;
+        final result = await showDialog<({double amount, DateTime validFrom})>(
+          context: context,
+          builder: (_) => AdvancePaymentDialog(
+            currentAmount: advParsed,
+            accentColor: AppColors.green,
+          ),
+        );
+        if (result == null) {
+          setState(() => _isSaving = false);
+          return;
+        }
+        advValidFrom = result.validFrom;
+        finalAdv = result.amount;
+      }
+
       await AppDatabase.instance.updateContract(PriceContractsCompanion(
         id: Value(_latestContract!.id),
         internalName: Value(_latestContract!.internalName),
@@ -145,11 +177,19 @@ class _GasSettingsScreenState extends State<GasSettingsScreen> {
         monthlyBasePrice: Value(baseParsed),
         validFrom: Value(_validFrom!.millisecondsSinceEpoch),
         contractEndDate: Value(_contractEndDate?.millisecondsSinceEpoch),
-        monthlyAdvancePayment: Value(advParsed),
+        monthlyAdvancePayment: Value(finalAdv),
         brennwert: Value(bw),
         zustandszahl: Value(zz),
         isSynced: const Value(false),
       ));
+
+      if (advChanged && finalAdv != null && advValidFrom != null) {
+        await AppDatabase.instance.insertAdvancePaymentChange(AdvancePaymentChangesCompanion(
+          contractType: const Value('gas'),
+          amount: Value(finalAdv),
+          validFrom: Value(advValidFrom.millisecondsSinceEpoch),
+        ));
+      }
     }
     await _load();
     SyncService().syncAll();
