@@ -95,12 +95,70 @@ class _ElectricityCostDetailScreenState
 
     final advancePayment = latestContract.monthlyAdvancePayment;
 
+    // Projection for the current (incomplete) month
+    _Projection? projection;
+    if (months.isNotEmpty) {
+      final newest = months.last;
+      final nowP = DateTime.now();
+      if (newest.year == nowP.year && newest.month == nowP.month) {
+        final monthStart = DateTime(nowP.year, nowP.month, 1);
+        final daysInMonth = DateTime(nowP.year, nowP.month + 1, 0).day;
+
+        double? startVal = MeterInterpolator.interpolateAt(pts, monthStart);
+        DateTime startTime = monthStart;
+        if (startVal == null) {
+          final monthEnd = DateTime(nowP.year, nowP.month + 1, 1);
+          final sorted = [...pts]..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+          final firstInMonth = sorted.where((r) =>
+              !r.timestamp.isBefore(monthStart) &&
+              r.timestamp.isBefore(monthEnd)).firstOrNull;
+          if (firstInMonth != null) {
+            startVal = firstInMonth.value;
+            startTime = firstInMonth.timestamp;
+          }
+        }
+
+        if (startVal != null) {
+          final candidates = pts.where((r) => !r.timestamp.isAfter(nowP)).toList();
+          if (candidates.isNotEmpty) {
+            final lastPt = candidates.reduce(
+                (a, b) => a.timestamp.isAfter(b.timestamp) ? a : b);
+            final elapsed = lastPt.timestamp.difference(startTime);
+            final daysElapsedFrac = elapsed.inMinutes / (24.0 * 60);
+            if (daysElapsedFrac > 0 && lastPt.value > startVal) {
+              final consumptionSoFarKwh = lastPt.value - startVal;
+              final contract = allContracts.lastWhere(
+                (c) => DateTime.fromMillisecondsSinceEpoch(c.validFrom)
+                    .isBefore(nowP),
+                orElse: () => latestContract,
+              );
+              final projectedKwh =
+                  consumptionSoFarKwh * daysInMonth / daysElapsedFrac;
+              final projectedCost =
+                  projectedKwh * contract.pricePerKwh + contract.monthlyBasePrice;
+              projection = _Projection(
+                projectedTotal: projectedCost,
+                projectedKwh: projectedKwh,
+                consumptionSoFarKwh: consumptionSoFarKwh,
+                daysElapsedFrac: daysElapsedFrac,
+                daysElapsedDisplay: elapsed.inDays.clamp(1, 31),
+                daysInMonth: daysInMonth,
+                pricePerKwh: contract.pricePerKwh,
+                basePrice: contract.monthlyBasePrice,
+              );
+            }
+          }
+        }
+      }
+    }
+
     return _CostData(
       months: months.reversed.toList(),
       hasContracts: true,
       providerName: providerName,
       displayStart: displayStart,
       advancePayment: advancePayment,
+      projection: projection,
     );
   }
 
@@ -266,6 +324,7 @@ class _ElectricityCostDetailScreenState
               advance: advance,
               delta: deltas[i],
               eurFmt: eurFmt,
+              projection: i == 0 ? data.projection : null,
             ),
             const SizedBox(height: 8),
           ],
@@ -396,6 +455,7 @@ class _CostData {
   final String providerName;
   final DateTime? displayStart;
   final double? advancePayment;
+  final _Projection? projection;
 
   const _CostData({
     required this.months,
@@ -403,6 +463,7 @@ class _CostData {
     required this.providerName,
     required this.displayStart,
     this.advancePayment,
+    this.projection,
   });
 }
 
@@ -642,6 +703,7 @@ class _AbschlagMonthCard extends StatelessWidget {
   final String monthName;
   final double advance, delta;
   final NumberFormat eurFmt;
+  final _Projection? projection;
 
   const _AbschlagMonthCard({
     required this.month,
@@ -649,6 +711,7 @@ class _AbschlagMonthCard extends StatelessWidget {
     required this.advance,
     required this.delta,
     required this.eurFmt,
+    this.projection,
   });
 
   @override
@@ -663,91 +726,108 @@ class _AbschlagMonthCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         boxShadow: AppColors.neu(5),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$monthName ${month.year}'.toUpperCase(),
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.amber,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Text(
-                      'Abschlag',
-                      style: GoogleFonts.rajdhani(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      eurFmt.format(advance),
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      'Istkosten',
-                      style: GoogleFonts.rajdhani(
-                        fontSize: 13,
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      eurFmt.format(month.total),
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 12,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          Container(width: 1, height: 52, color: AppColors.border),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(
-                isPositive
-                    ? Icons.arrow_upward_rounded
-                    : Icons.arrow_downward_rounded,
-                color: deltaColor,
-                size: 16,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${isPositive ? '+' : ''}${eurFmt.format(delta)}',
-                style: GoogleFonts.spaceMono(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: deltaColor,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$monthName ${month.year}'.toUpperCase(),
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.amber,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text(
+                          'Abschlag',
+                          style: GoogleFonts.rajdhani(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          eurFmt.format(advance),
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          'Istkosten',
+                          style: GoogleFonts.rajdhani(
+                            fontSize: 13,
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          eurFmt.format(month.total),
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 12,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
+              ),
+              const SizedBox(width: 16),
+              Container(width: 1, height: 52, color: AppColors.border),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Icon(
+                    isPositive
+                        ? Icons.arrow_upward_rounded
+                        : Icons.arrow_downward_rounded,
+                    color: deltaColor,
+                    size: 16,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${isPositive ? '+' : ''}${eurFmt.format(delta)}',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: deltaColor,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
+          if (projection != null) ...[
+            const SizedBox(height: 10),
+            Container(height: 1, color: AppColors.border),
+            const SizedBox(height: 10),
+            _ProjectionRow(
+              projection: projection!,
+              advance: advance,
+              eurFmt: eurFmt,
+              monthName: monthName,
+              month: month,
+            ),
+          ],
         ],
       ),
     );
@@ -820,6 +900,206 @@ class _SurplusBar extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Hochrechnung
+// ---------------------------------------------------------------------------
+
+class _Projection {
+  final double projectedTotal;
+  final double projectedKwh;
+  final double consumptionSoFarKwh;
+  final double daysElapsedFrac;
+  final int daysElapsedDisplay;
+  final int daysInMonth;
+  final double pricePerKwh;
+  final double basePrice;
+
+  const _Projection({
+    required this.projectedTotal,
+    required this.projectedKwh,
+    required this.consumptionSoFarKwh,
+    required this.daysElapsedFrac,
+    required this.daysElapsedDisplay,
+    required this.daysInMonth,
+    required this.pricePerKwh,
+    required this.basePrice,
+  });
+}
+
+class _ProjectionRow extends StatelessWidget {
+  final _Projection projection;
+  final double advance;
+  final NumberFormat eurFmt;
+  final String monthName;
+  final _MonthData month;
+
+  const _ProjectionRow({
+    super.key,
+    required this.projection,
+    required this.advance,
+    required this.eurFmt,
+    required this.monthName,
+    required this.month,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isOver = projection.projectedTotal > advance;
+    final color = isOver ? AppColors.error : AppColors.greenDark;
+
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: () => showDialog(
+            context: context,
+            builder: (_) => _ProjectionInfoDialog(
+              projection: projection,
+              monthName: monthName,
+              month: month,
+              eurFmt: eurFmt,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Hochrechnung',
+                style: GoogleFonts.rajdhani(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.info_outline_rounded,
+                  size: 13, color: AppColors.textSecondary),
+            ],
+          ),
+        ),
+        const Spacer(),
+        Text(
+          eurFmt.format(projection.projectedTotal),
+          style: GoogleFonts.spaceMono(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProjectionInfoDialog extends StatelessWidget {
+  final _Projection projection;
+  final String monthName;
+  final _MonthData month;
+  final NumberFormat eurFmt;
+
+  const _ProjectionInfoDialog({
+    super.key,
+    required this.projection,
+    required this.monthName,
+    required this.month,
+    required this.eurFmt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final elecCostOnly = projection.projectedKwh * projection.pricePerKwh;
+    final dailyAvgKwh =
+        projection.consumptionSoFarKwh / projection.daysElapsedFrac;
+
+    return AlertDialog(
+      backgroundColor: AppColors.background,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(
+        'HOCHRECHNUNG ${monthName.toUpperCase()} ${month.year}',
+        style: GoogleFonts.spaceMono(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: AppColors.amber,
+          letterSpacing: 1.2,
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _InfoSection(
+            'Bisheriger Zeitraum',
+            '${projection.daysElapsedDisplay} Tage',
+          ),
+          _InfoSection(
+            'Verbrauch bisher',
+            '${projection.consumptionSoFarKwh.toStringAsFixed(2)} kWh',
+          ),
+          _InfoSection(
+            'Tagesdurchschnitt',
+            '${dailyAvgKwh.toStringAsFixed(3)} kWh/Tag',
+          ),
+          _InfoSection(
+            'Hochrechnung auf ${projection.daysInMonth} Tage',
+            '${projection.projectedKwh.toStringAsFixed(2)} kWh'
+            ' × ${(projection.pricePerKwh * 100).toStringAsFixed(4)} ct/kWh'
+            '\n= ${eurFmt.format(elecCostOnly)}'
+            '\n+ Grundpreis ${eurFmt.format(projection.basePrice)}'
+            '\n= ${eurFmt.format(projection.projectedTotal)}',
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            'OK',
+            style: GoogleFonts.rajdhani(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.greenDark,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InfoSection extends StatelessWidget {
+  final String label, value;
+  const _InfoSection(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.rajdhani(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: GoogleFonts.spaceMono(
+              fontSize: 11,
+              color: AppColors.textPrimary,
+              height: 1.6,
             ),
           ),
         ],
