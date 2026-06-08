@@ -263,9 +263,9 @@ class _ElectricitySettingsScreenState extends State<ElectricitySettingsScreen> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   if (_latestContract != null) ...[
                     Row(children: [
-                      Expanded(child: SettingsToggleChip(label: 'Nein – Vertrag anpassen', selected: _isNewContract == false, accentColor: _blue, onTap: _selectNein)),
+                      Expanded(child: SettingsToggleChip(label: 'Vertrag anpassen', selected: _isNewContract == false, accentColor: _blue, onTap: _selectNein)),
                       const SizedBox(width: 8),
-                      Expanded(child: SettingsToggleChip(label: 'Ja – Neuer Anbieter', selected: _isNewContract == true, accentColor: _blue, onTap: _selectJa)),
+                      Expanded(child: SettingsToggleChip(label: 'Neuer Anbieter', selected: _isNewContract == true, accentColor: _blue, onTap: _selectJa)),
                     ]),
                   ],
                   AnimatedSize(

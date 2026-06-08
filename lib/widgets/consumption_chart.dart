@@ -314,10 +314,23 @@ class _ConsumptionChartState extends State<ConsumptionChart> {
         }
         return spots;
       case ChartPeriod.month:
+        // 5-day blocks matching consumption spots: 1–5, 6–10, 11–15, 16–20, 21–25, 26–lastDay
+        final lastDayOfMonth = DateTime(now.year, now.month + 1, 0).day;
+        final blockStarts = [1, 6, 11, 16, 21, 26];
         final spots = <FlSpot>[];
-        for (int day = 1; day <= now.day; day++) {
-          final temp = _temperatures[DateTime(now.year, now.month, day)];
-          if (temp != null) spots.add(FlSpot(day.toDouble(), temp));
+        for (final blockStart in blockStarts) {
+          if (blockStart > now.day) break;
+          final blockEnd = blockStart == 26 ? lastDayOfMonth : blockStart + 4;
+          final effectiveEnd = blockEnd.clamp(blockStart, now.day);
+          final blockTemps = <double>[];
+          for (int d = blockStart; d <= effectiveEnd; d++) {
+            final t = _temperatures[DateTime(now.year, now.month, d)];
+            if (t != null) blockTemps.add(t);
+          }
+          if (blockTemps.isNotEmpty) {
+            final avg = blockTemps.reduce((a, b) => a + b) / blockTemps.length;
+            spots.add(FlSpot(blockEnd.toDouble(), avg));
+          }
         }
         return spots;
       case ChartPeriod.year:
