@@ -36,6 +36,11 @@ class _ScanScreenState extends State<ScanScreen> {
   bool _isEditing = false;
   String? _ocrRawHint;
   int _meterIntDigits = 5;
+
+  static const _blue = Color(0xFF5B8DB8);
+  bool get _isElec => widget.meterType == MeterType.electricity;
+  Color get _accentColor => _isElec ? _blue : AppColors.green;
+  Color get _highlightColor => _isElec ? _blue : AppColors.amber;
   int _meterDecDigits = 1;
   double? _lastReading;
 
@@ -164,7 +169,7 @@ class _ScanScreenState extends State<ScanScreen> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: AppColors.green,
+            backgroundColor: _accentColor,
             content: Text(
               'Zählerstand ${parsed.toStringAsFixed(2)} $_unit gespeichert.',
               style: GoogleFonts.rajdhani(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
@@ -263,7 +268,7 @@ class _ScanScreenState extends State<ScanScreen> {
           style: GoogleFonts.spaceMono(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: AppColors.greenDark,
+            color: _accentColor,
             letterSpacing: 4,
           ),
         ),
@@ -301,6 +306,7 @@ class _ScanScreenState extends State<ScanScreen> {
             icon: Icons.photo_camera_outlined,
             label: 'FOTO AUFNEHMEN',
             sublabel: 'Kamera öffnen',
+            accentColor: _highlightColor,
             onPressed: () => _pickImage(ImageSource.camera),
           ),
           const SizedBox(height: 12),
@@ -308,6 +314,7 @@ class _ScanScreenState extends State<ScanScreen> {
             icon: Icons.photo_library_outlined,
             label: 'AUS GALERIE WÄHLEN',
             sublabel: 'Vorhandenes Bild',
+            accentColor: _highlightColor,
             onPressed: () => _pickImage(ImageSource.gallery),
           ),
           const SizedBox(height: 12),
@@ -315,6 +322,7 @@ class _ScanScreenState extends State<ScanScreen> {
             icon: Icons.edit_outlined,
             label: 'MANUELL EINGEBEN',
             sublabel: 'Zählerstand direkt eintippen',
+            accentColor: _highlightColor,
             onPressed: _startManualEntry,
           ),
           const SizedBox(height: 20),
@@ -347,7 +355,7 @@ class _ScanScreenState extends State<ScanScreen> {
           Center(
             child: Opacity(
               opacity: 0.08,
-              child: Icon(Icons.speed, size: 100, color: AppColors.greenDark),
+              child: Icon(_isElec ? Icons.bolt : Icons.speed, size: 100, color: _accentColor),
             ),
           ),
         ],
@@ -384,7 +392,7 @@ class _ScanScreenState extends State<ScanScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               CircularProgressIndicator(
-                                  color: AppColors.amber, strokeWidth: 2),
+                                  color: _highlightColor, strokeWidth: 2),
                               const SizedBox(height: 12),
                               const Text('Texterkennung läuft…',
                                   style: TextStyle(
@@ -427,7 +435,7 @@ class _ScanScreenState extends State<ScanScreen> {
                       style: GoogleFonts.spaceMono(
                         fontSize: 36,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.amber,
+                        color: _highlightColor,
                       ),
                     ),
                   )
@@ -447,19 +455,19 @@ class _ScanScreenState extends State<ScanScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.amber.withOpacity(0.10),
+                color: _highlightColor.withOpacity(0.10),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: AppColors.amber, size: 14),
+                  Icon(Icons.info_outline, color: _highlightColor, size: 14),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _ocrRawHint!,
                       style: GoogleFonts.rajdhani(
                           fontSize: 12,
-                          color: AppColors.amber,
+                          color: _highlightColor,
                           letterSpacing: 0.3),
                     ),
                   ),
@@ -475,6 +483,7 @@ class _ScanScreenState extends State<ScanScreen> {
             icon: Icons.check_rounded,
             isPrimary: true,
             isLoading: _isSaving,
+            accentColor: _accentColor,
             onPressed: _isProcessing || _isSaving || !hasValue ? null : _save,
           ),
           const SizedBox(height: 12),
@@ -487,6 +496,7 @@ class _ScanScreenState extends State<ScanScreen> {
                   icon: Icons.refresh_rounded,
                   isPrimary: false,
                   isLoading: false,
+                  accentColor: _accentColor,
                   onPressed: _isProcessing || _isSaving ? null : _resetToPickStep,
                 ),
               ),
@@ -497,6 +507,7 @@ class _ScanScreenState extends State<ScanScreen> {
                   icon: Icons.edit_rounded,
                   isPrimary: false,
                   isLoading: false,
+                  accentColor: _accentColor,
                   onPressed: _isProcessing || _isSaving ? null : _startEditing,
                 ),
               ),
@@ -550,9 +561,9 @@ class _ScanScreenState extends State<ScanScreen> {
               style: GoogleFonts.spaceMono(
                 fontSize: 32,
                 fontWeight: FontWeight.w700,
-                color: AppColors.amber,
+                color: _highlightColor,
               ),
-              cursorColor: AppColors.green,
+              cursorColor: _accentColor,
               decoration: InputDecoration(
                 hintText: '00000.00',
                 hintStyle: GoogleFonts.spaceMono(
@@ -595,7 +606,7 @@ class _ScanScreenState extends State<ScanScreen> {
                 fontSize: 16,
                 color: AppColors.textPrimary,
               ),
-              cursorColor: AppColors.green,
+              cursorColor: _accentColor,
               decoration: InputDecoration(
                 hintText: 'z.B. Zählerstand nach Heizungscheck',
                 hintStyle: GoogleFonts.rajdhani(
@@ -616,6 +627,7 @@ class _ScanScreenState extends State<ScanScreen> {
             icon: Icons.check_rounded,
             isPrimary: true,
             isLoading: _isSaving,
+            accentColor: _accentColor,
             onPressed: _isSaving ? null : _save,
           ),
 
@@ -626,6 +638,7 @@ class _ScanScreenState extends State<ScanScreen> {
               icon: Icons.arrow_back_rounded,
               isPrimary: false,
               isLoading: false,
+              accentColor: _accentColor,
               onPressed: _isSaving
                   ? null
                   : () => setState(() => _isEditing = false),
@@ -645,6 +658,7 @@ class _PickButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final String sublabel;
+  final Color accentColor;
   final VoidCallback onPressed;
 
   const _PickButton({
@@ -652,6 +666,7 @@ class _PickButton extends StatelessWidget {
     required this.label,
     required this.sublabel,
     required this.onPressed,
+    this.accentColor = AppColors.amber,
   });
 
   @override
@@ -672,10 +687,10 @@ class _PickButton extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: AppColors.amber.withOpacity(0.12),
+                color: accentColor.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: AppColors.amber, size: 22),
+              child: Icon(icon, color: accentColor, size: 22),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -718,6 +733,7 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final bool isPrimary;
   final bool isLoading;
+  final Color accentColor;
   final VoidCallback? onPressed;
 
   const _ActionButton({
@@ -726,6 +742,7 @@ class _ActionButton extends StatelessWidget {
     required this.isPrimary,
     required this.isLoading,
     required this.onPressed,
+    this.accentColor = AppColors.green,
   });
 
   @override
@@ -737,13 +754,13 @@ class _ActionButton extends StatelessWidget {
         child: Container(
           height: 54,
           decoration: BoxDecoration(
-            color: isPrimary ? AppColors.green : AppColors.background,
+            color: isPrimary ? accentColor : AppColors.background,
             borderRadius: BorderRadius.circular(14),
             boxShadow: isPrimary
                 ? [
-                    const BoxShadow(
-                      color: Color(0xFF3A5E3D),
-                      offset: Offset(0, 4),
+                    BoxShadow(
+                      color: accentColor.withOpacity(0.45),
+                      offset: const Offset(0, 4),
                       blurRadius: 8,
                     ),
                   ]
@@ -757,7 +774,7 @@ class _ActionButton extends StatelessWidget {
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
-                      color: isPrimary ? Colors.white : AppColors.green,
+                      color: isPrimary ? Colors.white : accentColor,
                       strokeWidth: 2),
                 )
               else
