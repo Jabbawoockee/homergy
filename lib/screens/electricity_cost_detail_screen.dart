@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../database/database.dart';
 import '../theme/colors.dart';
 import '../utils/meter_interpolator.dart';
+import '../widgets/benchmark_card.dart';
 
 class ElectricityCostDetailScreen extends StatefulWidget {
   const ElectricityCostDetailScreen({super.key});
@@ -18,11 +19,19 @@ class _ElectricityCostDetailScreenState
   late Future<_CostData> _future;
   final _pageController = PageController();
   int _currentPage = 0;
+  bool _hasAdvance = false;
 
   @override
   void initState() {
     super.initState();
     _future = _loadData();
+    _future.then((data) {
+      if (mounted) {
+        setState(() {
+          _hasAdvance = data.months.any((m) => (m.advancePayment ?? 0) > 0);
+        });
+      }
+    });
   }
 
   @override
@@ -207,7 +216,11 @@ class _ElectricityCostDetailScreenState
                     transitionBuilder: (child, anim) =>
                         FadeTransition(opacity: anim, child: child),
                     child: Text(
-                      _currentPage == 0 ? 'STROMKOSTEN' : 'ABSCHLAGSVERGLEICH',
+                      _currentPage == 0
+                          ? 'STROMKOSTEN'
+                          : (_hasAdvance && _currentPage == 1)
+                              ? 'ABSCHLAGSVERGLEICH'
+                              : 'VERBRAUCHSVERGLEICH',
                       key: ValueKey(_currentPage),
                       style: GoogleFonts.spaceMono(
                         fontSize: 20,
@@ -234,11 +247,11 @@ class _ElectricityCostDetailScreenState
 
                   final hasAdvance =
                       data.months.any((m) => (m.advancePayment ?? 0) > 0);
-                  if (!hasAdvance) return _buildContent(data);
+                  final pageCount = hasAdvance ? 3 : 2;
 
                   return Column(
                     children: [
-                      _buildDots(),
+                      _buildDots(pageCount),
                       Expanded(
                         child: PageView(
                           controller: _pageController,
@@ -246,7 +259,8 @@ class _ElectricityCostDetailScreenState
                               setState(() => _currentPage = i),
                           children: [
                             _buildContent(data),
-                            _buildAbschlagPage(data),
+                            if (hasAdvance) _buildAbschlagPage(data),
+                            _buildVergleichPage(),
                           ],
                         ),
                       ),
@@ -261,12 +275,12 @@ class _ElectricityCostDetailScreenState
     );
   }
 
-  Widget _buildDots() {
+  Widget _buildDots([int count = 2]) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(2, (i) {
+        children: List.generate(count, (i) {
           final active = _currentPage == i;
           return GestureDetector(
             onTap: () => _pageController.animateToPage(
@@ -431,6 +445,20 @@ class _ElectricityCostDetailScreenState
               ],
             ),
           ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVergleichPage() {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          const SizedBox(height: 8),
+          const BenchmarkCard(type: BenchmarkType.electricity, accent: Color(0xFF5B8DB8)),
           const SizedBox(height: 24),
         ],
       ),

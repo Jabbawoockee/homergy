@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../database/database.dart';
 import '../theme/colors.dart';
 import '../utils/meter_interpolator.dart';
+import '../widgets/benchmark_card.dart';
 
 class CostDetailScreen extends StatefulWidget {
   const CostDetailScreen({super.key});
@@ -16,11 +17,19 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
   late Future<_CostDetailData> _future;
   final _pageController = PageController();
   int _currentPage = 0;
+  bool _hasAdvance = false;
 
   @override
   void initState() {
     super.initState();
     _future = _loadData();
+    _future.then((data) {
+      if (mounted) {
+        setState(() {
+          _hasAdvance = data.months.any((m) => (m.advancePayment ?? 0) > 0);
+        });
+      }
+    });
   }
 
   @override
@@ -230,7 +239,11 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
                     transitionBuilder: (child, anim) =>
                         FadeTransition(opacity: anim, child: child),
                     child: Text(
-                      _currentPage == 0 ? 'KOSTENÜBERSICHT' : 'ABSCHLAGSVERGLEICH',
+                      _currentPage == 0
+                          ? 'KOSTENÜBERSICHT'
+                          : (_hasAdvance && _currentPage == 1)
+                              ? 'ABSCHLAGSVERGLEICH'
+                              : 'VERBRAUCHSVERGLEICH',
                       key: ValueKey(_currentPage),
                       style: GoogleFonts.spaceMono(
                         fontSize: 20,
@@ -261,11 +274,11 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
 
                   final hasAdvance =
                       data.months.any((m) => (m.advancePayment ?? 0) > 0);
-                  if (!hasAdvance) return _buildContent(data);
+                  final pageCount = hasAdvance ? 3 : 2;
 
                   return Column(
                     children: [
-                      _buildDots(),
+                      _buildDots(pageCount),
                       Expanded(
                         child: PageView(
                           controller: _pageController,
@@ -273,7 +286,8 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
                               setState(() => _currentPage = i),
                           children: [
                             _buildContent(data),
-                            _buildAbschlagPage(data),
+                            if (hasAdvance) _buildAbschlagPage(data),
+                            _buildVergleichPage(),
                           ],
                         ),
                       ),
@@ -288,12 +302,12 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
     );
   }
 
-  Widget _buildDots() {
+  Widget _buildDots([int count = 2]) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(2, (i) {
+        children: List.generate(count, (i) {
           final active = _currentPage == i;
           return GestureDetector(
             onTap: () => _pageController.animateToPage(
@@ -504,6 +518,20 @@ class _CostDetailScreenState extends State<CostDetailScreen> {
               textAlign: TextAlign.center,
             ),
           ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVergleichPage() {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          const SizedBox(height: 8),
+          const BenchmarkCard(type: BenchmarkType.gas, accent: AppColors.green),
           const SizedBox(height: 24),
         ],
       ),
