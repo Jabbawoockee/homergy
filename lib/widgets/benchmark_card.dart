@@ -23,8 +23,8 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
   AppSetting? _settings;
   BenchmarkResult? _result;
 
-  GasBenchmarkFilters          _gasFilters  = const GasBenchmarkFilters();
-  ElectricityBenchmarkFilters  _elecFilters = const ElectricityBenchmarkFilters();
+  GasBenchmarkFilters         _gasFilters  = const GasBenchmarkFilters();
+  ElectricityBenchmarkFilters _elecFilters = const ElectricityBenchmarkFilters();
 
   @override
   void initState() {
@@ -63,6 +63,137 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
   }
 
   // ---------------------------------------------------------------------------
+  // Chip sublabel helpers
+  // ---------------------------------------------------------------------------
+
+  String _sqmSublabel(int pct) => '±$pct %';
+
+  String _yearSublabel(String mode) {
+    switch (mode) {
+      case 'decade':  return '±10 Jahre';
+      case 'quarter': return '±25 Jahre';
+      default:        return 'Bauepoche';
+    }
+  }
+
+  String _plzSublabel(int digits) {
+    switch (digits) {
+      case 1:  return 'Großregion';
+      case 3:  return 'Lokal';
+      default: return 'Regional';
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Bottom sheets
+  // ---------------------------------------------------------------------------
+
+  void _showSqmSheet({required bool isGas}) {
+    final current = isGas ? _gasFilters.sqmRangePct : _elecFilters.sqmRangePct;
+    _showSheet(
+      title: 'WOHNFLÄCHE',
+      explanation: 'Wie groß darf die Abweichung zur deiner Wohnfläche sein?',
+      options: [
+        (label: '±10 %', description: 'Sehr präzise', selected: current == 10),
+        (label: '±20 %', description: 'Präzise',      selected: current == 20),
+        (label: '±30 %', description: 'Standard',     selected: current == 30),
+        (label: '±50 %', description: 'Tolerant',     selected: current == 50),
+      ],
+      onSelect: (i) {
+        final pct = [10, 20, 30, 50][i];
+        setState(() {
+          if (isGas) {
+            _gasFilters = _gasFilters.copyWith(sqmRangePct: pct);
+          } else {
+            _elecFilters = _elecFilters.copyWith(sqmRangePct: pct);
+          }
+        });
+        _loadResult();
+      },
+      onDisable: () {
+        setState(() {
+          if (isGas) {
+            _gasFilters = _gasFilters.copyWith(useSqm: false);
+          } else {
+            _elecFilters = _elecFilters.copyWith(useSqm: false);
+          }
+        });
+        _loadResult();
+      },
+    );
+  }
+
+  void _showYearSheet() {
+    final current = _gasFilters.constructionYearMode;
+    _showSheet(
+      title: 'BAUJAHR',
+      explanation: 'Nach welcher Präzision soll das Baujahr verglichen werden?',
+      options: [
+        (label: 'Bauepoche', description: 'Vor/nach Wärmeschutzverordnung (Standard)', selected: current == 'era'),
+        (label: '±10 Jahre', description: 'Enger Zeitraum',                            selected: current == 'decade'),
+        (label: '±25 Jahre', description: 'Weiter Zeitraum',                           selected: current == 'quarter'),
+      ],
+      onSelect: (i) {
+        const modes = ['era', 'decade', 'quarter'];
+        setState(() => _gasFilters = _gasFilters.copyWith(constructionYearMode: modes[i]));
+        _loadResult();
+      },
+      onDisable: () {
+        setState(() => _gasFilters = _gasFilters.copyWith(useConstructionYear: false));
+        _loadResult();
+      },
+    );
+  }
+
+  void _showPlzSheet() {
+    final current = _gasFilters.plzDigits;
+    _showSheet(
+      title: 'KLIMAZONE',
+      explanation:
+          'Die ersten Stellen deiner PLZ dienen als Näherung für deine Klimazone. '
+          'Mehr Stellen = kleinere Region. Weniger Stellen = größeres Vergleichsgebiet.',
+      options: [
+        (label: 'Großregion', description: '1 Stelle  ·  ca. 200 km Radius', selected: current == 1),
+        (label: 'Regional',   description: '2 Stellen  ·  ca. 50 km Radius (Standard)', selected: current == 2),
+        (label: 'Lokal',      description: '3 Stellen  ·  ca. 15 km Radius', selected: current == 3),
+      ],
+      onSelect: (i) {
+        final digits = [1, 2, 3][i];
+        setState(() => _gasFilters = _gasFilters.copyWith(plzDigits: digits));
+        _loadResult();
+      },
+      onDisable: () {
+        setState(() => _gasFilters = _gasFilters.copyWith(usePlzRegion: false));
+        _loadResult();
+      },
+    );
+  }
+
+  void _showSheet({
+    required String title,
+    required String explanation,
+    required List<({String label, String description, bool selected})> options,
+    required ValueChanged<int> onSelect,
+    required VoidCallback onDisable,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _FilterSheet(
+        title: title,
+        explanation: explanation,
+        options: options,
+        onSelect: onSelect,
+        onDisable: onDisable,
+        accent: widget.accent,
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Chip lists
   // ---------------------------------------------------------------------------
 
@@ -70,12 +201,60 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
     final s = _settings;
     if (s == null) return [];
     return [
-      if (s.houseType != null)      _Chip('Haustyp',       _gasFilters.useHouseType,       () { setState(() => _gasFilters = _gasFilters.copyWith(useHouseType:       !_gasFilters.useHouseType));       _loadResult(); }),
-      if (s.squareMeters != null)   _Chip('Wohnfläche',    _gasFilters.useSqm,             () { setState(() => _gasFilters = _gasFilters.copyWith(useSqm:             !_gasFilters.useSqm));             _loadResult(); }),
-      if (s.hasSolarThermal != null)_Chip('Solarthermie',  _gasFilters.useSolarThermal,    () { setState(() => _gasFilters = _gasFilters.copyWith(useSolarThermal:    !_gasFilters.useSolarThermal));    _loadResult(); }),
-      if (s.constructionYear != null)_Chip('Baujahr',      _gasFilters.useConstructionYear,() { setState(() => _gasFilters = _gasFilters.copyWith(useConstructionYear: !_gasFilters.useConstructionYear)); _loadResult(); }),
-      if (s.isInsulated != null)    _Chip('Dämmung',       _gasFilters.useIsInsulated,     () { setState(() => _gasFilters = _gasFilters.copyWith(useIsInsulated:     !_gasFilters.useIsInsulated));     _loadResult(); }),
-      if (s.locationPlz != null)    _Chip('Region',        _gasFilters.usePlzRegion,       () { setState(() => _gasFilters = _gasFilters.copyWith(usePlzRegion:       !_gasFilters.usePlzRegion));       _loadResult(); }),
+      if (s.houseType != null)
+        _Chip('Haustyp', _gasFilters.useHouseType, onTap: () {
+          setState(() => _gasFilters = _gasFilters.copyWith(useHouseType: !_gasFilters.useHouseType));
+          _loadResult();
+        }),
+      if (s.squareMeters != null)
+        _Chip(
+          'Wohnfläche', _gasFilters.useSqm,
+          sublabel: _gasFilters.useSqm ? _sqmSublabel(_gasFilters.sqmRangePct) : null,
+          onTap: () {
+            if (!_gasFilters.useSqm) {
+              setState(() => _gasFilters = _gasFilters.copyWith(useSqm: true));
+              _loadResult();
+            } else {
+              _showSqmSheet(isGas: true);
+            }
+          },
+        ),
+      if (s.hasSolarThermal != null)
+        _Chip('Solarthermie', _gasFilters.useSolarThermal, onTap: () {
+          setState(() => _gasFilters = _gasFilters.copyWith(useSolarThermal: !_gasFilters.useSolarThermal));
+          _loadResult();
+        }),
+      if (s.constructionYear != null)
+        _Chip(
+          'Baujahr', _gasFilters.useConstructionYear,
+          sublabel: _gasFilters.useConstructionYear ? _yearSublabel(_gasFilters.constructionYearMode) : null,
+          onTap: () {
+            if (!_gasFilters.useConstructionYear) {
+              setState(() => _gasFilters = _gasFilters.copyWith(useConstructionYear: true));
+              _loadResult();
+            } else {
+              _showYearSheet();
+            }
+          },
+        ),
+      if (s.isInsulated != null)
+        _Chip('Dämmung', _gasFilters.useIsInsulated, onTap: () {
+          setState(() => _gasFilters = _gasFilters.copyWith(useIsInsulated: !_gasFilters.useIsInsulated));
+          _loadResult();
+        }),
+      if (s.locationPlz != null)
+        _Chip(
+          'Klimazone', _gasFilters.usePlzRegion,
+          sublabel: _gasFilters.usePlzRegion ? _plzSublabel(_gasFilters.plzDigits) : null,
+          onTap: () {
+            if (!_gasFilters.usePlzRegion) {
+              setState(() => _gasFilters = _gasFilters.copyWith(usePlzRegion: true));
+              _loadResult();
+            } else {
+              _showPlzSheet();
+            }
+          },
+        ),
     ];
   }
 
@@ -83,10 +262,34 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
     final s = _settings;
     if (s == null) return [];
     return [
-      if (s.numberOfPersons != null)_Chip('Personenanzahl',_elecFilters.usePersons,        () { setState(() => _elecFilters = _elecFilters.copyWith(usePersons:   !_elecFilters.usePersons));   _loadResult(); }),
-      if (s.hasPv != null)          _Chip('PV-Anlage',     _elecFilters.usePv,             () { setState(() => _elecFilters = _elecFilters.copyWith(usePv:        !_elecFilters.usePv));        _loadResult(); }),
-      if (s.squareMeters != null)   _Chip('Wohnfläche',    _elecFilters.useSqm,            () { setState(() => _elecFilters = _elecFilters.copyWith(useSqm:       !_elecFilters.useSqm));       _loadResult(); }),
-      if (s.houseType != null)      _Chip('Haustyp',       _elecFilters.useHouseType,      () { setState(() => _elecFilters = _elecFilters.copyWith(useHouseType: !_elecFilters.useHouseType)); _loadResult(); }),
+      if (s.numberOfPersons != null)
+        _Chip('Personenanzahl', _elecFilters.usePersons, onTap: () {
+          setState(() => _elecFilters = _elecFilters.copyWith(usePersons: !_elecFilters.usePersons));
+          _loadResult();
+        }),
+      if (s.hasPv != null)
+        _Chip('PV-Anlage', _elecFilters.usePv, onTap: () {
+          setState(() => _elecFilters = _elecFilters.copyWith(usePv: !_elecFilters.usePv));
+          _loadResult();
+        }),
+      if (s.squareMeters != null)
+        _Chip(
+          'Wohnfläche', _elecFilters.useSqm,
+          sublabel: _elecFilters.useSqm ? _sqmSublabel(_elecFilters.sqmRangePct) : null,
+          onTap: () {
+            if (!_elecFilters.useSqm) {
+              setState(() => _elecFilters = _elecFilters.copyWith(useSqm: true));
+              _loadResult();
+            } else {
+              _showSqmSheet(isGas: false);
+            }
+          },
+        ),
+      if (s.houseType != null)
+        _Chip('Haustyp', _elecFilters.useHouseType, onTap: () {
+          setState(() => _elecFilters = _elecFilters.copyWith(useHouseType: !_elecFilters.useHouseType));
+          _loadResult();
+        }),
     ];
   }
 
@@ -210,7 +413,7 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
       spacing: 6,
       runSpacing: 6,
       children: chips.map((c) => GestureDetector(
-        onTap: c.onToggle,
+        onTap: c.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -224,7 +427,14 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
               fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.3,
               color: c.active ? widget.accent : AppColors.textSecondary,
             )),
-            if (c.active) ...[
+            if (c.active && c.sublabel != null) ...[
+              Text(' · ${c.sublabel}', style: GoogleFonts.rajdhani(
+                fontSize: 11, fontWeight: FontWeight.w600,
+                color: widget.accent.withValues(alpha: 0.75),
+              )),
+              const SizedBox(width: 4),
+              Icon(Icons.tune_rounded, size: 10, color: widget.accent),
+            ] else if (c.active) ...[
               const SizedBox(width: 4),
               Icon(Icons.check_rounded, size: 11, color: widget.accent),
             ],
@@ -247,7 +457,7 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Filter deaktivieren, um den Vergleichspool zu vergrößern.',
+          'Filter deaktivieren oder Reichweite vergrößern, um den Vergleichspool zu erweitern.',
           style: GoogleFonts.rajdhani(fontSize: 12, color: AppColors.textSecondary.withValues(alpha: 0.65), height: 1.4),
           textAlign: TextAlign.center,
         ),
@@ -295,7 +505,7 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
         children: [
           const TextSpan(text: 'Du verbrauchst '),
           TextSpan(text: isEfficient ? 'weniger' : 'mehr', style: TextStyle(fontWeight: FontWeight.w700, color: chipColor)),
-          TextSpan(text: ' als $pct % der Vergleichshaushalte.'),
+          TextSpan(text: ' als $pct % der Vergleichshaushalte.'),
         ],
       )),
     );
@@ -327,12 +537,10 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
           child: LayoutBuilder(builder: (ctx, box) {
             final w = box.maxWidth;
             return Stack(alignment: Alignment.center, children: [
-              // Track
               Positioned(
                 left: 0, right: 0, top: 16,
                 child: Container(height: 6, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(3))),
               ),
-              // Filled portion up to user
               if (userFrac != null)
                 Positioned(
                   left: 0, top: 16,
@@ -345,13 +553,11 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
                     ),
                   ),
                 ),
-              // Median tick
               Positioned(
                 left: (medianFrac * w).clamp(1, w - 2) - 1,
                 top: 10,
                 child: Container(width: 2, height: 18, color: AppColors.textSecondary.withValues(alpha: 0.35)),
               ),
-              // User dot
               if (userFrac != null)
                 Positioned(
                   left: (userFrac * w - markerD / 2).clamp(0, w - markerD),
@@ -401,12 +607,127 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
 }
 
 // ---------------------------------------------------------------------------
-// Internal model
+// Chip model
 // ---------------------------------------------------------------------------
 
 class _Chip {
   final String label;
+  final String? sublabel;
   final bool active;
-  final VoidCallback onToggle;
-  const _Chip(this.label, this.active, this.onToggle);
+  final VoidCallback onTap;
+  const _Chip(this.label, this.active, {this.sublabel, required this.onTap});
+}
+
+// ---------------------------------------------------------------------------
+// Filter bottom sheet
+// ---------------------------------------------------------------------------
+
+class _FilterSheet extends StatelessWidget {
+  final String title;
+  final String explanation;
+  final List<({String label, String description, bool selected})> options;
+  final ValueChanged<int> onSelect;
+  final VoidCallback onDisable;
+  final Color accent;
+
+  const _FilterSheet({
+    required this.title,
+    required this.explanation,
+    required this.options,
+    required this.onSelect,
+    required this.onDisable,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.spaceMono(
+              fontSize: 11, fontWeight: FontWeight.w700,
+              letterSpacing: 2, color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            explanation,
+            style: GoogleFonts.rajdhani(
+              fontSize: 13, color: AppColors.textSecondary, height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ...options.asMap().entries.map((e) {
+            final opt = e.value;
+            return GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                onSelect(e.key);
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(children: [
+                  Container(
+                    width: 20, height: 20,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: opt.selected ? accent : AppColors.border,
+                        width: opt.selected ? 5 : 2,
+                      ),
+                      color: AppColors.background,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          opt.label,
+                          style: GoogleFonts.rajdhani(
+                            fontSize: 15, fontWeight: FontWeight.w700,
+                            color: opt.selected ? AppColors.textPrimary : AppColors.textSecondary,
+                          ),
+                        ),
+                        if (opt.description.isNotEmpty)
+                          Text(
+                            opt.description,
+                            style: GoogleFonts.rajdhani(
+                              fontSize: 12,
+                              color: AppColors.textSecondary.withValues(alpha: 0.7),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ]),
+              ),
+            );
+          }),
+          const SizedBox(height: 16),
+          Container(height: 1, color: AppColors.border),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+              onDisable();
+            },
+            child: Text(
+              'Filter deaktivieren',
+              style: GoogleFonts.rajdhani(
+                fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.error,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
