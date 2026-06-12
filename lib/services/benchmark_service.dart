@@ -29,30 +29,30 @@ class BenchmarkResult {
 }
 
 class GasBenchmarkFilters {
-  final bool useHouseType;
+  // null = alle Haustypen (Filter inaktiv)
+  final List<String>? selectedHouseTypes;
   final bool useSqm;
-  final int sqmRangePct;             // 10 | 20 | 30 | 50
+  final int sqmRangePct;             // 0 = exakt | 10 | 20 | 30 | 50
   final bool useSolarThermal;
   final bool useConstructionYear;
-  final String constructionYearMode; // 'era' | 'decade' | 'quarter'
+  final String constructionYearMode; // 'exact' | '5' | '10' | '15' | '20' | '25'
   final bool useIsInsulated;
   final bool usePlzRegion;
-  final int plzDigits;               // 1 | 2 | 3
+  final int plzDigits;               // 1 | 2 | 3 | 5 (5 = volle PLZ)
 
   const GasBenchmarkFilters({
-    this.useHouseType = true,
+    this.selectedHouseTypes,
     this.useSqm = true,
     this.sqmRangePct = 30,
     this.useSolarThermal = true,
     this.useConstructionYear = true,
-    this.constructionYearMode = 'era',
+    this.constructionYearMode = '10',
     this.useIsInsulated = true,
     this.usePlzRegion = true,
     this.plzDigits = 2,
   });
 
   GasBenchmarkFilters copyWith({
-    bool? useHouseType,
     bool? useSqm,
     int? sqmRangePct,
     bool? useSolarThermal,
@@ -63,31 +63,43 @@ class GasBenchmarkFilters {
     int? plzDigits,
   }) =>
       GasBenchmarkFilters(
-        useHouseType: useHouseType ?? this.useHouseType,
-        useSqm: useSqm ?? this.useSqm,
-        sqmRangePct: sqmRangePct ?? this.sqmRangePct,
-        useSolarThermal: useSolarThermal ?? this.useSolarThermal,
-        useConstructionYear: useConstructionYear ?? this.useConstructionYear,
+        selectedHouseTypes:   selectedHouseTypes,
+        useSqm:               useSqm ?? this.useSqm,
+        sqmRangePct:          sqmRangePct ?? this.sqmRangePct,
+        useSolarThermal:      useSolarThermal ?? this.useSolarThermal,
+        useConstructionYear:  useConstructionYear ?? this.useConstructionYear,
         constructionYearMode: constructionYearMode ?? this.constructionYearMode,
-        useIsInsulated: useIsInsulated ?? this.useIsInsulated,
-        usePlzRegion: usePlzRegion ?? this.usePlzRegion,
-        plzDigits: plzDigits ?? this.plzDigits,
+        useIsInsulated:       useIsInsulated ?? this.useIsInsulated,
+        usePlzRegion:         usePlzRegion ?? this.usePlzRegion,
+        plzDigits:            plzDigits ?? this.plzDigits,
       );
+
+  GasBenchmarkFilters copyWithHouseTypes(List<String>? types) => GasBenchmarkFilters(
+    selectedHouseTypes:   types,
+    useSqm:               useSqm,
+    sqmRangePct:          sqmRangePct,
+    useSolarThermal:      useSolarThermal,
+    useConstructionYear:  useConstructionYear,
+    constructionYearMode: constructionYearMode,
+    useIsInsulated:       useIsInsulated,
+    usePlzRegion:         usePlzRegion,
+    plzDigits:            plzDigits,
+  );
 }
 
 class ElectricityBenchmarkFilters {
   final bool usePersons;
   final bool usePv;
   final bool useSqm;
-  final int sqmRangePct; // 10 | 20 | 30 | 50
-  final bool useHouseType;
+  final int sqmRangePct;          // 0 = exakt | 10 | 20 | 30 | 50
+  final List<String>? selectedHouseTypes; // null = alle (Filter inaktiv)
 
   const ElectricityBenchmarkFilters({
     this.usePersons = true,
     this.usePv = true,
     this.useSqm = true,
     this.sqmRangePct = 30,
-    this.useHouseType = true,
+    this.selectedHouseTypes,
   });
 
   ElectricityBenchmarkFilters copyWith({
@@ -95,14 +107,22 @@ class ElectricityBenchmarkFilters {
     bool? usePv,
     bool? useSqm,
     int? sqmRangePct,
-    bool? useHouseType,
   }) =>
       ElectricityBenchmarkFilters(
-        usePersons: usePersons ?? this.usePersons,
-        usePv: usePv ?? this.usePv,
-        useSqm: useSqm ?? this.useSqm,
-        sqmRangePct: sqmRangePct ?? this.sqmRangePct,
-        useHouseType: useHouseType ?? this.useHouseType,
+        usePersons:          usePersons ?? this.usePersons,
+        usePv:               usePv ?? this.usePv,
+        useSqm:              useSqm ?? this.useSqm,
+        sqmRangePct:         sqmRangePct ?? this.sqmRangePct,
+        selectedHouseTypes:  selectedHouseTypes,
+      );
+
+  ElectricityBenchmarkFilters copyWithHouseTypes(List<String>? types) =>
+      ElectricityBenchmarkFilters(
+        usePersons:         usePersons,
+        usePv:              usePv,
+        useSqm:             useSqm,
+        sqmRangePct:        sqmRangePct,
+        selectedHouseTypes: types,
       );
 }
 
@@ -129,7 +149,6 @@ class BenchmarkService {
     if (value) await uploadBenchmark();
   }
 
-  // 12-month rolling average for gas in kWh/month
   Future<double?> _calcGasMonthlyAvgKwh() async {
     final rawReadings = await AppDatabase.instance.watchAllReadings().first;
     final readings = List<MeterReading>.from(rawReadings)
@@ -154,7 +173,6 @@ class BenchmarkService {
     return values.reduce((a, b) => a + b) / values.length;
   }
 
-  // 12-month rolling average for electricity in kWh/month
   Future<double?> _calcElectricityMonthlyAvgKwh() async {
     final rawReadings = await AppDatabase.instance.watchAllElectricityReadings().first;
     final readings = List<ElectricityReading>.from(rawReadings)
@@ -187,7 +205,7 @@ class BenchmarkService {
       final plzPrefix = (plz != null && plz.length >= 2) ? plz.substring(0, 2) : null;
 
       await SupabaseService.client.from(_table).upsert({
-        'user_id':                     user.id,
+        'user_id':                     SupabaseService.currentUser!.id,
         'house_type':                  settings?.houseType,
         'square_meters':               settings?.squareMeters,
         'number_of_persons':           settings?.numberOfPersons,
@@ -220,34 +238,45 @@ class BenchmarkService {
       // Construction year range
       int? yearMin, yearMax;
       if (filters.useConstructionYear && year != null) {
-        switch (filters.constructionYearMode) {
-          case 'decade':
-            yearMin = year - 10;
-            yearMax = year + 10;
-          case 'quarter':
-            yearMin = year - 25;
-            yearMax = year + 25;
-          default: // 'era' — German insulation regulation milestones
-            if (year < 1978)      { yearMin = 1900; yearMax = 1977; }
-            else if (year < 2002) { yearMin = 1978; yearMax = 2001; }
-            else                  { yearMin = 2002; yearMax = 2100; }
+        if (filters.constructionYearMode == 'exact') {
+          yearMin = year;
+          yearMax = year;
+        } else {
+          final range = int.tryParse(filters.constructionYearMode) ?? 10;
+          yearMin = year - range;
+          yearMax = year + range;
         }
       }
 
-      // Sqm range
-      final sqmFactor = filters.sqmRangePct / 100.0;
+      // Sqm range (0 = exact match)
+      int? sqmMin, sqmMax;
+      if (filters.useSqm && sqm != null) {
+        if (filters.sqmRangePct == 0) {
+          sqmMin = sqm;
+          sqmMax = sqm;
+        } else {
+          final factor = filters.sqmRangePct / 100.0;
+          sqmMin = (sqm * (1 - factor)).round();
+          sqmMax = (sqm * (1 + factor)).round();
+        }
+      }
 
       // PLZ prefix (climate zone proxy)
       String? plzPrefix;
       if (filters.usePlzRegion && plz != null && plz.length >= filters.plzDigits) {
-        plzPrefix = plz.substring(0, filters.plzDigits);
+        plzPrefix = plz.substring(0, filters.plzDigits.clamp(1, plz.length));
       }
+
+      // House types: null = no filter
+      final houseTypes = (filters.selectedHouseTypes?.isNotEmpty ?? false)
+          ? filters.selectedHouseTypes
+          : null;
 
       final data = await SupabaseService.client.rpc('get_gas_benchmark', params: {
         'p_user_id':               user.id,
-        'p_house_type':            filters.useHouseType ? settings?.houseType : null,
-        'p_sqm_min':               (filters.useSqm && sqm != null) ? (sqm * (1 - sqmFactor)).round() : null,
-        'p_sqm_max':               (filters.useSqm && sqm != null) ? (sqm * (1 + sqmFactor)).round() : null,
+        'p_house_types':           houseTypes,
+        'p_sqm_min':               sqmMin,
+        'p_sqm_max':               sqmMax,
         'p_has_solar_thermal':     filters.useSolarThermal ? settings?.hasSolarThermal : null,
         'p_construction_year_min': yearMin,
         'p_construction_year_max': yearMax,
@@ -269,15 +298,30 @@ class BenchmarkService {
 
       final settings = await AppDatabase.instance.getSettings();
       final sqm = settings?.squareMeters;
-      final sqmFactor = filters.sqmRangePct / 100.0;
+
+      int? sqmMin, sqmMax;
+      if (filters.useSqm && sqm != null) {
+        if (filters.sqmRangePct == 0) {
+          sqmMin = sqm;
+          sqmMax = sqm;
+        } else {
+          final factor = filters.sqmRangePct / 100.0;
+          sqmMin = (sqm * (1 - factor)).round();
+          sqmMax = (sqm * (1 + factor)).round();
+        }
+      }
+
+      final houseTypes = (filters.selectedHouseTypes?.isNotEmpty ?? false)
+          ? filters.selectedHouseTypes
+          : null;
 
       final data = await SupabaseService.client.rpc('get_electricity_benchmark', params: {
         'p_user_id':           user.id,
         'p_number_of_persons': filters.usePersons ? settings?.numberOfPersons : null,
         'p_has_pv':            filters.usePv ? settings?.hasPv : null,
-        'p_sqm_min':           (filters.useSqm && sqm != null) ? (sqm * (1 - sqmFactor)).round() : null,
-        'p_sqm_max':           (filters.useSqm && sqm != null) ? (sqm * (1 + sqmFactor)).round() : null,
-        'p_house_type':        filters.useHouseType ? settings?.houseType : null,
+        'p_sqm_min':           sqmMin,
+        'p_sqm_max':           sqmMax,
+        'p_house_types':       houseTypes,
       }) as Map<String, dynamic>?;
 
       return _parse(data);

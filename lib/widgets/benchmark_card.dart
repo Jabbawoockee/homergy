@@ -6,6 +6,14 @@ import '../theme/colors.dart';
 
 enum BenchmarkType { gas, electricity }
 
+const _allHouseTypes = [
+  'Wohnung',
+  'Reihenmittelhaus',
+  'Reihenendhaus',
+  'Doppelhaushälfte',
+  'Einfamilienhaus',
+];
+
 class BenchmarkCard extends StatefulWidget {
   final BenchmarkType type;
   final Color accent;
@@ -36,7 +44,22 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
     final shares   = await BenchmarkService().getSharesData();
     final settings = await AppDatabase.instance.getSettings();
     if (!mounted) return;
-    setState(() { _sharesData = shares; _settings = settings; _initLoading = false; });
+
+    // Pre-select user's own house type as default
+    var gasF  = _gasFilters;
+    var elecF = _elecFilters;
+    if (settings?.houseType != null) {
+      gasF  = gasF.copyWithHouseTypes([settings!.houseType!]);
+      elecF = elecF.copyWithHouseTypes([settings.houseType!]);
+    }
+
+    setState(() {
+      _sharesData  = shares;
+      _settings    = settings;
+      _gasFilters  = gasF;
+      _elecFilters = elecF;
+      _initLoading = false;
+    });
     if (shares) _loadResult();
   }
 
@@ -66,22 +89,26 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
   // Chip sublabel helpers
   // ---------------------------------------------------------------------------
 
-  String _sqmSublabel(int pct) => '±$pct %';
+  String _sqmSublabel(int pct) => pct == 0 ? 'Exakt' : '±$pct %';
 
   String _yearSublabel(String mode) {
-    switch (mode) {
-      case 'decade':  return '±10 Jahre';
-      case 'quarter': return '±25 Jahre';
-      default:        return 'Bauepoche';
-    }
+    if (mode == 'exact') return 'Exakt';
+    return '±$mode Jahre';
   }
 
   String _plzSublabel(int digits) {
     switch (digits) {
       case 1:  return 'Großregion';
       case 3:  return 'Lokal';
+      case 5:  return 'Eigene PLZ';
       default: return 'Regional';
     }
+  }
+
+  String? _houseTypeSublabel(List<String>? types) {
+    if (types == null || types.isEmpty) return null;
+    if (types.length == 1) return types.first;
+    return '${types.length} Typen';
   }
 
   // ---------------------------------------------------------------------------
@@ -92,20 +119,21 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
     final current = isGas ? _gasFilters.sqmRangePct : _elecFilters.sqmRangePct;
     _showSheet(
       title: 'WOHNFLÄCHE',
-      explanation: 'Wie groß darf die Abweichung zur deiner Wohnfläche sein?',
+      explanation: 'Wie groß darf die Abweichung zu deiner Wohnfläche sein?',
       options: [
-        (label: '±10 %', description: 'Sehr präzise', selected: current == 10),
-        (label: '±20 %', description: 'Präzise',      selected: current == 20),
-        (label: '±30 %', description: 'Standard',     selected: current == 30),
-        (label: '±50 %', description: 'Tolerant',     selected: current == 50),
+        (label: 'Exakt',    description: 'Nur gleiche Wohnfläche',     selected: current == 0),
+        (label: '±10 %',    description: 'Sehr präzise',               selected: current == 10),
+        (label: '±20 %',    description: 'Präzise',                    selected: current == 20),
+        (label: '±30 %',    description: 'Standard',                   selected: current == 30),
+        (label: '±50 %',    description: 'Tolerant',                   selected: current == 50),
       ],
       onSelect: (i) {
-        final pct = [10, 20, 30, 50][i];
+        final pct = [0, 10, 20, 30, 50][i];
         setState(() {
           if (isGas) {
-            _gasFilters = _gasFilters.copyWith(sqmRangePct: pct);
+            _gasFilters = _gasFilters.copyWith(sqmRangePct: pct, useSqm: true);
           } else {
-            _elecFilters = _elecFilters.copyWith(sqmRangePct: pct);
+            _elecFilters = _elecFilters.copyWith(sqmRangePct: pct, useSqm: true);
           }
         });
         _loadResult();
@@ -127,14 +155,17 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
     final current = _gasFilters.constructionYearMode;
     _showSheet(
       title: 'BAUJAHR',
-      explanation: 'Nach welcher Präzision soll das Baujahr verglichen werden?',
+      explanation: 'Wie nah soll das Baujahr der Vergleichshaushalte an deinem sein?',
       options: [
-        (label: 'Bauepoche', description: 'Vor/nach Wärmeschutzverordnung (Standard)', selected: current == 'era'),
-        (label: '±10 Jahre', description: 'Enger Zeitraum',                            selected: current == 'decade'),
-        (label: '±25 Jahre', description: 'Weiter Zeitraum',                           selected: current == 'quarter'),
+        (label: 'Exakt',      description: 'Nur gleiches Baujahr',   selected: current == 'exact'),
+        (label: '±5 Jahre',   description: 'Sehr präzise',           selected: current == '5'),
+        (label: '±10 Jahre',  description: 'Präzise (Standard)',     selected: current == '10'),
+        (label: '±15 Jahre',  description: 'Mittel',                 selected: current == '15'),
+        (label: '±20 Jahre',  description: 'Breit',                  selected: current == '20'),
+        (label: '±25 Jahre',  description: 'Sehr breit',             selected: current == '25'),
       ],
       onSelect: (i) {
-        const modes = ['era', 'decade', 'quarter'];
+        const modes = ['exact', '5', '10', '15', '20', '25'];
         setState(() => _gasFilters = _gasFilters.copyWith(constructionYearMode: modes[i]));
         _loadResult();
       },
@@ -150,15 +181,16 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
     _showSheet(
       title: 'KLIMAZONE',
       explanation:
-          'Die ersten Stellen deiner PLZ dienen als Näherung für deine Klimazone. '
-          'Mehr Stellen = kleinere Region. Weniger Stellen = größeres Vergleichsgebiet.',
+          'Deine PLZ dient als Näherung für deine Klimazone. Je mehr Stellen übereinstimmen, '
+          'desto enger ist der geografische Vergleichsraum – und damit ähnlicher das regionale Klima.',
       options: [
-        (label: 'Großregion', description: '1 Stelle  ·  ca. 200 km Radius', selected: current == 1),
-        (label: 'Regional',   description: '2 Stellen  ·  ca. 50 km Radius (Standard)', selected: current == 2),
-        (label: 'Lokal',      description: '3 Stellen  ·  ca. 15 km Radius', selected: current == 3),
+        (label: 'Großregion',   description: '1. Stelle der PLZ identisch · ~200 km Radius',          selected: current == 1),
+        (label: 'Regional',     description: '1.–2. Stelle identisch · ~50 km Radius (Standard)',      selected: current == 2),
+        (label: 'Lokal',        description: '1.–3. Stelle identisch · ~15 km Radius',                 selected: current == 3),
+        (label: 'Eigene PLZ',   description: 'Vollständige PLZ identisch · sehr lokal',                selected: current == 5),
       ],
       onSelect: (i) {
-        final digits = [1, 2, 3][i];
+        final digits = [1, 2, 3, 5][i];
         setState(() => _gasFilters = _gasFilters.copyWith(plzDigits: digits));
         _loadResult();
       },
@@ -166,6 +198,43 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
         setState(() => _gasFilters = _gasFilters.copyWith(usePlzRegion: false));
         _loadResult();
       },
+    );
+  }
+
+  void _showHaustypenSheet({required bool isGas}) {
+    final current = isGas ? _gasFilters.selectedHouseTypes : _elecFilters.selectedHouseTypes;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _HaustypenSheet(
+        selected: current ?? [],
+        accent: widget.accent,
+        onApply: (types) {
+          setState(() {
+            // Empty selection = deactivate filter (null)
+            final result = types.isEmpty ? null : types;
+            if (isGas) {
+              _gasFilters = _gasFilters.copyWithHouseTypes(result);
+            } else {
+              _elecFilters = _elecFilters.copyWithHouseTypes(result);
+            }
+          });
+          _loadResult();
+        },
+        onDisable: () {
+          setState(() {
+            if (isGas) {
+              _gasFilters = _gasFilters.copyWithHouseTypes(null);
+            } else {
+              _elecFilters = _elecFilters.copyWithHouseTypes(null);
+            }
+          });
+          _loadResult();
+        },
+      ),
     );
   }
 
@@ -200,12 +269,23 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
   List<_Chip> _gasChips() {
     final s = _settings;
     if (s == null) return [];
+    final houseActive = (_gasFilters.selectedHouseTypes?.isNotEmpty ?? false);
     return [
       if (s.houseType != null)
-        _Chip('Haustyp', _gasFilters.useHouseType, onTap: () {
-          setState(() => _gasFilters = _gasFilters.copyWith(useHouseType: !_gasFilters.useHouseType));
-          _loadResult();
-        }),
+        _Chip(
+          'Haustyp', houseActive,
+          sublabel: houseActive ? _houseTypeSublabel(_gasFilters.selectedHouseTypes) : null,
+          onTap: () {
+            if (!houseActive) {
+              // Enable with default (user's own type)
+              final def = s.houseType != null ? [s.houseType!] : <String>[];
+              setState(() => _gasFilters = _gasFilters.copyWithHouseTypes(def.isEmpty ? null : def));
+              _loadResult();
+            } else {
+              _showHaustypenSheet(isGas: true);
+            }
+          },
+        ),
       if (s.squareMeters != null)
         _Chip(
           'Wohnfläche', _gasFilters.useSqm,
@@ -261,6 +341,7 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
   List<_Chip> _elecChips() {
     final s = _settings;
     if (s == null) return [];
+    final houseActive = (_elecFilters.selectedHouseTypes?.isNotEmpty ?? false);
     return [
       if (s.numberOfPersons != null)
         _Chip('Personenanzahl', _elecFilters.usePersons, onTap: () {
@@ -286,10 +367,19 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
           },
         ),
       if (s.houseType != null)
-        _Chip('Haustyp', _elecFilters.useHouseType, onTap: () {
-          setState(() => _elecFilters = _elecFilters.copyWith(useHouseType: !_elecFilters.useHouseType));
-          _loadResult();
-        }),
+        _Chip(
+          'Haustyp', houseActive,
+          sublabel: houseActive ? _houseTypeSublabel(_elecFilters.selectedHouseTypes) : null,
+          onTap: () {
+            if (!houseActive) {
+              final def = s.houseType != null ? [s.houseType!] : <String>[];
+              setState(() => _elecFilters = _elecFilters.copyWithHouseTypes(def.isEmpty ? null : def));
+              _loadResult();
+            } else {
+              _showHaustypenSheet(isGas: false);
+            }
+          },
+        ),
     ];
   }
 
@@ -619,7 +709,142 @@ class _Chip {
 }
 
 // ---------------------------------------------------------------------------
-// Filter bottom sheet
+// Haustyp multi-select sheet
+// ---------------------------------------------------------------------------
+
+class _HaustypenSheet extends StatefulWidget {
+  final List<String> selected;
+  final Color accent;
+  final ValueChanged<List<String>> onApply;
+  final VoidCallback onDisable;
+
+  const _HaustypenSheet({
+    required this.selected,
+    required this.accent,
+    required this.onApply,
+    required this.onDisable,
+  });
+
+  @override
+  State<_HaustypenSheet> createState() => _HaustypenSheetState();
+}
+
+class _HaustypenSheetState extends State<_HaustypenSheet> {
+  late Set<String> _checked;
+
+  @override
+  void initState() {
+    super.initState();
+    _checked = Set.from(widget.selected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'HAUSTYP',
+            style: GoogleFonts.spaceMono(
+              fontSize: 11, fontWeight: FontWeight.w700,
+              letterSpacing: 2, color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Wähle die Haustypen, mit denen du verglichen werden möchtest. '
+            'Standardmäßig ist nur dein eigener Haustyp ausgewählt.',
+            style: GoogleFonts.rajdhani(
+              fontSize: 13, color: AppColors.textSecondary, height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ..._allHouseTypes.map((type) {
+            final isChecked = _checked.contains(type);
+            return GestureDetector(
+              onTap: () => setState(() {
+                if (isChecked) { _checked.remove(type); } else { _checked.add(type); }
+              }),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 140),
+                    width: 20, height: 20,
+                    decoration: BoxDecoration(
+                      color: isChecked ? widget.accent : Colors.transparent,
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(
+                        color: isChecked ? widget.accent : AppColors.border,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: isChecked
+                        ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                        : null,
+                  ),
+                  const SizedBox(width: 14),
+                  Text(
+                    type,
+                    style: GoogleFonts.rajdhani(
+                      fontSize: 15, fontWeight: FontWeight.w700,
+                      color: isChecked ? AppColors.textPrimary : AppColors.textSecondary,
+                    ),
+                  ),
+                ]),
+              ),
+            );
+          }),
+          const SizedBox(height: 20),
+          GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+              widget.onApply(_checked.toList());
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              decoration: BoxDecoration(
+                color: widget.accent,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'ÜBERNEHMEN',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.spaceMono(
+                  fontSize: 11, fontWeight: FontWeight.w700,
+                  color: Colors.white, letterSpacing: 1.5,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(height: 1, color: AppColors.border),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+              widget.onDisable();
+            },
+            child: Text(
+              'Filter deaktivieren',
+              style: GoogleFonts.rajdhani(
+                fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.error,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Single-select filter bottom sheet
 // ---------------------------------------------------------------------------
 
 class _FilterSheet extends StatelessWidget {
