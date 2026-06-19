@@ -1,4 +1,4 @@
-package com.gastrack.gas_track
+package com.homergy.app
 
 import io.flutter.embedding.android.FlutterActivity
 
