@@ -625,7 +625,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -691,6 +691,40 @@ class AppDatabase extends _$AppDatabase {
           SELECT 'electricity', monthly_advance_payment, valid_from, 0
           FROM electricity_contracts WHERE monthly_advance_payment IS NOT NULL
         ''');
+      }
+      if (from < 15) {
+        // Timestamp-Indizes: beschleunigen watchAllReadings, getReadingsInRange,
+        // getLatestReading — alle drei sortieren/filtern nach timestamp.
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_mr_timestamp ON meter_readings(timestamp DESC)',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_er_timestamp ON electricity_readings(timestamp DESC)',
+        );
+        // isSynced-Index: beschleunigt getUnsyncedReadings (WHERE isSynced = 0).
+        // Partieller Index auf den seltenen Fall (unsynced = Minderheit).
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_mr_unsynced ON meter_readings(id) WHERE is_synced = 0',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_er_unsynced ON electricity_readings(id) WHERE is_synced = 0',
+        );
+        // advance_payment_changes: getForDate filtert contract_type + valid_from
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_apc_type_valid ON advance_payment_changes(contract_type, valid_from DESC)',
+        );
+        // weather_caches: getForDateRange filtert nach date (TEXT "YYYY-MM-DD")
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_weather_date ON weather_caches(date)',
+        );
+        // price_contracts / electricity_contracts: getContractForDate
+        // filtert valid_from <= ? ORDER BY valid_from DESC LIMIT 1
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_pc_valid_from ON price_contracts(valid_from DESC)',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_ec_valid_from ON electricity_contracts(valid_from DESC)',
+        );
       }
     },
   );

@@ -21,21 +21,45 @@ class SyncService {
   static const _advanceChangesTable     = 'advance_payment_changes';
 
   /// Push unsynced local records to Supabase, then pull missing remote records.
+  /// Die 6 Entitätstypen sind voneinander unabhängig und laufen parallel.
+  /// Weather-Prefetch folgt sequenziell (benötigt gesyncte Standortdaten).
   Future<void> syncAll() async {
     final user = SupabaseService.currentUser;
     if (user == null) return;
-    await _pushPendingReadings(user.id);
-    await _pullMissingReadings(user.id);
-    await _pushPendingElectricityReadings(user.id);
-    await _pullMissingElectricityReadings(user.id);
-    await _syncSettings(user.id);
-    await _pushPendingContracts(user.id);
-    await _pullMissingContracts(user.id);
-    await _pushPendingElectricityContracts(user.id);
-    await _pullMissingElectricityContracts(user.id);
-    await _pushPendingAdvancePaymentChanges(user.id);
-    await _pullMissingAdvancePaymentChanges(user.id);
+    await Future.wait([
+      _syncGasReadings(user.id),
+      _syncElectricityReadings(user.id),
+      _syncSettings(user.id),
+      _syncGasContracts(user.id),
+      _syncElectricityContracts(user.id),
+      _syncAdvancePayments(user.id),
+    ]);
     await _prefetchWeather();
+  }
+
+  Future<void> _syncGasReadings(String userId) async {
+    await _pushPendingReadings(userId);
+    await _pullMissingReadings(userId);
+  }
+
+  Future<void> _syncElectricityReadings(String userId) async {
+    await _pushPendingElectricityReadings(userId);
+    await _pullMissingElectricityReadings(userId);
+  }
+
+  Future<void> _syncGasContracts(String userId) async {
+    await _pushPendingContracts(userId);
+    await _pullMissingContracts(userId);
+  }
+
+  Future<void> _syncElectricityContracts(String userId) async {
+    await _pushPendingElectricityContracts(userId);
+    await _pullMissingElectricityContracts(userId);
+  }
+
+  Future<void> _syncAdvancePayments(String userId) async {
+    await _pushPendingAdvancePaymentChanges(userId);
+    await _pullMissingAdvancePaymentChanges(userId);
   }
 
   /// Pre-fetches weather for the last 30 days so the chart always has data,
