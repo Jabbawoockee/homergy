@@ -163,6 +163,12 @@ class _ScanScreenState extends State<ScanScreen> {
         ));
       }
 
+      if (_imagePath != null) {
+        try {
+          await File(_imagePath!).delete();
+        } catch (_) {}
+      }
+
       SyncService().syncAll();
 
       if (mounted) {
