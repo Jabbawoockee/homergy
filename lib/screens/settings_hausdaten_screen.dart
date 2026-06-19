@@ -436,10 +436,10 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
                 const SizedBox(height: 10),
                 Row(children: [
                   SettingsToggleChip(label: 'Ja', selected: _hasPv == true,
-                      onTap: () => setState(() => _hasPv = true)),
+                      onTap: () => setState(() => _hasPv = _hasPv == true ? null : true)),
                   const SizedBox(width: 8),
                   SettingsToggleChip(label: 'Nein', selected: _hasPv == false,
-                      onTap: () => setState(() => _hasPv = false)),
+                      onTap: () => setState(() => _hasPv = _hasPv == false ? null : false)),
                 ]),
 
                 const SizedBox(height: 20),
@@ -461,10 +461,10 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
                 const SizedBox(height: 10),
                 Row(children: [
                   SettingsToggleChip(label: 'Ja', selected: _isInsulated == true,
-                      onTap: () => setState(() => _isInsulated = true)),
+                      onTap: () => setState(() => _isInsulated = _isInsulated == true ? null : true)),
                   const SizedBox(width: 8),
                   SettingsToggleChip(label: 'Nein', selected: _isInsulated == false,
-                      onTap: () => setState(() => _isInsulated = false)),
+                      onTap: () => setState(() => _isInsulated = _isInsulated == false ? null : false)),
                 ]),
 
                 const SizedBox(height: 20),
@@ -486,10 +486,10 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
                 const SizedBox(height: 10),
                 Row(children: [
                   SettingsToggleChip(label: 'Ja', selected: _hasSolarThermal == true,
-                      onTap: () => setState(() => _hasSolarThermal = true)),
+                      onTap: () => setState(() => _hasSolarThermal = _hasSolarThermal == true ? null : true)),
                   const SizedBox(width: 8),
                   SettingsToggleChip(label: 'Nein', selected: _hasSolarThermal == false,
-                      onTap: () => setState(() => _hasSolarThermal = false)),
+                      onTap: () => setState(() => _hasSolarThermal = _hasSolarThermal == false ? null : false)),
                 ]),
               ])),
 
@@ -587,6 +587,15 @@ class _YearFieldState extends State<_YearField> {
   void initState() {
     super.initState();
     _ctrl = TextEditingController(text: widget.value != null ? '${widget.value}' : '');
+  }
+
+  @override
+  void didUpdateWidget(_YearField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      final newText = widget.value != null ? '${widget.value}' : '';
+      if (_ctrl.text != newText) _ctrl.text = newText;
+    }
   }
 
   @override

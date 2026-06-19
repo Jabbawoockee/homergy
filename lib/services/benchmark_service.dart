@@ -149,6 +149,12 @@ class BenchmarkService {
     if (value) await uploadBenchmark();
   }
 
+  // Wird beim App-Start aufgerufen, um gespeicherte Daten aktuell zu halten
+  Future<void> refreshIfSharing() async {
+    final shares = await getSharesData();
+    if (shares) await uploadBenchmark();
+  }
+
   Future<double?> _calcGasMonthlyAvgKwh() async {
     final rawReadings = await AppDatabase.instance.watchAllReadings().first;
     final readings = List<MeterReading>.from(rawReadings)
@@ -201,8 +207,7 @@ class BenchmarkService {
       final settings = await AppDatabase.instance.getSettings();
       final gasAvg  = await _calcGasMonthlyAvgKwh();
       final elecAvg = await _calcElectricityMonthlyAvgKwh();
-      final plz     = settings?.locationPlz;
-      final plzPrefix = (plz != null && plz.length >= 2) ? plz.substring(0, 2) : null;
+      final plz = settings?.locationPlz;
 
       await SupabaseService.client.from(_table).upsert({
         'user_id':                     SupabaseService.currentUser!.id,
@@ -213,7 +218,7 @@ class BenchmarkService {
         'has_solar_thermal':           settings?.hasSolarThermal,
         'construction_year':           settings?.constructionYear,
         'is_insulated':                settings?.isInsulated,
-        'plz_prefix':                  plzPrefix,
+        'plz_prefix':                  plz,  // vollständige PLZ speichern, Prefix-Matching in SQL
         'gas_kwh_monthly_avg':         gasAvg,
         'electricity_kwh_monthly_avg': elecAvg,
         'updated_at':                  DateTime.now().toUtc().toIso8601String(),

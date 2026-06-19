@@ -66,7 +66,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   Future<void> _signOut() async {
     await SupabaseService.signOut();
     await AppDatabase.instance.clearAllUserData();
-    await SettingsService().resetOnboarding();
+    final settings = SettingsService();
+    await settings.resetOnboarding();
+    await settings.clearRegistrationPending();
     if (mounted) {
       Navigator.of(context).pushNamedAndRemoveUntil('/onboarding', (_) => false);
     }

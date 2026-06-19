@@ -38,16 +38,20 @@ class SupabaseService {
     }
   }
 
-  /// Links an email to the current anonymous account.
-  /// The user receives a confirmation link → after clicking, the account is promoted.
-  static Future<void> linkEmail(String email) async {
-    await client.auth.updateUser(UserAttributes(email: email));
+  /// Sends a magic-link for new user registration (creates account + authenticates).
+  static Future<void> sendRegistrationMagicLink(String email) async {
+    await client.auth.signInWithOtp(
+      email: email,
+      shouldCreateUser: true,
+      emailRedirectTo: 'homergy://auth-callback',
+    );
   }
 
-  /// Sends a magic-link for signing in on a new device.
+  /// Sends a magic-link for signing in on a new device (existing account).
   static Future<void> signInWithMagicLink(String email) async {
     await client.auth.signInWithOtp(
       email: email,
+      shouldCreateUser: false,
       emailRedirectTo: 'homergy://auth-callback',
     );
   }

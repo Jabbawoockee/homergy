@@ -60,7 +60,10 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
       _elecFilters = elecF;
       _initLoading = false;
     });
-    if (shares) _loadResult();
+    if (shares) {
+      BenchmarkService().uploadBenchmark(); // PLZ-Daten aktualisieren (vollständige PLZ)
+      _loadResult();
+    }
   }
 
   Future<void> _loadResult() async {
@@ -206,6 +209,7 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.background,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -248,6 +252,7 @@ class _BenchmarkCardState extends State<BenchmarkCard> {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.background,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -740,104 +745,110 @@ class _HaustypenSheetState extends State<_HaustypenSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 36),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'HAUSTYP',
-            style: GoogleFonts.spaceMono(
-              fontSize: 11, fontWeight: FontWeight.w700,
-              letterSpacing: 2, color: AppColors.textSecondary,
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final maxHeight = MediaQuery.of(context).size.height * 0.85;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomPadding),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'HAUSTYP',
+              style: GoogleFonts.spaceMono(
+                fontSize: 11, fontWeight: FontWeight.w700,
+                letterSpacing: 2, color: AppColors.textSecondary,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Wähle die Haustypen, mit denen du verglichen werden möchtest. '
-            'Standardmäßig ist nur dein eigener Haustyp ausgewählt.',
-            style: GoogleFonts.rajdhani(
-              fontSize: 13, color: AppColors.textSecondary, height: 1.45,
+            const SizedBox(height: 8),
+            Text(
+              'Wähle die Haustypen, mit denen du verglichen werden möchtest. '
+              'Standardmäßig ist nur dein eigener Haustyp ausgewählt.',
+              style: GoogleFonts.rajdhani(
+                fontSize: 13, color: AppColors.textSecondary, height: 1.45,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          ..._allHouseTypes.map((type) {
-            final isChecked = _checked.contains(type);
-            return GestureDetector(
-              onTap: () => setState(() {
-                if (isChecked) { _checked.remove(type); } else { _checked.add(type); }
-              }),
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Row(children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 140),
-                    width: 20, height: 20,
-                    decoration: BoxDecoration(
-                      color: isChecked ? widget.accent : Colors.transparent,
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(
-                        color: isChecked ? widget.accent : AppColors.border,
-                        width: 1.5,
+            const SizedBox(height: 16),
+            ..._allHouseTypes.map((type) {
+              final isChecked = _checked.contains(type);
+              return GestureDetector(
+                onTap: () => setState(() {
+                  if (isChecked) { _checked.remove(type); } else { _checked.add(type); }
+                }),
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 140),
+                      width: 20, height: 20,
+                      decoration: BoxDecoration(
+                        color: isChecked ? widget.accent : Colors.transparent,
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                          color: isChecked ? widget.accent : AppColors.border,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: isChecked
+                          ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                          : null,
+                    ),
+                    const SizedBox(width: 14),
+                    Text(
+                      type,
+                      style: GoogleFonts.rajdhani(
+                        fontSize: 15, fontWeight: FontWeight.w700,
+                        color: isChecked ? AppColors.textPrimary : AppColors.textSecondary,
                       ),
                     ),
-                    child: isChecked
-                        ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
-                        : null,
+                  ]),
+                ),
+              );
+            }),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                widget.onApply(_checked.toList());
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                decoration: BoxDecoration(
+                  color: widget.accent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'ÜBERNEHMEN',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.spaceMono(
+                    fontSize: 11, fontWeight: FontWeight.w700,
+                    color: Colors.white, letterSpacing: 1.5,
                   ),
-                  const SizedBox(width: 14),
-                  Text(
-                    type,
-                    style: GoogleFonts.rajdhani(
-                      fontSize: 15, fontWeight: FontWeight.w700,
-                      color: isChecked ? AppColors.textPrimary : AppColors.textSecondary,
-                    ),
-                  ),
-                ]),
-              ),
-            );
-          }),
-          const SizedBox(height: 20),
-          GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-              widget.onApply(_checked.toList());
-            },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              decoration: BoxDecoration(
-                color: widget.accent,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                'ÜBERNEHMEN',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.spaceMono(
-                  fontSize: 11, fontWeight: FontWeight.w700,
-                  color: Colors.white, letterSpacing: 1.5,
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Container(height: 1, color: AppColors.border),
-          const SizedBox(height: 16),
-          GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-              widget.onDisable();
-            },
-            child: Text(
-              'Filter deaktivieren',
-              style: GoogleFonts.rajdhani(
-                fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.error,
+            const SizedBox(height: 16),
+            Container(height: 1, color: AppColors.border),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                widget.onDisable();
+              },
+              child: Text(
+                'Filter deaktivieren',
+                style: GoogleFonts.rajdhani(
+                  fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.error,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -866,92 +877,98 @@ class _FilterSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 36),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.spaceMono(
-              fontSize: 11, fontWeight: FontWeight.w700,
-              letterSpacing: 2, color: AppColors.textSecondary,
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final maxHeight = MediaQuery.of(context).size.height * 0.85;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomPadding),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: GoogleFonts.spaceMono(
+                fontSize: 11, fontWeight: FontWeight.w700,
+                letterSpacing: 2, color: AppColors.textSecondary,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            explanation,
-            style: GoogleFonts.rajdhani(
-              fontSize: 13, color: AppColors.textSecondary, height: 1.45,
+            const SizedBox(height: 8),
+            Text(
+              explanation,
+              style: GoogleFonts.rajdhani(
+                fontSize: 13, color: AppColors.textSecondary, height: 1.45,
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          ...options.asMap().entries.map((e) {
-            final opt = e.value;
-            return GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-                onSelect(e.key);
-              },
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Row(children: [
-                  Container(
-                    width: 20, height: 20,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: opt.selected ? accent : AppColors.border,
-                        width: opt.selected ? 5 : 2,
-                      ),
-                      color: AppColors.background,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          opt.label,
-                          style: GoogleFonts.rajdhani(
-                            fontSize: 15, fontWeight: FontWeight.w700,
-                            color: opt.selected ? AppColors.textPrimary : AppColors.textSecondary,
-                          ),
+            const SizedBox(height: 20),
+            ...options.asMap().entries.map((e) {
+              final opt = e.value;
+              return GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  onSelect(e.key);
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(children: [
+                    Container(
+                      width: 20, height: 20,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: opt.selected ? accent : AppColors.border,
+                          width: opt.selected ? 5 : 2,
                         ),
-                        if (opt.description.isNotEmpty)
+                        color: AppColors.background,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            opt.description,
+                            opt.label,
                             style: GoogleFonts.rajdhani(
-                              fontSize: 12,
-                              color: AppColors.textSecondary.withValues(alpha: 0.7),
+                              fontSize: 15, fontWeight: FontWeight.w700,
+                              color: opt.selected ? AppColors.textPrimary : AppColors.textSecondary,
                             ),
                           ),
-                      ],
+                          if (opt.description.isNotEmpty)
+                            Text(
+                              opt.description,
+                              style: GoogleFonts.rajdhani(
+                                fontSize: 12,
+                                color: AppColors.textSecondary.withValues(alpha: 0.7),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                ]),
-              ),
-            );
-          }),
-          const SizedBox(height: 16),
-          Container(height: 1, color: AppColors.border),
-          const SizedBox(height: 16),
-          GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-              onDisable();
-            },
-            child: Text(
-              'Filter deaktivieren',
-              style: GoogleFonts.rajdhani(
-                fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.error,
+                  ]),
+                ),
+              );
+            }),
+            const SizedBox(height: 16),
+            Container(height: 1, color: AppColors.border),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                onDisable();
+              },
+              child: Text(
+                'Filter deaktivieren',
+                style: GoogleFonts.rajdhani(
+                  fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.error,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

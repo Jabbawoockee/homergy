@@ -51,6 +51,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage            = 0;
   bool _saving                = false;
   bool _emailSending          = false;
+  bool _awaitingEmailConfirm  = false;
   _TrackingMode _trackingMode = _TrackingMode.both;
 
   @override
@@ -60,11 +61,61 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (!mounted) return;
       if (data.event == AuthChangeEvent.signedIn ||
           data.event == AuthChangeEvent.userUpdated) {
-        if (!SupabaseService.isAnonymous) {
-          _finishWithLogin();
-        }
+        _handleAuthenticated();
       }
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _handleAuthenticated();
+    });
+  }
+
+  void _handleAuthenticated() {
+    if (!mounted || SupabaseService.isAnonymous) return;
+
+    if (_mode == _OnbMode.login) {
+      _finishWithLogin();
+      return;
+    }
+
+    // Magic link clicked while app was open — advance to setup
+    if (_mode == _OnbMode.newUser && _awaitingEmailConfirm) {
+      _settingsService.clearRegistrationPending();
+      setState(() => _awaitingEmailConfirm = false);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pageController.hasClients) {
+          _pageController.jumpToPage(_pageTracking);
+          setState(() => _currentPage = _pageTracking);
+        }
+      });
+      return;
+    }
+
+    // User lands on welcome screen (existing user or cold-start after magic link)
+    if (_mode == _OnbMode.welcome) {
+      _handleWelcomeAuthenticated();
+    }
+  }
+
+  Future<void> _handleWelcomeAuthenticated() async {
+    final isPending = await _settingsService.isRegistrationPending();
+    if (!mounted) return;
+    if (isPending) {
+      // Cold start after clicking registration magic link — skip to setup steps
+      await _settingsService.clearRegistrationPending();
+      if (!mounted) return;
+      setState(() {
+        _mode = _OnbMode.newUser;
+        _currentPage = _pageTracking;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pageController.hasClients) {
+          _pageController.jumpToPage(_pageTracking);
+        }
+      });
+    } else {
+      _finishWithLogin();
+    }
   }
 
   @override
@@ -167,7 +218,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  // Check email existence, send link, return false if account already exists
   Future<bool> _sendOnboardingEmail() async {
     final email = _emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) return false;
@@ -198,11 +248,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       _emailController.clear();
                       _currentPage = 0;
                     });
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (_pageController.hasClients) {
-                        _pageController.jumpToPage(0);
-                      }
-                    });
                   },
                   child: Text('ZUM ANMELDEN',
                       style: GoogleFonts.spaceMono(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.green, letterSpacing: 1)),
@@ -218,8 +263,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         }
         return false;
       }
-      await SupabaseService.signInWithMagicLink(email);
-    } catch (_) {}
+      await SupabaseService.sendRegistrationMagicLink(email);
+      await _settingsService.setRegistrationPending();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _emailSending = false);
+        _showError('Fehler beim Senden des Links: $e');
+      }
+      return false;
+    }
     if (mounted) setState(() => _emailSending = false);
     return true;
   }
@@ -484,11 +536,96 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   // ---------------------------------------------------------------------------
+  // New-user flow — OTP-Eingabe
+  // ---------------------------------------------------------------------------
+
+  Widget _buildAwaitingEmailConfirm() {
+    final email = _emailController.text.trim();
+    return Padding(
+      key: const ValueKey('awaitEmail'),
+      padding: const EdgeInsets.fromLTRB(28, 16, 28, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(children: [
+            GestureDetector(
+              onTap: () => setState(() => _awaitingEmailConfirm = false),
+              child: Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(color: AppColors.background, shape: BoxShape.circle, boxShadow: AppColors.neu(5)),
+                child: const Icon(Icons.arrow_back_ios_new, size: 16, color: AppColors.textPrimary),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Text('KONTO ERSTELLEN', style: GoogleFonts.spaceMono(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.greenDark, letterSpacing: 3)),
+          ]),
+          const SizedBox(height: 32),
+          Container(height: 1, color: AppColors.border),
+          const Spacer(),
+          Center(
+            child: Container(
+              width: 80, height: 80,
+              decoration: BoxDecoration(color: AppColors.background, shape: BoxShape.circle, boxShadow: AppColors.neu(10)),
+              child: const Icon(Icons.mark_email_read_outlined, color: AppColors.green, size: 36),
+            ),
+          ),
+          const SizedBox(height: 28),
+          Text('Link gesendet!',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.spaceMono(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.greenDark, letterSpacing: 0.5)),
+          const SizedBox(height: 10),
+          Text(
+            'Wir haben einen Bestätigungslink an\n$email\ngesendet.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.rajdhani(fontSize: 15, color: AppColors.textSecondary, height: 1.6),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(color: AppColors.amber.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(12)),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.touch_app_outlined, size: 18, color: AppColors.amber),
+              const SizedBox(width: 10),
+              Expanded(child: Text(
+                'Öffne deine E-Mail-App, tippe den Link an — die App öffnet sich automatisch und leitet dich zur Einrichtung weiter.',
+                style: GoogleFonts.rajdhani(fontSize: 14, color: AppColors.textSecondary, height: 1.5),
+              )),
+            ]),
+          ),
+          const SizedBox(height: 20),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const SizedBox(
+              width: 14, height: 14,
+              child: CircularProgressIndicator(color: AppColors.green, strokeWidth: 1.5),
+            ),
+            const SizedBox(width: 10),
+            Text('Warte auf Bestätigung …',
+                style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary)),
+          ]),
+          const Spacer(),
+          GestureDetector(
+            onTap: () => setState(() => _awaitingEmailConfirm = false),
+            child: Text('Andere E-Mail-Adresse verwenden',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.rajdhani(fontSize: 13, color: AppColors.textSecondary,
+                    decoration: TextDecoration.underline, decorationColor: AppColors.textSecondary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // New-user flow
   // ---------------------------------------------------------------------------
 
   Widget _buildNewUserFlow() {
     final isLastPage = _currentPage == _pageLocation;
+
+    // Magic Link gesendet — warte auf Bestätigung
+    if (_awaitingEmailConfirm) {
+      return _buildAwaitingEmailConfirm();
+    }
 
     return Column(
       key: const ValueKey('newUser'),
@@ -573,6 +710,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           }
                           final ok = await _sendOnboardingEmail();
                           if (!ok) return;
+                          if (mounted) setState(() => _awaitingEmailConfirm = true);
+                          return;
                         }
                         if (isLastPage) {
                           _finishNewUser();

@@ -3,6 +3,7 @@ import '../database/database.dart';
 
 class SettingsService {
   static const _keyOnboardingDone = 'onboarding_done';
+  static const _keyRegistrationPending = 'registration_pending';
 
   Future<int> getMeterIntDigits() async {
     final s = await AppDatabase.instance.getSettings();
@@ -47,6 +48,21 @@ class SettingsService {
   Future<void> resetOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyOnboardingDone);
+  }
+
+  Future<bool> isRegistrationPending() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyRegistrationPending) ?? false;
+  }
+
+  Future<void> setRegistrationPending() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyRegistrationPending, true);
+  }
+
+  Future<void> clearRegistrationPending() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyRegistrationPending);
   }
 
   Future<String> getTrackingMode() async {

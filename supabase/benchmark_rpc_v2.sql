@@ -1,11 +1,13 @@
 -- ============================================================
--- GasTrack: RPCs v2 — Haustyp als TEXT[] für Mehrfachauswahl
+-- GasTrack: RPCs v2 — Haustyp als TEXT[], PLZ Prefix-Matching
 -- Im Supabase SQL-Editor ausführen
 -- ============================================================
 
 -- Alte Funktionen entfernen (Signatur hat sich geändert)
 DROP FUNCTION IF EXISTS get_gas_benchmark(UUID, TEXT, INT, INT, BOOLEAN, INT, INT, BOOLEAN, TEXT);
+DROP FUNCTION IF EXISTS get_gas_benchmark(UUID, TEXT[], INT, INT, BOOLEAN, INT, INT, BOOLEAN, TEXT);
 DROP FUNCTION IF EXISTS get_electricity_benchmark(UUID, INT, BOOLEAN, INT, INT, TEXT);
+DROP FUNCTION IF EXISTS get_electricity_benchmark(UUID, INT, BOOLEAN, INT, INT, TEXT[]);
 
 -- ============================================================
 -- RPC: Gas-Vergleich (v2)
@@ -54,7 +56,7 @@ BEGIN
     AND (p_construction_year_min  IS NULL OR construction_year      >= p_construction_year_min)
     AND (p_construction_year_max  IS NULL OR construction_year      <= p_construction_year_max)
     AND (p_is_insulated           IS NULL OR is_insulated           =  p_is_insulated)
-    AND (p_plz_prefix             IS NULL OR plz_prefix             =  p_plz_prefix);
+    AND (p_plz_prefix IS NULL OR LEFT(plz_prefix, LENGTH(p_plz_prefix)) = p_plz_prefix);
 
   RETURN v_result;
 END;
