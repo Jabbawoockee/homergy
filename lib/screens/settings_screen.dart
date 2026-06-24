@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../database/database.dart';
 import '../services/supabase_service.dart';
 import '../theme/colors.dart';
@@ -18,11 +19,15 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   _SettingsPreview?    _preview;
   _Completeness?       _completeness;
+  String               _appVersion = '';
 
   @override
   void initState() {
     super.initState();
     _loadPreview();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _appVersion = info.version);
+    });
   }
 
   Future<void> _loadPreview() async {
@@ -296,7 +301,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Icon(Icons.info_outline_rounded,
                           size: 14, color: AppColors.textSecondary.withValues(alpha: 0.5)),
                       const SizedBox(width: 6),
-                      Text('Homergy v1.0.0',
+                      Text('Homergy v$_appVersion',
                           style: GoogleFonts.spaceMono(
                               fontSize: 11,
                               color: AppColors.textSecondary.withValues(alpha: 0.5),

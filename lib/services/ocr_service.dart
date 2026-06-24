@@ -59,6 +59,7 @@ class OcrService {
     String imagePath, {
     MeterType meterType = MeterType.gas,
     int intDigits = 5,
+    int decDigits = 2,
     double? lastReading,
   }) async {
     final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
@@ -81,26 +82,25 @@ class OcrService {
         if (result != null) {
           final brightness = brightnessSampler?.sample(box) ?? 128.0;
           final brightnessBonus = _brightnessBonus(brightness);
-          // "kWh" on the same line → this is the meter reading display, massive bonus.
-          final kwhBonus = _kwhBonus(line.text);
-          final score = result.priority * 1000000.0 + area + brightnessBonus + kwhBonus;
+          // "kWh" / "m³" on the same line → this is the meter display, massive bonus.
+          final unitBonus = _unitBonus(line.text);
+          final score = result.priority * 1000000.0 + area + brightnessBonus + unitBonus;
           debugPrint(
               '[OCR] Candidate: "${line.text}" → ${result.value}  pri=${result.priority}  '
               'area=${area.toStringAsFixed(0)}  bri=${brightness.toStringAsFixed(0)}  '
-              'kwh=${kwhBonus > 0 ? "YES" : "no"}  score=${score.toStringAsFixed(0)}');
+              'unit=${unitBonus > 0 ? "YES" : "no"}  score=${score.toStringAsFixed(0)}');
           candidates.add(_Candidate(
               value: result.value, score: score, sourceText: line.text));
         }
       }
 
       // Adjacent line pairs (integer + decimal split across two ML Kit lines).
-      // IMPORTANT: never combine a kWh display line with its neighbour — the
-      // display line is self-contained, and nearby spec numbers (e.g. "212 345")
-      // would be misread as false decimal digits (e.g. "151069,12").
+      // IMPORTANT: never combine a kWh/m³ display line with its neighbour — the
+      // display line is self-contained.
       for (int i = 0; i < allLines.length - 1; i++) {
         final lineAText = allLines[i].text;
         final lineBText = allLines[i + 1].text;
-        if (_kwhBonus(lineAText) > 0 || _kwhBonus(lineBText) > 0) continue;
+        if (_unitBonus(lineAText) > 0 || _unitBonus(lineBText) > 0) continue;
 
         final combined = '${lineAText.trim()} ${lineBText.trim()}';
         final result = _tryExtractWithPriority(combined, intDigits);
@@ -142,7 +142,7 @@ class OcrService {
             debugPrint(
                 '[OCR] History pick: "${best.sourceText}" → ${best.value} (lastReading=$lastReading)');
             return OcrResult(
-                reading: _truncateTo2Decimals(best.value), rawText: rawText);
+                reading: _truncateToDecimals(best.value, decDigits), rawText: rawText);
           }
           debugPrint(
               '[OCR] All candidates below lastReading=$lastReading, using score-based pick');
@@ -152,13 +152,13 @@ class OcrService {
         debugPrint(
             '[OCR] Best: "${best.sourceText}" → ${best.value}  score=${best.score}');
         return OcrResult(
-            reading: _truncateTo2Decimals(best.value), rawText: rawText);
+            reading: _truncateToDecimals(best.value, decDigits), rawText: rawText);
       }
 
       final fullText = allLines.map((l) => l.text).join(' ');
       final fallback = _tryExtractWithPriority(fullText, intDigits);
       return OcrResult(
-        reading: fallback != null ? _truncateTo2Decimals(fallback.value) : null,
+        reading: fallback != null ? _truncateToDecimals(fallback.value, decDigits) : null,
         rawText: rawText,
       );
     } catch (e) {
@@ -169,10 +169,14 @@ class OcrService {
     }
   }
 
-  /// Bonus when the text line contains "kWh" — strongest possible signal that
-  /// this line is the meter reading display, not a serial number or spec label.
-  double _kwhBonus(String lineText) =>
-      lineText.toLowerCase().contains('kwh') ? 4000000.0 : 0.0;
+  /// Bonus when the text line contains a meter unit ("kWh" or "m³") —
+  /// strongest possible signal that this line is the display, not a label.
+  double _unitBonus(String lineText) {
+    final t = lineText.toLowerCase();
+    if (t.contains('kwh')) return 4000000.0;
+    if (t.contains('m³') || t.contains('m3')) return 4000000.0;
+    return 0.0;
+  }
 
   // ---------------------------------------------------------------------------
   // Fixed-digit electricity extraction
@@ -279,6 +283,87 @@ class OcrService {
     }
   }
 
+  /// Extracts a gas meter reading.
+  ///
+  /// Brightness thresholds (after the sampler fix that reads true image size):
+  ///   Black drums (integer):      luminance  0–40   → accepted
+  ///   Red drums   (decimal):      luminance 60–80   → accepted (part of reading)
+  ///   Combined display line avg:  luminance ~40–80  → accepted
+  ///   Grey housing / serial nr:   luminance 130+    → rejected
+  ///   White label text:           luminance 180+    → rejected
+  ///   Red safety panel text avg:  luminance ~120+   → rejected
+  Future<OcrResult> extractGasReading(
+    String imagePath, {
+    required int intDigits,
+    required int decDigits,
+  }) async {
+    // 100 sits safely between red drums (~76) and grey housing/safety panel (~120+).
+    const kGasBrightnessMax = 100.0;
+
+    final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
+    try {
+      final inputImage = InputImage.fromFile(File(imagePath));
+      final recognizedText = await recognizer.processImage(inputImage);
+      final allLines = recognizedText.blocks.expand((b) => b.lines).toList();
+      final rawText = allLines.map((l) => l.text).join(' | ');
+      debugPrint('[OCR-Gas] Raw lines: $rawText');
+      debugPrint('[OCR-Gas] Looking for $intDigits black-background digits');
+
+      final brightnessSampler = await _BrightnessSampler.load(imagePath, allLines);
+
+      // Collect all lines on dark background (black integer drums + red decimal drums).
+      final darkLines = <TextLine>[];
+      for (final line in allLines) {
+        if (brightnessSampler != null) {
+          final bg = brightnessSampler.sample(line.boundingBox);
+          debugPrint('[OCR-Gas] bg=${bg.toStringAsFixed(0)} "${line.text.trim()}"');
+          if (bg > kGasBrightnessMax) {
+            debugPrint('[OCR-Gas] → skip');
+            continue;
+          }
+        }
+        darkLines.add(line);
+      }
+
+      debugPrint('[OCR-Gas] Dark lines: ${darkLines.map((l) => l.text).join(" | ")}');
+
+      // Try each dark line individually.
+      _ElecCandidate? best;
+      for (final line in darkLines) {
+        final candidate = _elecExtract(line.text, intDigits, decDigits);
+        if (candidate == null) continue;
+        final score = line.boundingBox.height;
+        debugPrint('[OCR-Gas] ✓ "${line.text.trim()}" h=${score.toInt()} → $candidate');
+        if (best == null || score > best.score) {
+          best = _ElecCandidate(reading: candidate, score: score);
+        }
+      }
+
+      // Fallback: combine all dark-line text (handles ML Kit splitting display row).
+      if (best == null && darkLines.isNotEmpty) {
+        final combined = darkLines.map((l) => l.text).join(' ');
+        final candidate = _elecExtract(combined, intDigits, decDigits);
+        if (candidate != null) {
+          debugPrint('[OCR-Gas] Combined dark lines → $candidate');
+          best = _ElecCandidate(reading: candidate, score: 0);
+        }
+      }
+
+      if (best != null) {
+        debugPrint('[OCR-Gas] Result: ${best.reading}');
+        return OcrResult(reading: best.reading, rawText: rawText);
+      }
+
+      debugPrint('[OCR-Gas] No dark-background digits found');
+      return OcrResult(rawText: rawText);
+    } catch (e) {
+      debugPrint('[OCR-Gas] Error: $e');
+      return const OcrResult(rawText: '');
+    } finally {
+      await recognizer.close();
+    }
+  }
+
   /// Normalizes a meter display line and extracts digits.
   /// Returns "intPart.decPart" string if enough digits found, null otherwise.
   String? _elecExtract(String lineText, int intDigits, int decDigits) {
@@ -308,11 +393,11 @@ class OcrService {
     return 0.0;
   }
 
-  /// Truncate to exactly 2 decimal places (drop 3rd decimal digit).
-  String _truncateTo2Decimals(String value) {
+  /// Truncate to exactly [dec] decimal places.
+  String _truncateToDecimals(String value, int dec) {
     final dotIdx = value.indexOf('.');
     if (dotIdx == -1) return value;
-    final end = (dotIdx + 3).clamp(0, value.length);
+    final end = (dotIdx + 1 + dec).clamp(0, value.length);
     return value.substring(0, end);
   }
 
@@ -474,6 +559,12 @@ class _BrightnessSampler {
     try {
       final bytes = Uint8List.fromList(await File(imagePath).readAsBytes());
 
+      // Read true original dimensions from the file header (JPEG/PNG).
+      // This is critical: estimating from ML Kit bounding boxes is unreliable
+      // because text often covers only the upper portion of the image, causing
+      // the scale factor to be off by 2x or more.
+      final dims = _parseImageDimensions(bytes);
+
       // Decode at a small target width to save memory and speed up sampling.
       const targetWidth = 320;
       final codec = await ui.instantiateImageCodec(
@@ -483,14 +574,22 @@ class _BrightnessSampler {
       final frame = await codec.getNextFrame();
       final img = frame.image;
 
-      // Estimate original image dimensions from ML Kit bounding boxes.
-      double origW = 0, origH = 0;
-      for (final line in allLines) {
-        origW = math.max(origW, line.boundingBox.right);
-        origH = math.max(origH, line.boundingBox.bottom);
+      double origW, origH;
+      if (dims != null) {
+        origW = dims.$1;
+        origH = dims.$2;
+        debugPrint('[OCR] Image dimensions from header: ${origW.toInt()}×${origH.toInt()}');
+      } else {
+        // Fallback: estimate from ML Kit bounding boxes (less accurate).
+        origW = 0; origH = 0;
+        for (final line in allLines) {
+          origW = math.max(origW, line.boundingBox.right);
+          origH = math.max(origH, line.boundingBox.bottom);
+        }
+        if (origW < 1) origW = 1920;
+        if (origH < 1) origH = 1080;
+        debugPrint('[OCR] Image dimensions estimated from bboxes: ${origW.toInt()}×${origH.toInt()}');
       }
-      if (origW < 1) origW = 1920;
-      if (origH < 1) origH = 1080;
 
       final scaleX = img.width / origW;
       final scaleY = img.height / origH;
@@ -504,6 +603,49 @@ class _BrightnessSampler {
       debugPrint('[OCR] BrightnessSampler load failed: $e');
       return null;
     }
+  }
+
+  /// Reads image dimensions from a JPEG or PNG file header without full decode.
+  /// Returns (width, height) or null if the format is unrecognised.
+  static (double, double)? _parseImageDimensions(Uint8List bytes) {
+    // JPEG: scan for SOF0 (0xC0), SOF1 (0xC1) or SOF2 (0xC2) markers.
+    // Each SOF segment: FF marker len(2) precision(1) height(2) width(2)
+    if (bytes.length > 4 && bytes[0] == 0xFF && bytes[1] == 0xD8) {
+      int i = 2;
+      while (i + 4 < bytes.length) {
+        if (bytes[i] != 0xFF) break;
+        final marker = bytes[i + 1];
+        if (marker == 0xC0 || marker == 0xC1 || marker == 0xC2) {
+          if (i + 9 <= bytes.length) {
+            final h = ((bytes[i + 5] << 8) | bytes[i + 6]).toDouble();
+            final w = ((bytes[i + 7] << 8) | bytes[i + 8]).toDouble();
+            if (w > 0 && h > 0) return (w, h);
+          }
+          return null;
+        }
+        // Markers with no payload (RST0–RST7, SOI, EOI, TEM).
+        if (marker == 0xD9) break;
+        if ((marker >= 0xD0 && marker <= 0xD9) || marker == 0x01) {
+          i += 2;
+          continue;
+        }
+        final segLen = (bytes[i + 2] << 8) | bytes[i + 3];
+        if (segLen < 2) break;
+        i += 2 + segLen;
+      }
+    }
+    // PNG: 8-byte signature, then IHDR chunk at offset 8.
+    // IHDR layout: length(4) "IHDR" width(4) height(4) ...
+    if (bytes.length >= 24 &&
+        bytes[0] == 0x89 && bytes[1] == 0x50 &&
+        bytes[2] == 0x4E && bytes[3] == 0x47) {
+      final w = ((bytes[16] << 24) | (bytes[17] << 16) |
+                 (bytes[18] << 8)  |  bytes[19]).toDouble();
+      final h = ((bytes[20] << 24) | (bytes[21] << 16) |
+                 (bytes[22] << 8)  |  bytes[23]).toDouble();
+      if (w > 0 && h > 0) return (w, h);
+    }
+    return null;
   }
 
   /// Returns the average pixel brightness (0–255) in the scaled region.

@@ -2463,6 +2463,17 @@ class $AppSettingsTable extends AppSettings
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _meterDecDigitsMeta = const VerificationMeta(
+    'meterDecDigits',
+  );
+  @override
+  late final GeneratedColumn<int> meterDecDigits = GeneratedColumn<int>(
+    'meter_dec_digits',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _electricityIntDigitsMeta =
       const VerificationMeta('electricityIntDigits');
   @override
@@ -2586,6 +2597,7 @@ class $AppSettingsTable extends AppSettings
     locationLat,
     locationLon,
     meterIntDigits,
+    meterDecDigits,
     electricityIntDigits,
     electricityDecDigits,
     houseType,
@@ -2654,6 +2666,15 @@ class $AppSettingsTable extends AppSettings
         meterIntDigits.isAcceptableOrUnknown(
           data['meter_int_digits']!,
           _meterIntDigitsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('meter_dec_digits')) {
+      context.handle(
+        _meterDecDigitsMeta,
+        meterDecDigits.isAcceptableOrUnknown(
+          data['meter_dec_digits']!,
+          _meterDecDigitsMeta,
         ),
       );
     }
@@ -2774,6 +2795,10 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.int,
         data['${effectivePrefix}meter_int_digits'],
       ),
+      meterDecDigits: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}meter_dec_digits'],
+      ),
       electricityIntDigits: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}electricity_int_digits'],
@@ -2830,6 +2855,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final double? locationLat;
   final double? locationLon;
   final int? meterIntDigits;
+  final int? meterDecDigits;
   final int? electricityIntDigits;
   final int? electricityDecDigits;
   final String? houseType;
@@ -2847,6 +2873,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     this.locationLat,
     this.locationLon,
     this.meterIntDigits,
+    this.meterDecDigits,
     this.electricityIntDigits,
     this.electricityDecDigits,
     this.houseType,
@@ -2876,6 +2903,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     }
     if (!nullToAbsent || meterIntDigits != null) {
       map['meter_int_digits'] = Variable<int>(meterIntDigits);
+    }
+    if (!nullToAbsent || meterDecDigits != null) {
+      map['meter_dec_digits'] = Variable<int>(meterDecDigits);
     }
     if (!nullToAbsent || electricityIntDigits != null) {
       map['electricity_int_digits'] = Variable<int>(electricityIntDigits);
@@ -2928,6 +2958,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       meterIntDigits: meterIntDigits == null && nullToAbsent
           ? const Value.absent()
           : Value(meterIntDigits),
+      meterDecDigits: meterDecDigits == null && nullToAbsent
+          ? const Value.absent()
+          : Value(meterDecDigits),
       electricityIntDigits: electricityIntDigits == null && nullToAbsent
           ? const Value.absent()
           : Value(electricityIntDigits),
@@ -2973,6 +3006,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       locationLat: serializer.fromJson<double?>(json['locationLat']),
       locationLon: serializer.fromJson<double?>(json['locationLon']),
       meterIntDigits: serializer.fromJson<int?>(json['meterIntDigits']),
+      meterDecDigits: serializer.fromJson<int?>(json['meterDecDigits']),
       electricityIntDigits: serializer.fromJson<int?>(
         json['electricityIntDigits'],
       ),
@@ -2999,6 +3033,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'locationLat': serializer.toJson<double?>(locationLat),
       'locationLon': serializer.toJson<double?>(locationLon),
       'meterIntDigits': serializer.toJson<int?>(meterIntDigits),
+      'meterDecDigits': serializer.toJson<int?>(meterDecDigits),
       'electricityIntDigits': serializer.toJson<int?>(electricityIntDigits),
       'electricityDecDigits': serializer.toJson<int?>(electricityDecDigits),
       'houseType': serializer.toJson<String?>(houseType),
@@ -3019,6 +3054,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     Value<double?> locationLat = const Value.absent(),
     Value<double?> locationLon = const Value.absent(),
     Value<int?> meterIntDigits = const Value.absent(),
+    Value<int?> meterDecDigits = const Value.absent(),
     Value<int?> electricityIntDigits = const Value.absent(),
     Value<int?> electricityDecDigits = const Value.absent(),
     Value<String?> houseType = const Value.absent(),
@@ -3038,6 +3074,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     meterIntDigits: meterIntDigits.present
         ? meterIntDigits.value
         : this.meterIntDigits,
+    meterDecDigits: meterDecDigits.present
+        ? meterDecDigits.value
+        : this.meterDecDigits,
     electricityIntDigits: electricityIntDigits.present
         ? electricityIntDigits.value
         : this.electricityIntDigits,
@@ -3077,6 +3116,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       meterIntDigits: data.meterIntDigits.present
           ? data.meterIntDigits.value
           : this.meterIntDigits,
+      meterDecDigits: data.meterDecDigits.present
+          ? data.meterDecDigits.value
+          : this.meterDecDigits,
       electricityIntDigits: data.electricityIntDigits.present
           ? data.electricityIntDigits.value
           : this.electricityIntDigits,
@@ -3115,6 +3157,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('locationLat: $locationLat, ')
           ..write('locationLon: $locationLon, ')
           ..write('meterIntDigits: $meterIntDigits, ')
+          ..write('meterDecDigits: $meterDecDigits, ')
           ..write('electricityIntDigits: $electricityIntDigits, ')
           ..write('electricityDecDigits: $electricityDecDigits, ')
           ..write('houseType: $houseType, ')
@@ -3137,6 +3180,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     locationLat,
     locationLon,
     meterIntDigits,
+    meterDecDigits,
     electricityIntDigits,
     electricityDecDigits,
     houseType,
@@ -3158,6 +3202,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.locationLat == this.locationLat &&
           other.locationLon == this.locationLon &&
           other.meterIntDigits == this.meterIntDigits &&
+          other.meterDecDigits == this.meterDecDigits &&
           other.electricityIntDigits == this.electricityIntDigits &&
           other.electricityDecDigits == this.electricityDecDigits &&
           other.houseType == this.houseType &&
@@ -3177,6 +3222,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<double?> locationLat;
   final Value<double?> locationLon;
   final Value<int?> meterIntDigits;
+  final Value<int?> meterDecDigits;
   final Value<int?> electricityIntDigits;
   final Value<int?> electricityDecDigits;
   final Value<String?> houseType;
@@ -3194,6 +3240,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.locationLat = const Value.absent(),
     this.locationLon = const Value.absent(),
     this.meterIntDigits = const Value.absent(),
+    this.meterDecDigits = const Value.absent(),
     this.electricityIntDigits = const Value.absent(),
     this.electricityDecDigits = const Value.absent(),
     this.houseType = const Value.absent(),
@@ -3212,6 +3259,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.locationLat = const Value.absent(),
     this.locationLon = const Value.absent(),
     this.meterIntDigits = const Value.absent(),
+    this.meterDecDigits = const Value.absent(),
     this.electricityIntDigits = const Value.absent(),
     this.electricityDecDigits = const Value.absent(),
     this.houseType = const Value.absent(),
@@ -3230,6 +3278,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<double>? locationLat,
     Expression<double>? locationLon,
     Expression<int>? meterIntDigits,
+    Expression<int>? meterDecDigits,
     Expression<int>? electricityIntDigits,
     Expression<int>? electricityDecDigits,
     Expression<String>? houseType,
@@ -3248,6 +3297,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (locationLat != null) 'location_lat': locationLat,
       if (locationLon != null) 'location_lon': locationLon,
       if (meterIntDigits != null) 'meter_int_digits': meterIntDigits,
+      if (meterDecDigits != null) 'meter_dec_digits': meterDecDigits,
       if (electricityIntDigits != null)
         'electricity_int_digits': electricityIntDigits,
       if (electricityDecDigits != null)
@@ -3270,6 +3320,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<double?>? locationLat,
     Value<double?>? locationLon,
     Value<int?>? meterIntDigits,
+    Value<int?>? meterDecDigits,
     Value<int?>? electricityIntDigits,
     Value<int?>? electricityDecDigits,
     Value<String?>? houseType,
@@ -3288,6 +3339,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       locationLat: locationLat ?? this.locationLat,
       locationLon: locationLon ?? this.locationLon,
       meterIntDigits: meterIntDigits ?? this.meterIntDigits,
+      meterDecDigits: meterDecDigits ?? this.meterDecDigits,
       electricityIntDigits: electricityIntDigits ?? this.electricityIntDigits,
       electricityDecDigits: electricityDecDigits ?? this.electricityDecDigits,
       houseType: houseType ?? this.houseType,
@@ -3321,6 +3373,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     }
     if (meterIntDigits.present) {
       map['meter_int_digits'] = Variable<int>(meterIntDigits.value);
+    }
+    if (meterDecDigits.present) {
+      map['meter_dec_digits'] = Variable<int>(meterDecDigits.value);
     }
     if (electricityIntDigits.present) {
       map['electricity_int_digits'] = Variable<int>(electricityIntDigits.value);
@@ -3364,6 +3419,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('locationLat: $locationLat, ')
           ..write('locationLon: $locationLon, ')
           ..write('meterIntDigits: $meterIntDigits, ')
+          ..write('meterDecDigits: $meterDecDigits, ')
           ..write('electricityIntDigits: $electricityIntDigits, ')
           ..write('electricityDecDigits: $electricityDecDigits, ')
           ..write('houseType: $houseType, ')
@@ -5312,6 +5368,7 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<double?> locationLat,
       Value<double?> locationLon,
       Value<int?> meterIntDigits,
+      Value<int?> meterDecDigits,
       Value<int?> electricityIntDigits,
       Value<int?> electricityDecDigits,
       Value<String?> houseType,
@@ -5331,6 +5388,7 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<double?> locationLat,
       Value<double?> locationLon,
       Value<int?> meterIntDigits,
+      Value<int?> meterDecDigits,
       Value<int?> electricityIntDigits,
       Value<int?> electricityDecDigits,
       Value<String?> houseType,
@@ -5379,6 +5437,11 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<int> get meterIntDigits => $composableBuilder(
     column: $table.meterIntDigits,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get meterDecDigits => $composableBuilder(
+    column: $table.meterDecDigits,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5472,6 +5535,11 @@ class $$AppSettingsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get meterDecDigits => $composableBuilder(
+    column: $table.meterDecDigits,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get electricityIntDigits => $composableBuilder(
     column: $table.electricityIntDigits,
     builder: (column) => ColumnOrderings(column),
@@ -5560,6 +5628,11 @@ class $$AppSettingsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get meterDecDigits => $composableBuilder(
+    column: $table.meterDecDigits,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get electricityIntDigits => $composableBuilder(
     column: $table.electricityIntDigits,
     builder: (column) => column,
@@ -5644,6 +5717,7 @@ class $$AppSettingsTableTableManager
                 Value<double?> locationLat = const Value.absent(),
                 Value<double?> locationLon = const Value.absent(),
                 Value<int?> meterIntDigits = const Value.absent(),
+                Value<int?> meterDecDigits = const Value.absent(),
                 Value<int?> electricityIntDigits = const Value.absent(),
                 Value<int?> electricityDecDigits = const Value.absent(),
                 Value<String?> houseType = const Value.absent(),
@@ -5661,6 +5735,7 @@ class $$AppSettingsTableTableManager
                 locationLat: locationLat,
                 locationLon: locationLon,
                 meterIntDigits: meterIntDigits,
+                meterDecDigits: meterDecDigits,
                 electricityIntDigits: electricityIntDigits,
                 electricityDecDigits: electricityDecDigits,
                 houseType: houseType,
@@ -5680,6 +5755,7 @@ class $$AppSettingsTableTableManager
                 Value<double?> locationLat = const Value.absent(),
                 Value<double?> locationLon = const Value.absent(),
                 Value<int?> meterIntDigits = const Value.absent(),
+                Value<int?> meterDecDigits = const Value.absent(),
                 Value<int?> electricityIntDigits = const Value.absent(),
                 Value<int?> electricityDecDigits = const Value.absent(),
                 Value<String?> houseType = const Value.absent(),
@@ -5697,6 +5773,7 @@ class $$AppSettingsTableTableManager
                 locationLat: locationLat,
                 locationLon: locationLon,
                 meterIntDigits: meterIntDigits,
+                meterDecDigits: meterDecDigits,
                 electricityIntDigits: electricityIntDigits,
                 electricityDecDigits: electricityDecDigits,
                 houseType: houseType,

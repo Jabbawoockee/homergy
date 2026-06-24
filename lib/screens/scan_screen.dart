@@ -36,13 +36,13 @@ class _ScanScreenState extends State<ScanScreen> {
   bool _isEditing = false;
   String? _ocrRawHint;
   int _meterIntDigits = 5;
+  double? _lastGasReading;
 
   static const _blue = Color(0xFF5B8DB8);
   bool get _isElec => widget.meterType == MeterType.electricity;
   Color get _accentColor => _isElec ? _blue : AppColors.green;
   Color get _highlightColor => _isElec ? _blue : AppColors.amber;
   int _meterDecDigits = 1;
-  double? _lastReading;
 
   @override
   void initState() {
@@ -54,20 +54,19 @@ class _ScanScreenState extends State<ScanScreen> {
     final isElec = widget.meterType == MeterType.electricity;
     int digits;
     int decDigits = 1;
-    double? lastValue;
     if (isElec) {
       digits = await _settingsService.getElectricityIntDigits();
       decDigits = await _settingsService.getElectricityDecDigits();
-      lastValue = (await _db.getLatestElectricityReading())?.value;
     } else {
       digits = await _settingsService.getMeterIntDigits();
-      lastValue = (await _db.getLatestReading())?.value;
+      decDigits = await _settingsService.getMeterDecDigits();
+      final latest = await _db.getLatestReading();
+      if (mounted) _lastGasReading = latest?.value;
     }
     if (mounted) {
       setState(() {
         _meterIntDigits = digits;
         _meterDecDigits = decDigits;
-        _lastReading = lastValue;
       });
     }
   }
@@ -111,7 +110,8 @@ class _ScanScreenState extends State<ScanScreen> {
           picked.path,
           meterType: MeterType.gas,
           intDigits: _meterIntDigits,
-          lastReading: _lastReading,
+          decDigits: _meterDecDigits,
+          lastReading: _lastGasReading,
         );
       }
       if (mounted) {

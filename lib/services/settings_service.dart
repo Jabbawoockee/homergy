@@ -16,6 +16,15 @@ class SettingsService {
     await AppDatabase.instance.saveMeterIntDigits(digits);
   }
 
+  Future<int> getMeterDecDigits() async {
+    final s = await AppDatabase.instance.getSettings();
+    return s?.meterDecDigits ?? 3;
+  }
+
+  Future<void> setMeterDecDigits(int digits) async {
+    await AppDatabase.instance.saveMeterDecDigits(digits);
+  }
+
   Future<int> getElectricityIntDigits() async {
     final s = await AppDatabase.instance.getSettings();
     return s?.electricityIntDigits ?? 6;

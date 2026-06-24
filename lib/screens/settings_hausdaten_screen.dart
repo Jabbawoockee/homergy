@@ -41,6 +41,7 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
   String  _trackingMode = 'both';
 
   int _gasMeterIntDigits = 5;
+  int _gasMeterDecDigits = 3;
   int _elecIntDigits     = 6;
   int _elecDecDigits     = 1;
 
@@ -61,9 +62,10 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
     final s = await AppDatabase.instance.getSettings();
     if (!mounted) return;
     final mode        = await _settingsService.getTrackingMode();
-    final gasMeterD   = await _settingsService.getMeterIntDigits();
-    final elecIntD    = await _settingsService.getElectricityIntDigits();
-    final elecDecD    = await _settingsService.getElectricityDecDigits();
+    final gasMeterD    = await _settingsService.getMeterIntDigits();
+    final gasMeterDecD = await _settingsService.getMeterDecDigits();
+    final elecIntD     = await _settingsService.getElectricityIntDigits();
+    final elecDecD     = await _settingsService.getElectricityDecDigits();
     setState(() {
       _coordsFound       = s?.locationLat != null;
       _houseType         = s?.houseType;
@@ -74,6 +76,7 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
       _isInsulated       = s?.isInsulated;
       _trackingMode      = mode;
       _gasMeterIntDigits = gasMeterD;
+      _gasMeterDecDigits = gasMeterDecD;
       _elecIntDigits     = elecIntD;
       _elecDecDigits     = elecDecD;
     });
@@ -132,6 +135,13 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
     await _settingsService.setMeterIntDigits(digits);
     SyncService().syncSettings();
     _showSnack('Gaszähler: $digits Vorkomma-Stellen gespeichert');
+  }
+
+  Future<void> _saveGasMeterDecDigits(int digits) async {
+    setState(() => _gasMeterDecDigits = digits);
+    await _settingsService.setMeterDecDigits(digits);
+    SyncService().syncSettings();
+    _showSnack('Gaszähler: $digits Nachkomma-Stellen gespeichert');
   }
 
   Future<void> _saveElecIntDigits(int d) async {
@@ -239,14 +249,34 @@ class _HausdatenSettingsScreenState extends State<HausdatenSettingsScreen> {
               // ── Gaszähler-Typ ─────────────────────────────────────────────
               const SettingsSectionLabel('GASZÄHLER'),
               const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'OCR liest ${_gasMeterIntDigits + _gasMeterDecDigits} Stellen (${_gasMeterIntDigits} schwarz + ${_gasMeterDecDigits} rot).',
+                  style: GoogleFonts.spaceMono(fontSize: 11, color: AppColors.amber),
+                ),
+              ),
               SettingsDigitSelector(
                 icon: Icons.local_fire_department_outlined,
                 iconColor: AppColors.amber,
-                description: 'Wie viele Stellen stehen vor dem Komma auf deinem Gaszähler?',
+                accentColor: AppColors.amber,
+                description: 'Stellen VOR dem Komma (schwarze Trommeln)',
                 selected: _gasMeterIntDigits,
                 options: const [4, 5, 6],
-                formatHint: (d) => '${'0' * d},${'0' * 3} m³',
+                formatHint: (d) => '${'0' * d},${'0' * _gasMeterDecDigits} m³',
                 onSelect: _saveGasMeterDigits,
+              ),
+              const SizedBox(height: 16),
+              SettingsDigitSelector(
+                icon: Icons.looks_one_outlined,
+                iconColor: AppColors.amber,
+                accentColor: AppColors.amber,
+                title: 'Nachkomma-Stellen',
+                description: 'Stellen NACH dem Komma (rote Trommeln)',
+                selected: _gasMeterDecDigits,
+                options: const [2, 3],
+                formatHint: (d) => '${'0' * _gasMeterIntDigits},${'0' * d} m³',
+                onSelect: _saveGasMeterDecDigits,
               ),
 
               const SizedBox(height: 24),

@@ -32,6 +32,7 @@ class AppSettings extends Table {
   RealColumn get locationLat => real().nullable()();
   RealColumn get locationLon => real().nullable()();
   IntColumn get meterIntDigits => integer().nullable()();
+  IntColumn get meterDecDigits => integer().nullable()();
   IntColumn get electricityIntDigits => integer().nullable()();
   IntColumn get electricityDecDigits => integer().nullable()();
   // Hausdaten (added v10)
@@ -453,6 +454,16 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
     }
   }
 
+  Future<void> saveMeterDecDigits(int digits) async {
+    final existing = await getSettings();
+    if (existing == null) {
+      await into(appSettings).insert(AppSettingsCompanion(meterDecDigits: Value(digits)));
+    } else {
+      await (update(appSettings)..where((t) => t.id.equals(existing.id)))
+          .write(AppSettingsCompanion(meterDecDigits: Value(digits)));
+    }
+  }
+
   Future<void> saveElectricityIntDigits(int digits) async {
     final existing = await getSettings();
     if (existing == null) {
@@ -625,7 +636,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance ??= AppDatabase._();
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -691,6 +702,9 @@ class AppDatabase extends _$AppDatabase {
           SELECT 'electricity', monthly_advance_payment, valid_from, 0
           FROM electricity_contracts WHERE monthly_advance_payment IS NOT NULL
         ''');
+      }
+      if (from < 16) {
+        await migrator.addColumn(appSettings, appSettings.meterDecDigits);
       }
       if (from < 15) {
         // Timestamp-Indizes: beschleunigen watchAllReadings, getReadingsInRange,
@@ -834,6 +848,9 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> saveMeterIntDigits(int digits) =>
       settingsDao.saveMeterIntDigits(digits);
+
+  Future<void> saveMeterDecDigits(int digits) =>
+      settingsDao.saveMeterDecDigits(digits);
 
   Future<void> saveElectricityIntDigits(int digits) =>
       settingsDao.saveElectricityIntDigits(digits);

@@ -2,7 +2,7 @@ name: gas_track
 description: "Homergy - Strom und Gasverbrauch tracken & Kosten verfolgen"
 publish_to: 'none'
 
-version: 1.0.1+2
+version: 1.0.9+15
 
 environment:
   sdk: ^3.8.1
@@ -41,6 +41,7 @@ dependencies:
 
   # Supabase (Cloud-Sync & Auth)
   supabase_flutter: ^2.9.0
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:
