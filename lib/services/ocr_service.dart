@@ -285,21 +285,15 @@ class OcrService {
 
   /// Extracts a gas meter reading.
   ///
-  /// Brightness thresholds (after the sampler fix that reads true image size):
-  ///   Black drums (integer):      luminance  0–40   → accepted
-  ///   Red drums   (decimal):      luminance 60–80   → accepted (part of reading)
-  ///   Combined display line avg:  luminance ~40–80  → accepted
-  ///   Grey housing / serial nr:   luminance 130+    → rejected
-  ///   White label text:           luminance 180+    → rejected
-  ///   Red safety panel text avg:  luminance ~120+   → rejected
+  /// Strategy: anchor on the "m³" / "m3" unit label that always appears on the
+  /// display row, then extract digits from that line via [_elecExtract].
+  /// This is display-colour-agnostic — works for both dark-background rollers
+  /// and the more common light-background roller displays.
   Future<OcrResult> extractGasReading(
     String imagePath, {
     required int intDigits,
     required int decDigits,
   }) async {
-    // 100 sits safely between red drums (~76) and grey housing/safety panel (~120+).
-    const kGasBrightnessMax = 100.0;
-
     final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
     try {
       final inputImage = InputImage.fromFile(File(imagePath));
@@ -307,54 +301,56 @@ class OcrService {
       final allLines = recognizedText.blocks.expand((b) => b.lines).toList();
       final rawText = allLines.map((l) => l.text).join(' | ');
       debugPrint('[OCR-Gas] Raw lines: $rawText');
-      debugPrint('[OCR-Gas] Looking for $intDigits black-background digits');
 
-      final brightnessSampler = await _BrightnessSampler.load(imagePath, allLines);
-
-      // Collect all lines on dark background (black integer drums + red decimal drums).
-      final darkLines = <TextLine>[];
-      for (final line in allLines) {
-        if (brightnessSampler != null) {
-          final bg = brightnessSampler.sample(line.boundingBox);
-          debugPrint('[OCR-Gas] bg=${bg.toStringAsFixed(0)} "${line.text.trim()}"');
-          if (bg > kGasBrightnessMax) {
-            debugPrint('[OCR-Gas] → skip');
-            continue;
-          }
-        }
-        darkLines.add(line);
+      bool isUnitLine(String t) {
+        final lower = t.toLowerCase();
+        return lower.contains('m³') || lower.contains('m3');
       }
 
-      debugPrint('[OCR-Gas] Dark lines: ${darkLines.map((l) => l.text).join(" | ")}');
+      // Pass 1: line that contains the unit AND enough digits.
+      for (final line in allLines) {
+        if (!isUnitLine(line.text)) continue;
+        final candidate = _elecExtract(line.text, intDigits, decDigits);
+        if (candidate != null) {
+          debugPrint('[OCR-Gas] Unit-anchored: "${line.text.trim()}" → $candidate');
+          return OcrResult(reading: candidate, rawText: rawText);
+        }
+      }
 
-      // Try each dark line individually.
+      // Pass 2: ML Kit sometimes splits the display into two adjacent lines.
+      // Combine the unit line with its immediate neighbours.
+      for (int i = 0; i < allLines.length; i++) {
+        if (!isUnitLine(allLines[i].text)) continue;
+        final start = (i - 1).clamp(0, allLines.length - 1);
+        final end   = (i + 1).clamp(0, allLines.length - 1);
+        final combined = allLines
+            .sublist(start, end + 1)
+            .map((l) => l.text)
+            .join(' ');
+        final candidate = _elecExtract(combined, intDigits, decDigits);
+        if (candidate != null) {
+          debugPrint('[OCR-Gas] Combined near unit: "$combined" → $candidate');
+          return OcrResult(reading: candidate, rawText: rawText);
+        }
+      }
+
+      // Pass 3: no unit found — fall back to the tallest line with enough digits
+      // (last resort, same heuristic as extractElectricityReading).
       _ElecCandidate? best;
-      for (final line in darkLines) {
+      for (final line in allLines) {
         final candidate = _elecExtract(line.text, intDigits, decDigits);
         if (candidate == null) continue;
         final score = line.boundingBox.height;
-        debugPrint('[OCR-Gas] ✓ "${line.text.trim()}" h=${score.toInt()} → $candidate');
         if (best == null || score > best.score) {
           best = _ElecCandidate(reading: candidate, score: score);
         }
       }
-
-      // Fallback: combine all dark-line text (handles ML Kit splitting display row).
-      if (best == null && darkLines.isNotEmpty) {
-        final combined = darkLines.map((l) => l.text).join(' ');
-        final candidate = _elecExtract(combined, intDigits, decDigits);
-        if (candidate != null) {
-          debugPrint('[OCR-Gas] Combined dark lines → $candidate');
-          best = _ElecCandidate(reading: candidate, score: 0);
-        }
-      }
-
       if (best != null) {
-        debugPrint('[OCR-Gas] Result: ${best.reading}');
+        debugPrint('[OCR-Gas] Fallback height pick → ${best.reading}');
         return OcrResult(reading: best.reading, rawText: rawText);
       }
 
-      debugPrint('[OCR-Gas] No dark-background digits found');
+      debugPrint('[OCR-Gas] No result found');
       return OcrResult(rawText: rawText);
     } catch (e) {
       debugPrint('[OCR-Gas] Error: $e');
