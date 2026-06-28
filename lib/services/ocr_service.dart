@@ -283,12 +283,16 @@ class OcrService {
     }
   }
 
-  /// Extracts a gas meter reading.
+  /// Extracts a gas meter reading using four passes in order of reliability.
   ///
-  /// Strategy: anchor on the "m³" / "m3" unit label that always appears on the
-  /// display row, then extract digits from that line via [_elecExtract].
-  /// This is display-colour-agnostic — works for both dark-background rollers
-  /// and the more common light-background roller displays.
+  /// Pass 1 – Unit-anchored: line containing "m³"/"m3" with ≥ intDigits digits.
+  /// Pass 2 – Unit-band: same, but combine ±2 neighbouring lines around the unit.
+  /// Pass 3 – Comma/dot pattern: regex across all joined text. The reading
+  ///   always has a separator (comma or dot) between the integer and decimal
+  ///   rollers; serial numbers (002532352125) never do → zero false positives.
+  /// Pass 4 – Height fallback with serial-number exclusion: skip any ML Kit
+  ///   line whose digit count exceeds intDigits + decDigits + 2 (i.e. 10 for a
+  ///   5+3 meter). This prevents "002532352125" (12 digits) from ever winning.
   Future<OcrResult> extractGasReading(
     String imagePath, {
     required int intDigits,
@@ -300,57 +304,90 @@ class OcrService {
       final recognizedText = await recognizer.processImage(inputImage);
       final allLines = recognizedText.blocks.expand((b) => b.lines).toList();
       final rawText = allLines.map((l) => l.text).join(' | ');
-      debugPrint('[OCR-Gas] Raw lines: $rawText');
+      debugPrint('[OCR-Gas] Raw: $rawText');
 
-      bool isUnitLine(String t) {
-        final lower = t.toLowerCase();
-        return lower.contains('m³') || lower.contains('m3');
+      String norm(String s) => s
+          .replaceAll(RegExp(r'[ilI|]'), '1')
+          .replaceAll(RegExp(r'[oO]'), '0');
+
+      bool hasUnit(String t) {
+        final l = t.toLowerCase();
+        return l.contains('m³') || RegExp(r'm\s*3').hasMatch(l);
       }
 
-      // Pass 1: line that contains the unit AND enough digits.
+      // ── Pass 1: unit line with enough digits ────────────────────────────────
       for (final line in allLines) {
-        if (!isUnitLine(line.text)) continue;
-        final candidate = _elecExtract(line.text, intDigits, decDigits);
-        if (candidate != null) {
-          debugPrint('[OCR-Gas] Unit-anchored: "${line.text.trim()}" → $candidate');
-          return OcrResult(reading: candidate, rawText: rawText);
+        if (!hasUnit(line.text)) continue;
+        final c = _elecExtract(norm(line.text), intDigits, decDigits);
+        if (c != null) {
+          debugPrint('[OCR-Gas] P1 unit-line: "${line.text.trim()}" → $c');
+          return OcrResult(reading: c, rawText: rawText);
         }
       }
 
-      // Pass 2: ML Kit sometimes splits the display into two adjacent lines.
-      // Combine the unit line with its immediate neighbours.
+      // ── Pass 2: combine unit line with ±2 neighbours ───────────────────────
+      // Only include lines that contain at least one real digit — this avoids
+      // words like "elster" where norm() turns 'l' into '1'.
+      final hasDigit = RegExp(r'\d');
       for (int i = 0; i < allLines.length; i++) {
-        if (!isUnitLine(allLines[i].text)) continue;
-        final start = (i - 1).clamp(0, allLines.length - 1);
-        final end   = (i + 1).clamp(0, allLines.length - 1);
-        final combined = allLines
-            .sublist(start, end + 1)
-            .map((l) => l.text)
+        if (!hasUnit(allLines[i].text)) continue;
+        final s = (i - 2).clamp(0, allLines.length - 1);
+        final e = (i + 2).clamp(0, allLines.length - 1);
+        final band = allLines
+            .sublist(s, e + 1)
+            .where((l) => hasDigit.hasMatch(l.text) || hasUnit(l.text))
+            .map((l) => norm(l.text))
             .join(' ');
-        final candidate = _elecExtract(combined, intDigits, decDigits);
-        if (candidate != null) {
-          debugPrint('[OCR-Gas] Combined near unit: "$combined" → $candidate');
-          return OcrResult(reading: candidate, rawText: rawText);
+        final c = _elecExtract(band, intDigits, decDigits);
+        if (c != null) {
+          debugPrint('[OCR-Gas] P2 unit-band: "$band" → $c');
+          return OcrResult(reading: c, rawText: rawText);
         }
       }
 
-      // Pass 3: no unit found — fall back to the tallest line with enough digits
-      // (last resort, same heuristic as extractElectricityReading).
+      // ── Pass 3: comma/dot-pattern across all joined text ───────────────────
+      // The roller display ALWAYS has a physical comma between integer and
+      // decimal drums. Serial numbers (002532352125) have no such separator.
+      // Regex: intDigits single digits (with optional spaces between) + comma/dot
+      //        + decDigits single digits.
+      final joined = allLines.map((l) => norm(l.text)).join(' ');
+      final sepRe = RegExp(
+        r'(?<![,.\d])(\d(?:\s*\d){' '${intDigits - 1}' r'})\s*[,.]\s*'
+        r'(\d(?:\s*\d){' '${decDigits - 1}' r'})(?!\s*\d)',
+      );
+      final sepM = sepRe.firstMatch(joined);
+      if (sepM != null) {
+        final intStr = sepM.group(1)!.replaceAll(RegExp(r'\s'), '');
+        final decStr = sepM.group(2)!.replaceAll(RegExp(r'\s'), '');
+        final intVal = int.tryParse(intStr) ?? 0;
+        debugPrint('[OCR-Gas] P3 comma-pattern → $intVal.$decStr');
+        return OcrResult(reading: '$intVal.$decStr', rawText: rawText);
+      }
+
+      // ── Pass 4: height-based, serial numbers excluded ──────────────────────
+      // A serial number like "002532352125" has 12 digits — far more than the
+      // reading (intDigits + decDigits = 8). Skip any line exceeding that limit.
+      final maxDigits = intDigits + decDigits + 2;
       _ElecCandidate? best;
       for (final line in allLines) {
-        final candidate = _elecExtract(line.text, intDigits, decDigits);
-        if (candidate == null) continue;
+        final lineDigits = norm(line.text).replaceAll(RegExp(r'[^\d]'), '');
+        if (lineDigits.length > maxDigits) {
+          debugPrint('[OCR-Gas] P4 skip serial: "${line.text.trim()}"');
+          continue;
+        }
+        final c = _elecExtract(norm(line.text), intDigits, decDigits);
+        if (c == null) continue;
         final score = line.boundingBox.height;
         if (best == null || score > best.score) {
-          best = _ElecCandidate(reading: candidate, score: score);
+          best = _ElecCandidate(reading: c, score: score);
         }
       }
       if (best != null) {
-        debugPrint('[OCR-Gas] Fallback height pick → ${best.reading}');
+        debugPrint('[OCR-Gas] P4 height-pick → ${best.reading}');
         return OcrResult(reading: best.reading, rawText: rawText);
       }
 
-      debugPrint('[OCR-Gas] No result found');
+      debugPrint('[OCR-Gas] No result');
       return OcrResult(rawText: rawText);
     } catch (e) {
       debugPrint('[OCR-Gas] Error: $e');

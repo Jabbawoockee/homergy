@@ -26,7 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _loadPreview();
     PackageInfo.fromPlatform().then((info) {
-      if (mounted) setState(() => _appVersion = info.version);
+      if (mounted) setState(() => _appVersion = '${info.version}+${info.buildNumber}');
     });
   }
 
