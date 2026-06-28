@@ -2,7 +2,7 @@ name: gas_track
 description: "Homergy - Strom und Gasverbrauch tracken & Kosten verfolgen"
 publish_to: 'none'
 
-version: 1.0.10+16
+version: 1.0.10+17
 
 environment:
   sdk: ^3.8.1
