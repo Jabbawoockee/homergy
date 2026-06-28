@@ -106,12 +106,10 @@ class _ScanScreenState extends State<ScanScreen> {
           decDigits: _meterDecDigits,
         );
       } else {
-        result = await _ocrService.extractMeterReadingWithRaw(
+        result = await _ocrService.extractGasReading(
           picked.path,
-          meterType: MeterType.gas,
           intDigits: _meterIntDigits,
           decDigits: _meterDecDigits,
-          lastReading: _lastGasReading,
         );
       }
       if (mounted) {
