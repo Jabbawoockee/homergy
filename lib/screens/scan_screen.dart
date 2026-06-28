@@ -36,8 +36,6 @@ class _ScanScreenState extends State<ScanScreen> {
   bool _isEditing = false;
   String? _ocrRawHint;
   int _meterIntDigits = 5;
-  double? _lastGasReading;
-
   static const _blue = Color(0xFF5B8DB8);
   bool get _isElec => widget.meterType == MeterType.electricity;
   Color get _accentColor => _isElec ? _blue : AppColors.green;
@@ -60,8 +58,6 @@ class _ScanScreenState extends State<ScanScreen> {
     } else {
       digits = await _settingsService.getMeterIntDigits();
       decDigits = await _settingsService.getMeterDecDigits();
-      final latest = await _db.getLatestReading();
-      if (mounted) _lastGasReading = latest?.value;
     }
     if (mounted) {
       setState(() {
@@ -106,7 +102,7 @@ class _ScanScreenState extends State<ScanScreen> {
           decDigits: _meterDecDigits,
         );
       } else {
-        result = await _ocrService.extractGasReading(
+        result = await _ocrService.extractElectricityReading(
           picked.path,
           intDigits: _meterIntDigits,
           decDigits: _meterDecDigits,
